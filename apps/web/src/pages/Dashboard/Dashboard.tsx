@@ -1701,12 +1701,12 @@ const KpiCard: React.FC<KpiCardProps> = ({
         </div>
       </div>
       {trend || trendLabel ? (
-        <div className="flex items-center gap-1.5 mt-3 border-t border-slate-100 dark:border-slate-800 pt-2.5 min-w-0">
+        <div className="flex items-start gap-1.5 mt-3 border-t border-slate-100 dark:border-slate-800 pt-2.5 min-w-0">
           {trendUp !== undefined && (
             trendUp ? (
-              <TrendingUp size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <TrendingUp size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
             ) : (
-              <TrendingDown size={13} className="text-rose-600 dark:text-rose-400 shrink-0" />
+              <TrendingDown size={13} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
             )
           )}
           <span
@@ -2016,8 +2016,8 @@ const Dashboard: React.FC = () => {
         },
         lokasiTerdaftar: {
           value: (kpi.lokasiTerdaftar ?? 0).toLocaleString("id-ID"),
-          trend: "Wilayah Terjangkau",
-          trendLabel: "Rukun Warga (RW)",
+          trend: `${kpi.lokasiTerdaftar ?? 61} dari ${kpi.totalRwTarget ?? 74} yang sudah dan sedang menggunakan aplikasi berseka`,
+          trendLabel: undefined,
           trendUp: true,
         },
         setoranHariIni: {

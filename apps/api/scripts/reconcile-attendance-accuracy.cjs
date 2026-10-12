@@ -40,6 +40,9 @@ async function reconcile() {
     if (jedaLogsArray.length === 0) continue;
 
     const lastLog = jedaLogsArray[jedaLogsArray.length - 1];
+    // Jangan potong durasi jika jeda disebabkan oleh bug autoTriggered / staleGpsAnomaly
+    if (lastLog?.staleGpsAnomaly || lastLog?.autoTriggered) continue;
+
     const isUnresumedJeda = lastLog && lastLog.waktuJeda && !lastLog.waktuResume;
 
     if (isUnresumedJeda) {
@@ -47,8 +50,8 @@ async function reconcile() {
       const currentMins = att.actualInZoneMinutes ?? 0;
 
       // Jika ada anomali durasi yang membengkak padahal dijeda
-      if (currentMins > correctMins || (att.status === 'HADIR_MEMENUHI' && correctMins < 240)) {
-        const correctStatus = correctMins >= 240 ? 'HADIR_MEMENUHI' : 'HADIR_TIDAK_MEMENUHI';
+      if (currentMins > correctMins || (att.status === 'HADIR_MEMENUHI' && correctMins < 250)) {
+        const correctStatus = correctMins >= 250 ? 'HADIR_MEMENUHI' : 'HADIR_TIDAK_MEMENUHI';
 
         console.log(`\n[KOREKSI] Mahasiswa: ${att.student?.name} (${att.student?.studentProfile?.nim})`);
         console.log(`  ID Presensi: ${att.id}`);

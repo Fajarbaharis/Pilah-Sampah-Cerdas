@@ -355,13 +355,11 @@ export const AnalisisKknPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center text-xs font-semibold">
-                  <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 min-w-0">
-                    <TrendingUp size={13} className="shrink-0" />
-                    <span className="font-bold shrink-0">Wilayah Terjangkau</span>
-                    <span className="text-slate-300 dark:text-slate-600 shrink-0">•</span>
-                    <span className="text-slate-500 dark:text-slate-400 font-medium truncate">
-                      Rukun Warga (RW)
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-start text-xs font-semibold">
+                  <div className="flex items-start gap-1.5 text-emerald-700 dark:text-emerald-400 min-w-0">
+                    <TrendingUp size={13} className="shrink-0 mt-0.5" />
+                    <span className="font-semibold text-[11px] leading-snug break-words">
+                      {Number(kpiStats?.lokasiTerdaftar ?? 61)} dari {Number((kpiStats as any)?.totalRwTarget ?? 74)} yang sudah dan sedang menggunakan aplikasi berseka
                     </span>
                   </div>
                 </div>

@@ -20,7 +20,7 @@ export const getApiBaseUrl = (): string => {
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
-  timeout: 30000,
+  timeout: 60000,
   headers: {
     "Content-Type": "application/json",
     "ngrok-skip-browser-warning": "true",
@@ -43,6 +43,8 @@ api.interceptors.request.use(
       }
       delete config.headers["Content-Type"];
       delete config.headers["content-type"];
+      // Berikan timeout 90 detik untuk unggah berkas / multipart pada jaringan mobile seluler
+      config.timeout = 90000;
     }
 
     // Injeksi otomatis parameter includeTestAccounts: "true"

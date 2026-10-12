@@ -37,7 +37,15 @@ import {
   Image as ImageIcon,
   ExternalLink,
   Download,
+  PieChart as PieChartIcon,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  Tooltip as RechartsTooltip,
+} from "recharts";
 import toast from "react-hot-toast";
 import { downloadImageFile } from "../../utils/photoUtils";
 import {
@@ -51,6 +59,17 @@ import { resolveImageUrl } from "../../utils/imageUrl";
 import { ConfirmModal } from "../../components/common/ConfirmModal";
 import { Pagination } from "../../components/common/Pagination";
 import { sortChronologicalList } from "../../utils/sortUtils";
+
+// Color mapping for activity categories
+const CATEGORY_COLORS: Record<string, string> = {
+  "Kunjungan Lapangan": "#10b981",
+  "Koordinasi": "#3b82f6",
+  "Pembimbingan": "#8b5cf6",
+  "Monitoring Lapangan": "#f59e0b",
+  "Evaluasi Lapangan": "#6366f1",
+  "Pendampingan": "#ec4899",
+  "Lainnya": "#64748b",
+};
 
 // Helper Inisial Profil
 const getInitials = (name: string): string => {
@@ -90,6 +109,25 @@ export const LogAktivitasDpl: React.FC = () => {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [pageSize, setPageSize] = useState<number>(10);
+
+  // Aggregated Category Pie Data
+  const categoryPieData = useMemo(() => {
+    if (stats.kategoriBreakdown && stats.kategoriBreakdown.length > 0) {
+      return stats.kategoriBreakdown;
+    }
+    const counts: Record<string, number> = {};
+    logs.forEach((log) => {
+      const k = (log.kategori || "Lainnya").trim();
+      counts[k] = (counts[k] || 0) + 1;
+    });
+    const total = logs.length;
+    return Object.entries(counts).map(([name, count]) => ({
+      name,
+      count,
+      percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+      color: CATEGORY_COLORS[name] || "#0ea5e9",
+    })).sort((a, b) => b.count - a.count);
+  }, [stats.kategoriBreakdown, logs]);
 
   // Modal Form State (Catat / Edit Kegiatan DPL)
   const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
@@ -548,39 +586,186 @@ export const LogAktivitasDpl: React.FC = () => {
       </div>
 
       {/* ─────────────────────────────────────────────
-          2. 3 TOP STAT SUMMARY CARDS
+          2. TOP STAT SUMMARY CARDS + PIE CHART KATEGORI
           ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Card 1: Total Aktivitas */}
-        <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-slate-500">Total Aktivitas</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-1">{stats.totalAktivitas}</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Left Column: 3 Top Stat Cards (4 cols on lg) */}
+        <div className="lg:col-span-4 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3.5">
+          {/* Card 1: Total Aktivitas */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Total Aktivitas</p>
+              <h3 className="text-2xl font-bold text-slate-800 mt-1">{stats.totalAktivitas}</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Total supervisi tercatat</p>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <ClipboardCheck className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-            <ClipboardCheck className="w-5 h-5" />
+
+          {/* Card 2: Bulan Ini */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Bulan Ini</p>
+              <h3 className="text-2xl font-bold text-slate-800 mt-1">{stats.bulanIni}</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Kegiatan bulan berjalan</p>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <Calendar className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Card 3: Total Durasi (Satuan Jam) */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Total Durasi</p>
+              <h3 className="text-2xl font-bold text-slate-800 mt-1">{stats.totalDurasi}</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Akumulasi waktu bimbingan</p>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Clock className="w-5 h-5" />
+            </div>
           </div>
         </div>
 
-        {/* Card 2: Bulan Ini */}
-        <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-slate-500">Bulan Ini</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-1">{stats.bulanIni}</h3>
+        {/* Right Column: Pie / Donut Chart Distribusi Kategori (8 cols on lg) */}
+        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <PieChartIcon className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">Distribusi Kategori Kegiatan</h3>
+                <p className="text-[11px] text-slate-400">Proporsi jenis supervisi &amp; pendampingan yang telah dilaksanakan</p>
+              </div>
+            </div>
+            {selectedCategoryFilter !== "ALL" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategoryFilter("ALL");
+                  setCurrentPage(1);
+                }}
+                className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 self-start sm:self-auto cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" /> Reset Filter ({selectedCategoryFilter})
+              </button>
+            )}
           </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <Calendar className="w-5 h-5" />
-          </div>
-        </div>
 
-        {/* Card 3: Total Durasi (Satuan Jam) */}
-        <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-slate-500">Total Durasi</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-1">{stats.totalDurasi}</h3>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <Clock className="w-5 h-5" />
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center pt-3 flex-1">
+            {/* Donut Chart */}
+            <div className="sm:col-span-5 relative h-44 w-full flex items-center justify-center">
+              {categoryPieData.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={categoryPieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={46}
+                        outerRadius={68}
+                        paddingAngle={3}
+                        dataKey="count"
+                        onClick={(entry: any) => {
+                          if (entry && entry.name) {
+                            setSelectedCategoryFilter(prev => prev === entry.name ? "ALL" : entry.name);
+                            setCurrentPage(1);
+                          }
+                        }}
+                        cursor="pointer"
+                      >
+                        {categoryPieData.map((entry, idx) => (
+                          <Cell
+                            key={`cat-cell-${idx}`}
+                            fill={entry.color || CATEGORY_COLORS[entry.name] || "#0ea5e9"}
+                            stroke={selectedCategoryFilter === entry.name ? "#0f172a" : "transparent"}
+                            strokeWidth={selectedCategoryFilter === entry.name ? 2.5 : 0}
+                          />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const d = payload[0].payload;
+                            return (
+                              <div className="bg-slate-900 text-white text-[11px] font-bold py-1.5 px-3 rounded-xl shadow-lg border border-slate-800">
+                                <span className="block text-slate-300 text-[10px]">{d.name}</span>
+                                <span className="text-emerald-400 font-extrabold text-xs">
+                                  {d.count} Kegiatan ({d.percentage}%)
+                                </span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+
+                  {/* Inner Center Text */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-black text-slate-800 tracking-tight leading-none">
+                      {stats.totalAktivitas}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+                      Kegiatan
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-slate-400 italic">Belum ada data aktivitas</div>
+              )}
+            </div>
+
+            {/* Category Breakdown Chips / Legend */}
+            <div className="sm:col-span-7 flex flex-col justify-center gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {categoryPieData.map((item) => {
+                  const isSelected = selectedCategoryFilter === item.name;
+                  const itemColor = item.color || CATEGORY_COLORS[item.name] || "#0ea5e9";
+                  return (
+                    <button
+                      key={item.name}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategoryFilter(isSelected ? "ALL" : item.name);
+                        setCurrentPage(1);
+                      }}
+                      className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                        isSelected
+                          ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                          : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200/80"
+                      }`}
+                      title={`Klik untuk memfilter kategori ${item.name}`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: itemColor }}
+                        />
+                        <span className={`text-xs font-semibold truncate ${isSelected ? "text-white" : "text-slate-800"}`}>
+                          {item.name}
+                        </span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={`text-xs font-bold block leading-none ${isSelected ? "text-emerald-300" : "text-slate-900"}`}>
+                          {item.count}
+                        </span>
+                        <span className={`text-[10px] font-medium leading-none ${isSelected ? "text-slate-300" : "text-slate-400"}`}>
+                          {item.percentage}%
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-slate-400 italic mt-1">
+                Tip: Klik kategori di atas atau irisan pie untuk memfilter tabel riwayat di bawah.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -672,12 +857,12 @@ export const LogAktivitasDpl: React.FC = () => {
               }}
               className="appearance-none bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs text-slate-700 font-medium focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-600 cursor-pointer"
             >
-              <option value="ALL">Semua Kategori</option>
-              <option value="Kunjungan Lapangan">Kunjungan Lapangan</option>
-              <option value="Koordinasi">Koordinasi</option>
-              <option value="Pembimbingan">Pembimbingan</option>
-              <option value="Monitoring Lapangan">Monitoring Lapangan</option>
-              <option value="Evaluasi Lapangan">Evaluasi Lapangan</option>
+              <option value="ALL">Semua Kategori ({stats.totalAktivitas})</option>
+              {categoryPieData.map((item) => (
+                <option key={item.name} value={item.name}>
+                  {item.name} ({item.count})
+                </option>
+              ))}
             </select>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>

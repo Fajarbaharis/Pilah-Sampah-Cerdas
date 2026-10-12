@@ -130,7 +130,7 @@ async function main() {
 
     const durasiMenit = pm.durasiMenit || 0;
     const effectiveDurasi = Math.min(480, durasiMenit);
-    const status = effectiveDurasi >= 240 ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI";
+    const status = effectiveDurasi >= 250 ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI";
     const checkOutAt = pm.checkOutAt || new Date(checkInDate.getTime() + durasiMenit * 60000);
 
     console.log(
