@@ -195,96 +195,78 @@ function generateOfficialArchiveSvg(data: {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0b1329"/>
-      <stop offset="50%" stop-color="#062e24"/>
-      <stop offset="100%" stop-color="#021c15"/>
-    </linearGradient>
-    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#047857"/>
-      <stop offset="100%" stop-color="#065f46"/>
-    </linearGradient>
-    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.8"/>
-      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.9"/>
-    </linearGradient>
-    <pattern id="gridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
-      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#10b981" stroke-width="0.5" stroke-opacity="0.15"/>
-    </pattern>
+    <filter id="cardShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
   </defs>
 
-  <!-- Background -->
-  <rect width="100%" height="100%" fill="url(#bgGrad)" rx="20"/>
-  <rect width="100%" height="100%" fill="url(#gridPattern)" rx="20"/>
-  <rect width="100%" height="100%" fill="none" stroke="#059669" stroke-width="2" stroke-opacity="0.5" rx="20"/>
+  <!-- Clean Background -->
+  <rect width="100%" height="100%" fill="#f8fafc"/>
 
-  <!-- Header Banner -->
-  <rect x="2" y="2" width="796" height="88" fill="url(#headerGrad)" rx="18"/>
-  <path d="M 2 70 L 798 70 L 798 90 L 2 90 Z" fill="#065f46"/>
+  <!-- Paper Card Container -->
+  <rect x="24" y="20" width="752" height="480" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#cardShadow)"/>
 
-  <!-- Logo Emblem -->
-  <g transform="translate(32, 20)">
-    <circle cx="24" cy="24" r="22" fill="#022c22" stroke="#34d399" stroke-width="2"/>
-    <path d="M24 10 C16 16 14 26 24 36 C34 26 32 16 24 10 Z" fill="#34d399"/>
-    <circle cx="24" cy="24" r="5" fill="#f59e0b"/>
+  <!-- Header Letterhead -->
+  <g transform="translate(48, 45)">
+    <text x="0" y="0" font-family="'Times New Roman', Times, Georgia, serif" font-size="16" font-weight="700" fill="#0f172a" letter-spacing="0.5">LEMBAGA PENGABDIAN DAN PEMBERDAYAAN MASYARAKAT</text>
+    <text x="0" y="20" font-family="'Times New Roman', Times, Georgia, serif" font-size="14" font-weight="700" fill="#047857">KULIAH KERJA NYATA TEMATIK (KKN) BERSEKA - UNIKOM</text>
+    <text x="0" y="36" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500" fill="#64748b">Jl. Dipatiukur No. 112-116, Coblong, Kota Bandung | Arsip Digital Terverifikasi</text>
   </g>
 
-  <text x="92" y="42" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="900" fill="#ffffff" letter-spacing="1">BERSEKA</text>
-  <text x="92" y="62" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#a7f3d0" letter-spacing="0.5">ARSIP DIGITAL RESMI DOKUMENTASI KEGIATAN KKN</text>
-
   <!-- Status Pill -->
-  <rect x="550" y="26" width="218" height="36" rx="18" fill="#022c22" stroke="#34d399" stroke-width="1.5"/>
-  <circle cx="568" cy="44" r="5" fill="#10b981"/>
-  <text x="582" y="49" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="800" fill="#6ee7b7" letter-spacing="0.5">${status}</text>
+  <rect x="580" y="38" width="176" height="32" rx="16" fill="#f0fdf4" stroke="#86efac" stroke-width="1.2"/>
+  <circle cx="598" cy="54" r="4.5" fill="#16a34a"/>
+  <text x="610" y="58" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#15803d">${status}</text>
 
-  <!-- Central Information Panel -->
-  <rect x="32" y="112" width="736" height="320" rx="16" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.5"/>
+  <!-- Header Separator Lines -->
+  <line x1="48" y1="95" x2="752" y2="95" stroke="#0f172a" stroke-width="2"/>
+  <line x1="48" y1="99" x2="752" y2="99" stroke="#0f172a" stroke-width="0.8"/>
 
-  <!-- Column Left: Details -->
-  <g transform="translate(60, 140)">
-    <!-- Mahasiswa -->
-    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1">MAHASISWA PELAKSANA</text>
-    <text x="0" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="17" font-weight="800" fill="#f8fafc">${nama}</text>
-    <text x="0" y="44" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#94a3b8">NIM: <tspan fill="#38bdf8">${nip}</tspan></text>
+  <!-- Document Title -->
+  <text x="400" y="130" text-anchor="middle" font-family="'Times New Roman', Times, Georgia, serif" font-size="15" font-weight="700" fill="#0f172a" letter-spacing="1">SURAT BUKTI / DOKUMEN RESMI MAHASISWA</text>
+  <line x1="260" y1="135" x2="540" y2="135" stroke="#334155" stroke-width="1"/>
 
-    <!-- Kelompok & Wilayah -->
-    <text x="0" y="85" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1">KELOMPOK &amp; WILAYAH</text>
-    <text x="0" y="108" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">${kelompok}</text>
-    <text x="0" y="128" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">Kelurahan: ${kelurahan}</text>
+  <!-- Left Column: Identity -->
+  <g transform="translate(56, 160)">
+    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" fill="#64748b">IDENTITAS MAHASISWA</text>
+    <text x="0" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="700" fill="#0f172a">${nama}</text>
+    <text x="0" y="44" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="500" fill="#475569">NIM: <tspan font-weight="700" fill="#0f172a">${nip}</tspan></text>
 
-    <!-- Waktu & Tanggal -->
-    <text x="0" y="170" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1">WAKTU PELAKSANAAN</text>
-    <text x="0" y="193" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#34d399">${tanggal}</text>
-    <text x="0" y="213" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="500" fill="#94a3b8">${waktu}</text>
+    <text x="0" y="85" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" fill="#64748b">KELOMPOK &amp; WILAYAH</text>
+    <text x="0" y="106" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#1e293b">${kelompok}</text>
+    <text x="0" y="125" font-family="system-ui, -apple-system, sans-serif" font-size="11.5" font-weight="500" fill="#475569">Kelurahan: ${kelurahan}</text>
+
+    <text x="0" y="165" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" fill="#64748b">WAKTU &amp; STATUS KEGIATAN</text>
+    <text x="0" y="186" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#047857">${tanggal}</text>
+    <text x="0" y="205" font-family="system-ui, -apple-system, sans-serif" font-size="11.5" font-weight="500" fill="#475569">${waktu}</text>
   </g>
 
   <!-- Divider Vertical -->
-  <line x1="420" y1="136" x2="420" y2="400" stroke="#334155" stroke-width="1" stroke-dasharray="4 4"/>
+  <line x1="410" y1="160" x2="410" y2="400" stroke="#e2e8f0" stroke-width="1.5"/>
 
-  <!-- Column Right: Lokasi & Deskripsi & Seal -->
-  <g transform="translate(450, 140)">
-    <!-- Tempat -->
-    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1">LOKASI / TEMPAT</text>
-    <text x="0" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="700" fill="#f8fafc">${tempat}</text>
+  <!-- Right Column: Details & Verification -->
+  <g transform="translate(440, 160)">
+    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" fill="#64748b">LOKASI / TEMPAT</text>
+    <text x="0" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="600" fill="#1e293b">${tempat}</text>
 
-    <!-- Ringkasan Kegiatan -->
-    <text x="0" y="65" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1">DESKRIPSI AKTIVITAS</text>
-    <text x="0" y="90" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="500" fill="#cbd5e1">${deskripsi}</text>
+    <text x="0" y="65" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" fill="#64748b">KETERANGAN / ALASAN</text>
+    <text x="0" y="90" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="400" fill="#334155">${deskripsi}</text>
 
-    <!-- Official Seal Stamp -->
-    <g transform="translate(180, 130)">
-      <circle cx="60" cy="60" r="54" fill="none" stroke="#059669" stroke-width="2" stroke-dasharray="6 3"/>
-      <circle cx="60" cy="60" r="48" fill="#022c22" fill-opacity="0.9" stroke="#34d399" stroke-width="1.5"/>
-      <path d="M48 60 L56 68 L74 48" fill="none" stroke="#34d399" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <text x="60" y="86" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="8.5" font-weight="800" fill="#6ee7b7" letter-spacing="0.5">TERVALIDASI</text>
-      <text x="60" y="97" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="7" font-weight="600" fill="#94a3b8">BERSEKA SYSTEM</text>
+    <!-- Clean Official Seal -->
+    <g transform="translate(180, 150)">
+      <circle cx="50" cy="50" r="44" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8"/>
+      <circle cx="50" cy="50" r="38" fill="none" stroke="#86efac" stroke-width="1" stroke-dasharray="4 2"/>
+      <path d="M40 50 L47 57 L62 42" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="50" y="73" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="8" font-weight="700" fill="#15803d">TERVERIFIKASI</text>
+      <text x="50" y="82" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="6.5" font-weight="600" fill="#64748b">SISTEM KKN</text>
     </g>
   </g>
 
   <!-- Footer Info Bar -->
-  <g transform="translate(32, 460)">
-    <text x="12" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#64748b">NO. ARSIP: <tspan fill="#34d399">KKN-DOK-${docId}</tspan></text>
-    <text x="724" y="22" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500" fill="#64748b">Tercatat Sah dalam Pangkalan Data KKN Tematik BERSEKA</text>
+  <g transform="translate(48, 460)">
+    <line x1="0" y1="0" x2="704" y2="0" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="0" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="600" fill="#94a3b8">KODE ARSIP: <tspan fill="#334155">${docId}</tspan></text>
+    <text x="704" y="24" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="500" fill="#94a3b8">Pangkalan Data Resmi KKN Tematik BERSEKA Coblong</text>
   </g>
 </svg>`;
 }
@@ -480,6 +462,56 @@ app.use("/uploads", async (req, res, next) => {
                 presensi.status === "AKTIF" ? "TERVERIFIKASI SISTEM" : presensi.status,
               docId: presensi.id,
             };
+          } else {
+            // Cari metadata di pengajuan izin mahasiswa
+            const leave = await (prisma as any).studentLeaveRequest.findFirst({
+              where: {
+                OR: [
+                  { evidenceUrl: { contains: baseName } },
+                  { evidenceUrl: `/uploads/${baseName}` },
+                  { evidenceUrl: requestedPath },
+                ],
+              },
+              include: {
+                student: {
+                  select: {
+                    name: true,
+                    nip: true,
+                    studentProfile: {
+                      include: {
+                        kelompok: { select: { name: true, kelurahan: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            });
+
+            if (leave) {
+              const kelName = leave.student?.studentProfile?.kelompok?.name || "Kelompok KKN";
+              const kelLurah = leave.student?.studentProfile?.kelompok?.kelurahan || "Coblong";
+              archiveData = {
+                nama: leave.student?.name || "Mahasiswa KKN",
+                nip: leave.student?.nip || "-",
+                kelompok: kelName,
+                kelurahan: kelLurah,
+                tanggal: leave.startDate
+                  ? new Date(leave.startDate).toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : "-",
+                waktu: leave.type || "IZIN",
+                tempat: `Kelurahan ${kelLurah}`,
+                deskripsi: leave.reason || "Pengajuan izin resmi mahasiswa KKN Tematik",
+                status:
+                  leave.status === "APPROVED"
+                    ? "DISETUJUI DPL"
+                    : String(leave.status || "TERCATAT").replace(/_/g, " "),
+                docId: leave.id,
+              };
+            }
           }
         }
       } catch (dbErr) {

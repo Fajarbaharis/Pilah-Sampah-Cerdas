@@ -2686,13 +2686,13 @@ export const dplService = {
             latitude: lat,
             longitude: lng,
             attendedAt: sch.date || new Date(),
-            actualInZoneMinutes: 240,
+            actualInZoneMinutes: 250,
             deskripsiKegiatan: `Izin/Sakit Disetujui DPL: ${req.reason || "-"}`,
           },
           update: {
             status: attStatus,
             method: "IZIN_DPL",
-            actualInZoneMinutes: 240,
+            actualInZoneMinutes: 250,
             deskripsiKegiatan: `Izin/Sakit Disetujui DPL: ${req.reason || "-"}`,
           },
         });
@@ -4800,6 +4800,7 @@ export const dplService = {
           tanggal: true,
           status: true,
           durasiMenit: true,
+          kategori: true,
         },
       }),
       prisma.logbookDpl.count({ where }),
@@ -4828,11 +4829,12 @@ export const dplService = {
       }),
     ]);
 
-    // Kalkulasi 4 Indikator Statistik
+    // Kalkulasi Indikator Statistik & Breakdown Kategori
     const totalAktivitas = allLogsForStats.length;
     let bulanIniCount = 0;
     let totalDurasiMenit = 0;
     let belumDikirimCount = 0;
+    const kategoriMap: Record<string, number> = {};
 
     for (const log of allLogsForStats) {
       const logDate = new Date(log.tanggal);
@@ -4843,7 +4845,26 @@ export const dplService = {
       if (log.status === "DRAF") {
         belumDikirimCount++;
       }
+      const kat = (log.kategori || "Lainnya").trim();
+      kategoriMap[kat] = (kategoriMap[kat] || 0) + 1;
     }
+
+    const categoryColors: Record<string, string> = {
+      "Kunjungan Lapangan": "#10b981",
+      "Koordinasi": "#3b82f6",
+      "Pembimbingan": "#8b5cf6",
+      "Monitoring Lapangan": "#f59e0b",
+      "Evaluasi Lapangan": "#6366f1",
+      "Pendampingan": "#ec4899",
+      "Lainnya": "#64748b",
+    };
+
+    const kategoriBreakdown = Object.entries(kategoriMap).map(([name, count]) => ({
+      name,
+      count,
+      percentage: totalAktivitas > 0 ? Math.round((count / totalAktivitas) * 100) : 0,
+      color: categoryColors[name] || "#0ea5e9",
+    })).sort((a, b) => b.count - a.count);
 
     const totalDurasiHours = Math.round(totalDurasiMenit / 60);
     const totalDurasiLabel = `${totalDurasiHours} jam`;
@@ -4872,6 +4893,7 @@ export const dplService = {
         totalDurasi: totalDurasiLabel,
         totalDurasiJam: totalDurasiHours,
         belumDikirim: belumDikirimCount,
+        kategoriBreakdown,
       },
       items: items.map((item) => {
         const itemDate = new Date(item.tanggal);

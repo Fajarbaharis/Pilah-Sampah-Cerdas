@@ -41,12 +41,20 @@ export interface DplActivityLogItem {
   updatedAt?: string;
 }
 
+export interface KategoriDistributionItem {
+  name: string;
+  count: number;
+  percentage: number;
+  color?: string;
+}
+
 export interface DplActivityStats {
   totalAktivitas: number;
   bulanIni: number;
   totalDurasi: string;
   totalDurasiJam: number;
   belumDikirim: number;
+  kategoriBreakdown?: KategoriDistributionItem[];
 }
 
 export interface DplActivityLogsResponse {

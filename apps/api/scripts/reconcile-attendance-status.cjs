@@ -3,7 +3,7 @@
  * Proyek: BERSEKA
  * 
  * Menyelaraskan seluruh data historis presensi di database:
- * - Jika status HADIR_MEMENUHI tetapi durasi aktual < target (default 240 menit) -> ubah ke HADIR_TIDAK_MEMENUHI.
+ * - Jika status HADIR_MEMENUHI tetapi durasi aktual < target (default 250 menit) -> ubah ke HADIR_TIDAK_MEMENUHI.
  * - Jika status HADIR_TIDAK_MEMENUHI tetapi durasi aktual >= target -> ubah ke HADIR_MEMENUHI.
  * - Jika sesi terjeda tidak pernah di-resume dan durasi membengkak -> sesuaikan ke durasi sebelum jeda.
  */
@@ -52,7 +52,7 @@ async function reconcileAttendanceStatus() {
   console.log(`Total sesi presensi ditemukan: ${attendances.length}`);
 
   let correctedCount = 0;
-  const targetMinMinutes = 240; // 4 Jam
+  const targetMinMinutes = 250; // 250 Menit (4 Jam 10 Menit)
 
   for (const att of attendances) {
     const st = String(att.status || '').toUpperCase();
@@ -64,7 +64,7 @@ async function reconcileAttendanceStatus() {
     if (jedaLogsArray.length > 0) {
       const lastLog = jedaLogsArray[jedaLogsArray.length - 1];
       const isUnresumedJeda = lastLog && lastLog.waktuJeda && !lastLog.waktuResume;
-      if (isUnresumedJeda) {
+      if (isUnresumedJeda && !lastLog?.staleGpsAnomaly && !lastLog?.autoTriggered) {
         const correctMins = Number(lastLog.durasiSebelumJedaMenit) || 0;
         if (currentMins > correctMins) {
           adjustedMins = correctMins;
