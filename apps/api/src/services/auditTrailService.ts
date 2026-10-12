@@ -218,7 +218,7 @@ export class AuditTrailService {
       attendedAt,
       checkOutAt,
       durasiMenit,
-      durasiTargetMenit = 240,
+      durasiTargetMenit = 250,
       isMemenuhiDurasi,
       status,
       statusDisplay,

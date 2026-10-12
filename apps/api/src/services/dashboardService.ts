@@ -382,12 +382,16 @@ export const dashboardService = {
 
     const kelompokIds = kelompokList.map((k) => k.id);
 
-    const studentWhere: any = {};
+    const studentWhere: any = {
+      whitelistStatus: { not: "DROPOUT" },
+    };
+    if (kelompokIds.length > 0) {
+      studentWhere.kelompokId = { in: kelompokIds };
+    } else if (isFiltered) {
+      studentWhere.kelompokId = "__none__";
+    }
     if (!includeTestAccounts) {
       studentWhere.user = { isTestAccount: false };
-    }
-    if (isFiltered) {
-      studentWhere.kelompokId = kelompokIds.length > 0 ? { in: kelompokIds } : "__none__";
     }
 
     let totalMahasiswaKkn = 0;
@@ -554,6 +558,7 @@ export const dashboardService = {
 
     // 6. Lokasi Terdaftar (RW) — dihitung nyata dari data RW yang sudah aktif memiliki tempat sampah (ACTIVE_BOUND)
     let lokasiTerdaftar: number;
+    let totalRwTarget: number = 74;
     const rwActiveBinsWhere: any = {
       bins: {
         some: {
@@ -564,11 +569,23 @@ export const dashboardService = {
     if (isFiltered && rwIds.length > 0) {
       rwActiveBinsWhere.id = { in: rwIds };
       lokasiTerdaftar = await prisma.rw.count({ where: rwActiveBinsWhere });
+      totalRwTarget = rwIds.length;
     } else if (isFiltered && kelurahanIds.length > 0) {
       rwActiveBinsWhere.kelurahanId = { in: kelurahanIds };
       lokasiTerdaftar = await prisma.rw.count({ where: rwActiveBinsWhere });
+      totalRwTarget = await prisma.rw.count({
+        where: {
+          kelurahanId: { in: kelurahanIds },
+          NOT: [
+            { name: { contains: "99" } },
+            { name: { contains: "dummy" } },
+            { name: { contains: "test" } },
+          ],
+        },
+      });
     } else {
       lokasiTerdaftar = await prisma.rw.count({ where: rwActiveBinsWhere });
+      totalRwTarget = 74;
     }
 
     // 7. Setoran pada periode terpilih (kg).
@@ -1238,6 +1255,7 @@ export const dashboardService = {
       alertTempatSampahPenuh: fullBinsCount,
       tempatSampahAktif,
       lokasiTerdaftar,
+      totalRwTarget,
       setoranHariIniKg,
       totalPoin,
       komposisiSampah: {

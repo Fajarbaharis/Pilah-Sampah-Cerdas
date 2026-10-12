@@ -3832,7 +3832,7 @@ export class KknService {
       ruleConfigs.attendanceMinDurationHours * 60 +
       ruleConfigs.attendanceMinDurationMinutes +
       ruleConfigs.attendanceMinDurationSeconds / 60;
-    const targetDurationMinutes = ruleTargetMinutes > 0 ? ruleTargetMinutes : 240;
+    const targetDurationMinutes = ruleTargetMinutes > 0 ? ruleTargetMinutes : 250;
 
     // Hitung batas hari WIB (UTC+7) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â jadwal disimpan UTC, harus query dengan window WIB
     const nowForBoundary = new Date();

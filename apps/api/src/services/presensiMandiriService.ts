@@ -288,7 +288,7 @@ export class PresensiMandiriService {
         orderBy: { attendedAt: "desc" },
       });
 
-      const finalStatus = durasiMenit >= 240 ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI";
+      const finalStatus = durasiMenit >= 250 ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI";
 
       if (activeAttendance) {
         const syncedFinish = await prisma.activityAttendance.update({
