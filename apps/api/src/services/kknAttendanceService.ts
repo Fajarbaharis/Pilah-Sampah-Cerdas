@@ -870,15 +870,16 @@ export class KknAttendanceService {
       },
     });
 
-    // Cleanup lokasi > 24 jam (non-blocking)
-    prisma.studentLocation
-      .deleteMany({
-        where: {
-          studentId: userId,
-          recordedAt: { lt: new Date(Date.now() - 86400000) },
-        },
-      })
-      .catch(() => {});
+    // Cleanup lokasi > 24 jam (throttled ~1 dari 200 request agar tidak membebani DB)
+    if (Math.random() < 0.005) {
+      prisma.studentLocation
+        .deleteMany({
+          where: {
+            recordedAt: { lt: new Date(Date.now() - 86400000) },
+          },
+        })
+        .catch(() => {});
+    }
 
     // 2. Update durasi wall-clock jika ada sesi BERLANGSUNG
     //    Sesi TERJEDA (manual jeda) → durasi TIDAK bertambah
@@ -900,10 +901,12 @@ export class KknAttendanceService {
       currentScheduleId = activeAtt.scheduleId;
       // Update durasi wall-clock
       const liveMins = calculateLiveInZoneMinutes(activeAtt);
-      await prisma.activityAttendance.update({
-        where: { id: activeAtt.id },
-        data: { actualInZoneMinutes: liveMins },
-      });
+      if (liveMins !== activeAtt.actualInZoneMinutes) {
+        await prisma.activityAttendance.update({
+          where: { id: activeAtt.id },
+          data: { actualInZoneMinutes: liveMins },
+        });
+      }
 
       websocketService.broadcastStudentAttendance({
         id: activeAtt.id,
@@ -1647,7 +1650,7 @@ export class KknAttendanceService {
       ruleConfigs.attendanceMinDurationHours * 60 +
       ruleConfigs.attendanceMinDurationMinutes +
       ruleConfigs.attendanceMinDurationSeconds / 60;
-    const targetDurationMinutes = ruleTargetMinutes > 0 ? ruleTargetMinutes : 240;
+    const targetDurationMinutes = ruleTargetMinutes > 0 ? ruleTargetMinutes : 250;
 
     let isAttended = false;
     let attendanceStatus: string | null = null;
@@ -1989,7 +1992,7 @@ export class KknAttendanceService {
 
         let recordStatus = isAutoAlpa ? "ALPA" : "HADIR_MEMENUHI";
         if (!isAutoAlpa && actLoc) {
-          const targetMins = actLoc.targetDurationMinutes || 240;
+          const targetMins = actLoc.targetDurationMinutes || 250;
           const actualMins = existing.actualInZoneMinutes ?? 0;
           if (targetMins > 0 && actualMins < targetMins) {
             recordStatus = "HADIR_TIDAK_MEMENUHI";
@@ -2417,13 +2420,13 @@ export class KknAttendanceService {
         // Evaluasi toleransi kepulangan (Graceful Checkout di Luar Posko):
         // 1. Waktu saat ini di WIB sudah >= 15:30 WIB (menjelang/pasca 16:00 WIB selesai operasional posko)
         // 2. Jadwal kegiatan hari ini sudah berakhir (endTime sudah lewat) atau sesi hari lampau
-        // 3. Durasi di zona yang sudah tersimpan sudah mencukupi target (>= 240 menit)
+        // 3. Durasi di zona yang sudah tersimpan sudah mencukupi target (>= 250 menit)
         // 4. Mode auto-checkout sistem
         const nowUtc = new Date();
         const nowWib = new Date(nowUtc.getTime() + 7 * 3600000);
         const timeInMinsWib = nowWib.getUTCHours() * 60 + nowWib.getUTCMinutes();
         const isAfterOperationalHours = timeInMinsWib >= 15 * 60 + 30; // >= 15:30 WIB
-        const hasMetDuration = (attendance.actualInZoneMinutes ?? 0) >= 240;
+        const hasMetDuration = (attendance.actualInZoneMinutes ?? 0) >= 250;
 
         let isScheduleEnded = false;
         if (coSchedule) {
@@ -2510,7 +2513,7 @@ export class KknAttendanceService {
     });
 
     // Ambil konfigurasi target durasi kegiatan
-    let durasiWajibMenit = 240;
+    let durasiWajibMenit = 250;
     if (schedule) {
       durasiWajibMenit = await getScheduleTargetDurationMinutes(schedule);
     }
@@ -2562,7 +2565,7 @@ export class KknAttendanceService {
     // Validasi Minimal Jam Pulang (30 Menit dari Jam Pulang Kegiatan)
     // Berlaku untuk checkout manual oleh mahasiswa (isAutoCheckout: false)
     // Fleksibilitas KKN: Jika mahasiswa sudah memenuhi target durasi kerja wajib
-    // (misal >= 240 menit / 4 jam), mahasiswa diperbolehkan checkout tanpa harus
+    // (misal >= 250 menit), mahasiswa diperbolehkan checkout tanpa harus
     // menunggu batas H-30 jam jadwal (misal pukul 15:30 WIB).
     // =========================================================================
     // =========================================================================
@@ -2593,7 +2596,7 @@ export class KknAttendanceService {
     }
 
     const isMemenuhi =
-      durasiWajibMenit > 0 ? actualInZoneMins >= durasiWajibMenit : actualInZoneMins >= 240;
+      durasiWajibMenit > 0 ? actualInZoneMins >= durasiWajibMenit : actualInZoneMins >= 250;
     const checkoutFinalStatus = isMemenuhi ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI";
     const statusDisplay = isMemenuhi ? "Hadir & Memenuhi" : "Hadir & Tidak Memenuhi";
 
@@ -2672,7 +2675,7 @@ export class KknAttendanceService {
         .catch((err) => console.warn("[FCM] Gagal mengirim notif checkout:", err));
     } else {
       // Broadcast Notifikasi Lonceng & Push FCM ke Mahasiswa saat Hadir Tidak Memenuhi Target
-      const targetMenit = durasiWajibMenit > 0 ? durasiWajibMenit : 240;
+      const targetMenit = durasiWajibMenit > 0 ? durasiWajibMenit : 250;
       const shortageMins = Math.max(0, targetMenit - Math.floor(durationMinutes));
       const studentName = updated.student?.name || "Mahasiswa";
 
@@ -3252,7 +3255,7 @@ export class KknAttendanceService {
       attendanceListRuleConfigs.attendanceMinDurationMinutes +
       Math.round(attendanceListRuleConfigs.attendanceMinDurationSeconds / 60);
     const durasiWajib =
-      scheduleLoc?.targetDurationMinutes || (targetConfigMins > 0 ? targetConfigMins : 240);
+      scheduleLoc?.targetDurationMinutes || (targetConfigMins > 0 ? targetConfigMins : 250);
     const targetHours = Math.round((durasiWajib / 60) * 10) / 10;
 
     const attendedStudentIds = new Set<string>();
@@ -3425,7 +3428,7 @@ export class KknAttendanceService {
               data: {
                 status: attStatus,
                 method: "IZIN_DPL",
-                actualInZoneMinutes: 240,
+                actualInZoneMinutes: 250,
                 deskripsiKegiatan: `Izin/Sakit Disetujui DPL: ${leave.reason || "-"}`,
               },
             });
@@ -4135,7 +4138,7 @@ export class KknAttendanceService {
     const durasiWajibMenit =
       ruleConfigs.attendanceMinDurationHours * 60 +
         ruleConfigs.attendanceMinDurationMinutes +
-        Math.round(ruleConfigs.attendanceMinDurationSeconds / 60) || 240;
+        Math.round(ruleConfigs.attendanceMinDurationSeconds / 60) || 250;
 
     let targetDate = new Date();
     if (targetTanggal) {
@@ -4290,7 +4293,7 @@ export class KknAttendanceService {
           const isSelesai = todayMandiri.status === "SELESAI";
           const durasiMenit = todayMandiri.durasiMenit ?? 0;
           const statusBridge = isSelesai
-            ? (durasiMenit >= 240 ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI")
+            ? (durasiMenit >= 250 ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI")
             : "BERLANGSUNG";
 
           const bridgedAtt = await prisma.activityAttendance.upsert({
@@ -4429,7 +4432,7 @@ export class KknAttendanceService {
       // Status Kehadiran mahasiswa
       let statusKehadiran: string | null = null;
       let isMemenuhiDurasi = false;
-      const effectiveTargetMenit = durasiWajibMenit > 0 ? durasiWajibMenit : 240;
+      const effectiveTargetMenit = durasiWajibMenit > 0 ? durasiWajibMenit : 250;
       const isMemenuhi = actualInZoneMinutes >= effectiveTargetMenit;
 
       if (approvedLeave) {
@@ -5106,14 +5109,14 @@ export class KknAttendanceService {
       },
     });
 
-    // Award +4 points to student on Check-In (Mulai Kegiatan) if not already awarded today (terpadu & idempoten)
-    await awardCheckInPointIfNotExists(prisma, {
+    // Award +4 points to student on Check-In (Mulai Kegiatan) if not already awarded today (terpadu & idempoten, non-blocking)
+    awardCheckInPointIfNotExists(prisma, {
       userId: studentUserId,
       scheduleId,
       scheduleTitle: schedule.title,
       method: "GPS_ACTIVITY",
       date: attendance.attendedAt || new Date(),
-    });
+    }).catch((err) => console.warn("[Points] Award checkin point error:", err));
 
     // Record into system history / audit trail
     const isResumeSession = existingSession?.status === "TERJEDA";
@@ -5208,7 +5211,7 @@ export class KknAttendanceService {
     const durasiWajibMenit =
       ruleConfigs.attendanceMinDurationHours * 60 +
         ruleConfigs.attendanceMinDurationMinutes +
-        Math.round(ruleConfigs.attendanceMinDurationSeconds / 60) || 240;
+        Math.round(ruleConfigs.attendanceMinDurationSeconds / 60) || 250;
 
     return {
       sessionId: `SES-${schedule.id.slice(0, 8)}-${studentUserId.slice(-6)}`,
@@ -6967,7 +6970,7 @@ export class KknAttendanceService {
     const finalStatus =
       status ||
       (endDateTime
-        ? calculatedMinutes && calculatedMinutes >= 240
+        ? calculatedMinutes && calculatedMinutes >= 250
           ? "HADIR_MEMENUHI"
           : "HADIR_TIDAK_MEMENUHI"
         : "BERLANGSUNG");
@@ -7245,13 +7248,13 @@ export class KknAttendanceService {
           Math.floor((checkOutTime.getTime() - new Date(existing.attendedAt).getTime()) / 60000)
         );
       } else {
-        finalMinutes = 240;
+        finalMinutes = 250;
       }
     }
 
     const targetMinutes = existing.schedule
       ? await getScheduleTargetDurationMinutes(existing.schedule)
-      : 240;
+      : 250;
     const finalStatus =
       payload?.status ||
       (finalMinutes >= targetMinutes ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI");
@@ -7510,7 +7513,7 @@ export class KknAttendanceService {
               ["BERLANGSUNG", "TERJEDA", "DALAM_RADIUS", "DI_ZONA", "HADIR"].includes(stUpper)
             ) {
               const inZoneMins = existingAtt.actualInZoneMinutes ?? 0;
-              const finalSt = inZoneMins >= 240 ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI";
+              const finalSt = inZoneMins >= 250 ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI";
               await prisma.activityAttendance.update({
                 where: { id: existingAtt.id },
                 data: {
@@ -7620,13 +7623,13 @@ export class KknAttendanceService {
                 latitude: sched.latitude ? Number(sched.latitude) : null,
                 longitude: sched.longitude ? Number(sched.longitude) : null,
                 status: leaveStatus,
-                actualInZoneMinutes: 240,
+                actualInZoneMinutes: 250,
                 deskripsiKegiatan: `Izin/Sakit Disetujui DPL: ${approvedLeave.reason || "-"}`,
               },
               update: {
                 status: leaveStatus,
                 method: "LEAVE_AUTO",
-                actualInZoneMinutes: 240,
+                actualInZoneMinutes: 250,
                 deskripsiKegiatan: `Izin/Sakit Disetujui DPL: ${approvedLeave.reason || "-"}`,
               },
             });

@@ -323,13 +323,26 @@ export const kknExecutiveService = {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
-    let sebaranProdi: Array<{ name: string; count: number }> = [];
+    let sebaranProdi: Array<{
+      name: string;
+      count: number;
+      breakdown?: Array<{ name: string; count: number }>;
+    }> = [];
     if (sortedProdi.length > 0) {
       const top5 = sortedProdi.slice(0, 5);
-      const remainingCount = sortedProdi.slice(5).reduce((acc, curr) => acc + curr.count, 0);
+      const remainingList = sortedProdi.slice(5);
+      const remainingCount = remainingList.reduce((acc, curr) => acc + curr.count, 0);
       sebaranProdi = [
         ...top5,
-        { name: "Program Studi Lainnya", count: remainingCount },
+        ...(remainingCount > 0
+          ? [
+              {
+                name: "Program Studi Lainnya",
+                count: remainingCount,
+                breakdown: remainingList,
+              },
+            ]
+          : []),
       ];
     }
 
@@ -1202,6 +1215,7 @@ export const kknExecutiveService = {
         },
       },
       sebaranProdi,
+      sebaranProdiFull: sortedProdi,
       distribusiSks,
       sebaranMahasiswaPerWilayah,
       sebaranDplPerWilayah,
@@ -1213,10 +1227,24 @@ export const kknExecutiveService = {
       perhatianPimpinan,
       criticalAlpaStudents,
       resumeDpl,
+      programIdentity: {
+        tahun: "2026",
+        kodePts: "041027",
+        namaPts: "Universitas Komputer Indonesia",
+        batch: "1",
+        identitasFormat: "2026-041027-Universitas Komputer Indonesia - 1",
+      },
       filterOptions: {
         periodeOptions: [
-          { value: "2026", label: "Periode KKN 2026" },
-          { value: "ALL", label: "Semua Periode" },
+          {
+            value: "2026-041027-Universitas Komputer Indonesia - 1",
+            label: "2026-041027-Universitas Komputer Indonesia - 1",
+            tahun: "2026",
+            kodePts: "041027",
+            namaPts: "Universitas Komputer Indonesia",
+            batch: "1",
+          },
+          { value: "ALL", label: "Semua Batch / Periode" },
         ],
         kelurahanOptions: [
           { value: "Semua Kelurahan", label: "Semua Kelurahan" },
@@ -1230,7 +1258,7 @@ export const kknExecutiveService = {
         selectedKelurahan: filters.kelurahan || "Semua Kelurahan",
         selectedRw: filters.rw || "Semua RW",
         selectedKelompok: filters.kelompok || "Semua Kelompok",
-        selectedPeriode: filters.periode || "2026",
+        selectedPeriode: filters.periode || "2026-041027-Universitas Komputer Indonesia - 1",
       },
     };
 
@@ -1282,9 +1310,12 @@ export const kknExecutiveService = {
     XLSX.utils.book_append_sheet(wb, wsSummary, "Ringkasan Eksekutif");
 
     // Sheet 2: Sebaran Prodi
+    const prodiDataSource = (data as any).sebaranProdiFull && (data as any).sebaranProdiFull.length > 0
+      ? (data as any).sebaranProdiFull
+      : data.sebaranProdi;
     const prodiRows = [
       ["PROGRAM STUDI", "JUMLAH MAHASISWA"],
-      ...data.sebaranProdi.map((p) => [p.name, p.count]),
+      ...prodiDataSource.map((p: any) => [p.name, p.count]),
     ];
     const wsProdi = XLSX.utils.aoa_to_sheet(prodiRows);
     XLSX.utils.book_append_sheet(wb, wsProdi, "Sebaran Prodi");

@@ -203,6 +203,7 @@ export const DplDashboardPage: React.FC = () => {
 
   // Filter & Pagination States
   const [selectedApprovalStatus, setSelectedApprovalStatus] = useState<string>("ALL");
+  const [selectedLeaveType, setSelectedLeaveType] = useState<string>("ALL");
   const [approvalStartDate, setApprovalStartDate] = useState<string>("");
   const [approvalEndDate, setApprovalEndDate] = useState<string>("");
 
@@ -535,10 +536,28 @@ export const DplDashboardPage: React.FC = () => {
   }, [filteredModalGroupStudents, groupStudentPage]);
 
 
+  // Leave Statistics Summary (Sakit vs Izin counter)
+  const leaveStats = useMemo(() => {
+    let totalSakit = 0;
+    let totalIzin = 0;
+    approvalHistory.forEach((log) => {
+      const t = String(log.type || "").toUpperCase();
+      if (t === "SAKIT") totalSakit++;
+      else if (t === "IZIN") totalIzin++;
+    });
+    return {
+      total: approvalHistory.length,
+      sakit: totalSakit,
+      izin: totalIzin,
+    };
+  }, [approvalHistory]);
+
   // Filtered & Paginated Approvals History
   const filteredApprovalHistory = useMemo(() => {
     return approvalHistory.filter((log) => {
       const matchStatus = selectedApprovalStatus === "ALL" ? true : log.status === selectedApprovalStatus;
+      const typeUpper = String(log.type || "").toUpperCase();
+      const matchType = selectedLeaveType === "ALL" ? true : typeUpper === selectedLeaveType;
       let matchDate = true;
       if (approvalStartDate && (log.startDate || log.reviewedAt)) {
         const itemDate = (log.startDate || log.reviewedAt) as string;
@@ -550,9 +569,9 @@ export const DplDashboardPage: React.FC = () => {
         const endTs = new Date(`${approvalEndDate}T23:59:59`).getTime();
         if (new Date(itemDate).getTime() > endTs) matchDate = false;
       }
-      return matchStatus && matchDate;
+      return matchStatus && matchType && matchDate;
     });
-  }, [approvalHistory, selectedApprovalStatus, approvalStartDate, approvalEndDate]);
+  }, [approvalHistory, selectedApprovalStatus, selectedLeaveType, approvalStartDate, approvalEndDate]);
 
   const paginatedApprovalHistory = useMemo(() => {
     const start = (approvalPage - 1) * ITEMS_PER_PAGE;
@@ -1505,13 +1524,64 @@ export const DplDashboardPage: React.FC = () => {
 
         {/* Riwayat Validasi Log */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Riwayat Validasi Izin / Sakit</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Rekapitulasi riwayat izin / sakit mahasiswa bimbingan.</p>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Riwayat Validasi Izin / Sakit</h3>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedLeaveType("ALL"); setApprovalPage(1); }}
+                    className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border transition cursor-pointer ${
+                      selectedLeaveType === "ALL"
+                        ? "bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-700"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    Semua ({leaveStats.total})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedLeaveType("SAKIT"); setApprovalPage(1); }}
+                    className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border transition cursor-pointer flex items-center gap-1 ${
+                      selectedLeaveType === "SAKIT"
+                        ? "bg-rose-600 text-white border-rose-600 shadow-2xs"
+                        : "bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 hover:bg-rose-100"
+                    }`}
+                  >
+                    🩺 Sakit ({leaveStats.sakit})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedLeaveType("IZIN"); setApprovalPage(1); }}
+                    className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border transition cursor-pointer flex items-center gap-1 ${
+                      selectedLeaveType === "IZIN"
+                        ? "bg-purple-600 text-white border-purple-600 shadow-2xs"
+                        : "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 hover:bg-purple-100"
+                    }`}
+                  >
+                    📝 Izin ({leaveStats.izin})
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Rekapitulasi riwayat izin / sakit mahasiswa bimbingan.</p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+              {/* Filter Jenis: Sakit / Izin */}
+              <select
+                value={selectedLeaveType}
+                onChange={(e) => {
+                  setSelectedLeaveType(e.target.value);
+                  setApprovalPage(1);
+                }}
+                className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
+              >
+                <option value="ALL">Semua Keterangan ({leaveStats.total})</option>
+                <option value="SAKIT">🩺 Sakit ({leaveStats.sakit})</option>
+                <option value="IZIN">📝 Izin ({leaveStats.izin})</option>
+              </select>
+
               <select
                 value={selectedApprovalStatus}
                 onChange={(e) => {
@@ -1547,11 +1617,12 @@ export const DplDashboardPage: React.FC = () => {
                 />
               </div>
 
-              {(selectedApprovalStatus !== "ALL" || approvalStartDate || approvalEndDate) && (
+              {(selectedApprovalStatus !== "ALL" || selectedLeaveType !== "ALL" || approvalStartDate || approvalEndDate) && (
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedApprovalStatus("ALL");
+                    setSelectedLeaveType("ALL");
                     setApprovalStartDate("");
                     setApprovalEndDate("");
                     setApprovalPage(1);

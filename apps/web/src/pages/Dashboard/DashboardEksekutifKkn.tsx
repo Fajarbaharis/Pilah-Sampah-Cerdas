@@ -43,6 +43,8 @@ import {
   Eye,
   BookOpen,
   Image as ImageIcon,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -69,6 +71,28 @@ import { fetchMasterWilayah, type MasterKelurahanItem } from "../../utils/areaFi
 import { isTestKelompok, isTestStudent, isTestUser } from "../../utils/filterTestingUtils";
 import { calculateProkerMetrics } from "../../utils/prokerMetrics";
 
+// Color palette mapping untuk Sebaran Program Studi Mahasiswa (Serupa Donut Beban SKS)
+const PRODI_COLOR_MAP: Record<string, string> = {
+  "Manajemen": "#009966",
+  "Teknik Komputer & IF": "#0ea5e9",
+  "Sistem Informasi": "#6366f1",
+  "Ilmu Komunikasi": "#f59e0b",
+  "Teknik Sipil": "#ec4899",
+  "Program Studi Lainnya": "#3b82f6",
+};
+
+const PRODI_FALLBACK_PALETTE = [
+  "#009966",
+  "#0ea5e9",
+  "#6366f1",
+  "#f59e0b",
+  "#ec4899",
+  "#3b82f6",
+  "#8b5cf6",
+  "#14b8a6",
+  "#f43f5e",
+  "#64748b",
+];
 
 interface KknExecutiveData {
   lastUpdated: string;
@@ -86,7 +110,12 @@ interface KknExecutiveData {
       sublabel: string;
     };
   };
-  sebaranProdi: Array<{ name: string; count: number }>;
+  sebaranProdi: Array<{
+    name: string;
+    count: number;
+    breakdown?: Array<{ name: string; count: number }>;
+  }>;
+  sebaranProdiFull?: Array<{ name: string; count: number }>;
   distribusiSks: {
     totalMahasiswa: number;
     totalMahasiswaSemua?: number;
@@ -272,8 +301,8 @@ const getAttendanceBadgeClass = (rate: number) => {
 export const DashboardEksekutifKkn: React.FC = () => {
   const navigate = useNavigate();
 
-  // Filter states
-  const [selectedPeriode, setSelectedPeriode] = useState("2026");
+  // Filter states: Format Identitas Tahun - Kode PTS - Nama PTS - Batch
+  const [selectedPeriode, setSelectedPeriode] = useState("2026-041027-Universitas Komputer Indonesia - 1");
   const [selectedKelurahan, setSelectedKelurahan] = useState("Semua Kelurahan");
   const [selectedRw, setSelectedRw] = useState("Semua RW");
   const [selectedKelompok, setSelectedKelompok] = useState("Semua Kelompok");
@@ -298,6 +327,10 @@ export const DashboardEksekutifKkn: React.FC = () => {
   const [groupStudentSearchQuery, setGroupStudentSearchQuery] = useState("");
   const [groupStudentPage, setGroupStudentPage] = useState(1);
   const MODAL_STUDENTS_PER_PAGE = 8;
+
+  // Modal Rincian Seluruh Program Studi Mahasiswa KKN
+  const [showProdiModal, setShowProdiModal] = useState(false);
+  const [prodiSearchQuery, setProdiSearchQuery] = useState("");
 
   // Modal Detail Mahasiswa Alpa Kritis (Peringatan Dini)
   const [showCriticalAlpaModal, setShowCriticalAlpaModal] = useState(false);
@@ -608,6 +641,69 @@ export const DashboardEksekutifKkn: React.FC = () => {
     const start = (dplModalPage - 1) * dplModalPerPage;
     return filteredDplList.slice(start, start + dplModalPerPage);
   }, [filteredDplList, dplModalPage, dplModalPerPage]);
+
+  // Data Donut Chart Sebaran Program Studi Mahasiswa (Serupa Distribusi Beban SKS)
+  const sebaranProdiPieData = useMemo(() => {
+    const raw = data?.sebaranProdi || [];
+    const total = raw.reduce((acc, curr) => acc + (curr.count || 0), 0);
+    return raw.map((item, idx) => ({
+      name: item.name,
+      count: item.count,
+      breakdown: item.breakdown,
+      percentage: total > 0 ? Math.round((item.count / total) * 100) : 0,
+      color: PRODI_COLOR_MAP[item.name] || PRODI_FALLBACK_PALETTE[idx % PRODI_FALLBACK_PALETTE.length],
+    }));
+  }, [data?.sebaranProdi]);
+
+  const totalMahasiswaProdi = useMemo(() => {
+    return sebaranProdiPieData.reduce((acc, curr) => acc + curr.count, 0) || (data?.ringkasan?.totalMahasiswa ?? 524);
+  }, [sebaranProdiPieData, data?.ringkasan?.totalMahasiswa]);
+
+  // Daftar lengkap semua Program Studi (untuk Modal & Analisis Mendalam)
+  const allProdiList = useMemo(() => {
+    const total = totalMahasiswaProdi || 1;
+    if (data?.sebaranProdiFull && data.sebaranProdiFull.length > 0) {
+      return data.sebaranProdiFull.map((p, idx) => ({
+        ...p,
+        rank: idx + 1,
+        percentage: ((p.count / total) * 100).toFixed(1),
+        isTop5: idx < 5,
+        color: PRODI_COLOR_MAP[p.name] || PRODI_FALLBACK_PALETTE[idx % PRODI_FALLBACK_PALETTE.length],
+      }));
+    }
+    // Fallback dari breakdown data jika sebaranProdiFull belum di-cache
+    const list: Array<{ name: string; count: number; rank: number; percentage: string; isTop5: boolean; color: string }> = [];
+    (data?.sebaranProdi || []).forEach((p) => {
+      if (p.name === "Program Studi Lainnya" && p.breakdown) {
+        p.breakdown.forEach((bp) => {
+          list.push({
+            name: bp.name,
+            count: bp.count,
+            rank: 0,
+            percentage: ((bp.count / total) * 100).toFixed(1),
+            isTop5: false,
+            color: "#64748b",
+          });
+        });
+      } else {
+        list.push({
+          name: p.name,
+          count: p.count,
+          rank: 0,
+          percentage: ((p.count / total) * 100).toFixed(1),
+          isTop5: true,
+          color: PRODI_COLOR_MAP[p.name] || "#3b82f6",
+        });
+      }
+    });
+    return list.sort((a, b) => b.count - a.count).map((p, idx) => ({ ...p, rank: idx + 1 }));
+  }, [data?.sebaranProdiFull, data?.sebaranProdi, totalMahasiswaProdi]);
+
+  const filteredModalProdiList = useMemo(() => {
+    if (!prodiSearchQuery.trim()) return allProdiList;
+    const q = prodiSearchQuery.toLowerCase();
+    return allProdiList.filter((p) => p.name.toLowerCase().includes(q));
+  }, [allProdiList, prodiSearchQuery]);
 
   const fetchData = async (isSilent = false) => {
     try {
@@ -992,10 +1088,20 @@ export const DashboardEksekutifKkn: React.FC = () => {
           <div className="w-12 h-12 rounded-2xl bg-[#e5f7ed] dark:bg-emerald-950/60 text-[#009966] dark:text-emerald-400 flex items-center justify-center shrink-0 border border-[#009966]/15 dark:border-emerald-700/30 shadow-2xs">
             <GraduationCap size={24} />
           </div>
-          <div className="space-y-0.5">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
-              Kuliah Kerja Nyata
-            </h1>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
+                Kuliah Kerja Nyata
+              </h1>
+              {/* Batch Identity Badge sesuai standar: Tahun-Kode PTS-Nama PTS - Batch */}
+              <div
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 rounded-full text-xs font-mono font-bold tracking-tight shadow-2xs"
+                title="Format Identitas Program: [Tahun]-[Kode PTS]-[Nama PTS] - [Batch]"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span>2026-041027-Universitas Komputer Indonesia - 1</span>
+              </div>
+            </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               Dasbor eksekutif pemantauan strategis pelaksanaan Kuliah Kerja Nyata secara terpadu, berkala, dan waktu nyata.
             </p>
@@ -1036,17 +1142,19 @@ export const DashboardEksekutifKkn: React.FC = () => {
       {/* 1B. BILAH FILTER SIMETRIS 4 KOLOM (RESPONSIF & SEJAJAR)                    */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-        {/* Filter 1: Periode */}
+        {/* Filter 1: Identitas Program / Batch KKN */}
         <div className="flex items-center gap-2 bg-slate-50/80 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-700/80 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 w-full hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
           <Calendar size={14} className="text-blue-500 shrink-0" />
           <select
             value={selectedPeriode}
             onChange={(e) => setSelectedPeriode(e.target.value)}
-            aria-label="Filter Periode KKN"
-            className="bg-transparent outline-none cursor-pointer pr-1 text-xs font-bold text-slate-700 dark:text-slate-200 w-full"
+            aria-label="Filter Identitas Program KKN"
+            className="bg-transparent outline-none cursor-pointer pr-1 text-xs font-bold text-slate-700 dark:text-slate-200 w-full truncate"
           >
-            <option value="2026">Periode KKN 2026</option>
-            <option value="ALL">Semua Periode</option>
+            <option value="2026-041027-Universitas Komputer Indonesia - 1">
+              2026-041027-Universitas Komputer Indonesia - 1
+            </option>
+            <option value="ALL">Semua Batch / Periode</option>
           </select>
         </div>
 
@@ -1359,70 +1467,137 @@ export const DashboardEksekutifKkn: React.FC = () => {
       {/* 3. ROW 2A - PROFIL AKADEMIK KKN (SIMETRIS 2 KOLOM 50% - 50%)              */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-        {/* Col 1: Sebaran Program Studi Mahasiswa */}
+        {/* Col 1: Sebaran Program Studi Mahasiswa (Donut Chart Serupa Distribusi Beban SKS) */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs flex flex-col justify-between h-full">
-          <div className="flex items-center gap-2 mb-3">
-            <GraduationCap size={16} className="text-[#009966] dark:text-emerald-400" />
-            <h2 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
-              Sebaran Program Studi Mahasiswa
-            </h2>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <GraduationCap size={16} className="text-[#009966] dark:text-emerald-400" />
+              <h2 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+                Sebaran Program Studi Mahasiswa
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowProdiModal(true)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition-colors border border-emerald-200/50 dark:border-emerald-800/40 cursor-pointer"
+              title="Klik untuk melihat daftar lengkap semua program studi"
+            >
+              <span>Semua Prodi ({allProdiList.length || 27})</span>
+              <ExternalLink size={12} />
+            </button>
           </div>
 
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                layout="vertical"
-                data={data?.sebaranProdi || []}
-                margin={{ top: 5, right: 35, left: 15, bottom: 25 }}
-              >
-                <XAxis
-                  type="number"
-                  domain={[0, (dataMax: number) => Math.max(150, Math.ceil(dataMax * 1.15))]}
-                  tick={{ fontSize: 10, fill: "#94a3b8" }}
-                  tickLine={false}
-                  axisLine={{ stroke: "#e2e8f0" }}
-                  label={{ value: "Jumlah Mahasiswa (Orang)", position: "insideBottom", offset: -10, fontSize: 10, fill: "#94a3b8" }}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  tick={{ fontSize: 10.5, fill: "#475569" }}
-                  width={140}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <RechartsTooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const d = payload[0].payload;
-                      return (
-                        <div className="bg-slate-900 text-white text-[11px] font-bold py-1 px-2.5 rounded-lg shadow">
-                          <span>{d.name}: </span>
-                          <span className="text-emerald-400 font-extrabold">{d.count} Mahasiswa</span>
-                        </div>
-                      );
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-center my-auto py-1">
+            {/* Donut Chart */}
+            <div className="sm:col-span-5 relative h-48 w-full flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={sebaranProdiPieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={48}
+                    outerRadius={70}
+                    paddingAngle={2}
+                    dataKey="count"
+                  >
+                    {sebaranProdiPieData.map((entry, idx) => (
+                      <Cell key={`prodi-cell-${idx}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const d = payload[0].payload;
+                        return (
+                          <div className="bg-slate-900 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg shadow-lg border border-slate-700 max-w-xs">
+                            <div className="flex items-center justify-between gap-2">
+                              <span>{d.name}:</span>
+                              <span className="text-emerald-400 font-extrabold">
+                                {d.count} Mahasiswa ({d.percentage}%)
+                              </span>
+                            </div>
+                            {d.breakdown && (
+                              <div className="mt-1 pt-1 border-t border-slate-700 text-[10px] text-slate-300 font-normal">
+                                Mencakup {d.breakdown.length} Program Studi lain di UNIKOM (klik baris untuk rincian).
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+
+              {/* Inner Center Text */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none">
+                  {totalMahasiswaProdi}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium mt-0.5">
+                  Mahasiswa
+                </span>
+              </div>
+            </div>
+
+            {/* Legend List: 7 Kolom Rapi (Full Width Baris, Anti-Terpotong) */}
+            <div className="sm:col-span-7 flex flex-col justify-center space-y-1.5 w-full">
+              {sebaranProdiPieData.map((item, idx) => {
+                const isLainnya = item.name === "Program Studi Lainnya";
+                const breakdownPreview = item.breakdown
+                  ? item.breakdown.slice(0, 5).map((b) => `${b.name} (${b.count})`).join(", ") + (item.breakdown.length > 5 ? `, +${item.breakdown.length - 5} lainnya` : "")
+                  : "";
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={isLainnya ? () => setShowProdiModal(true) : undefined}
+                    className={`flex items-center justify-between text-xs py-1 px-2 rounded-lg transition-all ${
+                      isLainnya
+                        ? "bg-slate-50/90 hover:bg-emerald-50/90 dark:bg-slate-800/40 dark:hover:bg-slate-800 cursor-pointer border border-dashed border-slate-200 dark:border-slate-700 group"
+                        : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                    }`}
+                    title={
+                      isLainnya
+                        ? `Program Studi Lainnya (${item.count} Mahasiswa):\n${breakdownPreview}\nKlik untuk lihat tabel lengkap.`
+                        : `${item.name}: ${item.count} Mahasiswa (${item.percentage}%)`
                     }
-                    return null;
-                  }}
-                />
-                <Bar
-                  dataKey="count"
-                  fill="#009966"
-                  radius={[0, 4, 4, 0]}
-                  barSize={14}
-                  label={{
-                    position: "right",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    fill: "#334155",
-                  }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-slate-700 dark:text-slate-200 font-semibold text-[11px] truncate">
+                        {item.name}
+                      </span>
+                      {isLainnya && (
+                        <span className="shrink-0 text-[9px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/90 dark:bg-emerald-950/70 px-1.5 py-0.5 rounded group-hover:bg-emerald-200 transition-colors">
+                          {item.breakdown?.length || 22} prodi ↗
+                        </span>
+                      )}
+                    </div>
+                    <div className="shrink-0 flex items-center gap-1.5 text-[11px]">
+                      <span className="font-extrabold text-slate-800 dark:text-slate-100">
+                        {item.percentage}%
+                      </span>
+                      <span className="text-slate-400 dark:text-slate-500 font-medium">
+                        ({item.count})
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <p className="text-center text-[10.5px] text-slate-400 font-medium mt-1">
-            Jumlah Mahasiswa (Sumbu X: Orang, Sumbu Y: Program Studi)
-          </p>
+
+          <div className="mt-1 text-center">
+            <p className="text-[10.5px] text-slate-400 font-medium">
+              Persentase dan Jumlah Mahasiswa per Program Studi
+            </p>
+          </div>
         </div>
 
         {/* Col 2: Distribusi Beban SKS */}
@@ -1434,17 +1609,17 @@ export const DashboardEksekutifKkn: React.FC = () => {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center my-auto py-1">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-center my-auto py-1">
             {/* Donut Chart */}
-            <div className="sm:col-span-6 relative h-48 w-full flex items-center justify-center">
+            <div className="sm:col-span-5 relative h-48 w-full flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>
                   <Pie
                     data={(data?.distribusiSks?.breakdown || []).filter((item) => item.sks > 0)}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={74}
+                    innerRadius={48}
+                    outerRadius={70}
                     paddingAngle={2}
                     dataKey="count"
                   >
@@ -1487,18 +1662,24 @@ export const DashboardEksekutifKkn: React.FC = () => {
             </div>
 
             {/* Legend Grid 2 Kolom Rapi */}
-            <div className="sm:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-x-2.5 gap-y-2 text-[11px] font-bold">
+            <div className="sm:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5 text-[11px] font-bold">
               {(data?.distribusiSks?.breakdown || [])
                 .filter((item) => item.sks > 0)
                 .map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5 min-w-0">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-slate-700 dark:text-slate-300 truncate text-[10.5px]">
-                      {item.label} {item.percentage}% ({item.count})
-                    </span>
+                  <div key={idx} className="flex items-center justify-between gap-1.5 min-w-0 py-0.5 px-1 rounded hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-slate-700 dark:text-slate-300 truncate text-[10.5px]">
+                        {item.label}
+                      </span>
+                    </div>
+                    <div className="shrink-0 text-[10.5px] font-bold text-slate-600 dark:text-slate-300">
+                      <span className="text-slate-900 dark:text-slate-100 font-extrabold">{item.percentage}%</span>
+                      <span className="text-slate-400 ml-0.5 font-normal">({item.count})</span>
+                    </div>
                   </div>
                 ))}
             </div>
@@ -3510,6 +3691,163 @@ export const DashboardEksekutifKkn: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedGroupForDetail(null)}
+                className="px-4 py-2 bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-xl transition cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Detail Seluruh Program Studi Mahasiswa KKN */}
+      {showProdiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+            {/* Header Modal */}
+            <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#009966] dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0">
+                  <GraduationCap size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    Rincian Sebaran Program Studi Mahasiswa
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      {allProdiList.length} Program Studi
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Total {totalMahasiswaProdi} Mahasiswa KKN Aktif · Universitas Komputer Indonesia (UNIKOM)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProdiModal(false);
+                  setProdiSearchQuery("");
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Sub-Header Toolbar Filter */}
+            <div className="px-6 py-3 bg-slate-50 dark:bg-slate-850/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <div className="relative w-full sm:w-72">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Cari program studi..."
+                  value={prodiSearchQuery}
+                  onChange={(e) => setProdiSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 w-full sm:w-auto justify-end">
+                <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
+                  Top 5: {sebaranProdiPieData.filter((p) => p.name !== "Program Studi Lainnya").reduce((acc, curr) => acc + curr.count, 0)} Mhs ({100 - (sebaranProdiPieData.find((p) => p.name === "Program Studi Lainnya")?.percentage || 0)}%)
+                </span>
+                <span className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300 bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded">
+                  Lainnya: {sebaranProdiPieData.find((p) => p.name === "Program Studi Lainnya")?.count || 0} Mhs ({sebaranProdiPieData.find((p) => p.name === "Program Studi Lainnya")?.percentage || 0}%)
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Body: Scrollable Table */}
+            <div className="p-6 overflow-y-auto flex-1 max-h-[55vh]">
+              {filteredModalProdiList.length === 0 ? (
+                <div className="text-center py-10 text-slate-400">
+                  <p className="text-sm">Tidak ada program studi yang cocok dengan pencarian.</p>
+                </div>
+              ) : (
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-slate-100/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
+                        <th className="py-2.5 px-3 text-center w-12 font-bold">#</th>
+                        <th className="py-2.5 px-3 text-left font-bold">Program Studi</th>
+                        <th className="py-2.5 px-3 text-center w-28 font-bold">Kategori</th>
+                        <th className="py-2.5 px-3 text-right w-24 font-bold">Mahasiswa</th>
+                        <th className="py-2.5 px-3 text-right w-20 font-bold">Porsi</th>
+                        <th className="py-2.5 px-3 text-left w-32 font-bold">Distribusi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {filteredModalProdiList.map((p) => {
+                        const pctNum = parseFloat(p.percentage);
+                        return (
+                          <tr
+                            key={p.name}
+                            className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${
+                              p.isTop5 ? "bg-emerald-50/20 dark:bg-emerald-950/10 font-medium" : ""
+                            }`}
+                          >
+                            <td className="py-2.5 px-3 text-center font-bold text-slate-400">
+                              {p.rank}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                                  style={{ backgroundColor: p.color }}
+                                />
+                                <span className="font-semibold text-slate-800 dark:text-slate-100">
+                                  {p.name}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              {p.isTop5 ? (
+                                <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300/40">
+                                  Top 5 Utama
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2 py-0.5 text-[10px] font-medium rounded-md bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                  Prodi Lainnya
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-extrabold text-slate-900 dark:text-white">
+                              {p.count} <span className="text-[10px] font-normal text-slate-400">mhs</span>
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                              {p.percentage}%
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{
+                                    width: `${Math.min(100, Math.max(4, pctNum * 3))}%`,
+                                    backgroundColor: p.color,
+                                  }}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Menampilkan {filteredModalProdiList.length} dari {allProdiList.length} Program Studi
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProdiModal(false);
+                  setProdiSearchQuery("");
+                }}
                 className="px-4 py-2 bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-xl transition cursor-pointer"
               >
                 Tutup

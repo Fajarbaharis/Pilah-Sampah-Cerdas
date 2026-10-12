@@ -313,7 +313,7 @@ export const LaporanPresensiPage: React.FC = () => {
     tanggal: "",
     jamMasuk: "",
     jamPulang: "",
-    durasiMenit: 240,
+    durasiMenit: 250,
     status: "HADIR_MEMENUHI",
     deskripsiKegiatan: "",
   });
@@ -325,8 +325,8 @@ export const LaporanPresensiPage: React.FC = () => {
 
   const handleOpenEdit = (item: LaporanItem) => {
     setEditItem(item);
-    const itemMins = item.durasiMenit !== undefined ? item.durasiMenit : 240;
-    const defaultStat = item.status || (itemMins >= 240 ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI");
+    const itemMins = item.durasiMenit !== undefined ? item.durasiMenit : 250;
+    const defaultStat = item.status || (itemMins >= 250 ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI");
     setEditForm({
       tanggal: item.tanggal !== "-" ? item.tanggal : new Date().toISOString().slice(0, 10),
       jamMasuk: item.jamMasuk !== "-" ? item.jamMasuk : "08:00",
@@ -343,7 +343,7 @@ export const LaporanPresensiPage: React.FC = () => {
       setIsSavingEdit(true);
       const startDateTime = `${editForm.tanggal}T${editForm.jamMasuk}:00+07:00`;
       const endDateTime = editForm.jamPulang && editForm.jamPulang !== "-" ? `${editForm.tanggal}T${editForm.jamPulang}:00+07:00` : undefined;
-      const targetMins = editItem.targetMinMenit || 240;
+      const targetMins = editItem.targetMinMenit || 250;
       const finalStatus =
         editForm.status === "HADIR_MEMENUHI" && Number(editForm.durasiMenit) < targetMins
           ? "HADIR_TIDAK_MEMENUHI"
@@ -378,7 +378,7 @@ export const LaporanPresensiPage: React.FC = () => {
       setIsForcingCheckout(true);
       await api.post(`/kkn-attendance/${forceCheckoutTarget.id}/force-checkout`, {
         status: "HADIR_MEMENUHI",
-        actualInZoneMinutes: Math.max(240, forceCheckoutTarget.durasiMenit || 240),
+        actualInZoneMinutes: Math.max(250, forceCheckoutTarget.durasiMenit || 250),
         alasan: "Force check-out sesi lapangan oleh Admin/DPL",
       });
       toast.success(`Sesi presensi ${forceCheckoutTarget.namaMahasiswa} berhasil diselesaikan!`);
@@ -919,8 +919,8 @@ export const LaporanPresensiPage: React.FC = () => {
         "Rasio Capaian (%)",
         "Rerata Menit / Hari",
         "Rerata Jam / Hari",
-        "Sesi Memenuhi Target (>= 4 Jam)",
-        "Sesi Kurang Jam (< 4 Jam)",
+        "Sesi Memenuhi Target (>= 250 Menit)",
+        "Sesi Kurang Jam (< 250 Menit)",
         "Izin / Sakit",
         "Status Akumulasi",
       ];
@@ -1008,7 +1008,7 @@ export const LaporanPresensiPage: React.FC = () => {
         "Durasi Formatted",
         "Target Minimal Harian (Menit)",
         "Rasio Kehadiran (%)",
-        "Status Keterpenuhan (Target 4 Jam)",
+        "Status Keterpenuhan (Target 250 Menit)",
         "Status Kehadiran",
         "Deskripsi Kegiatan",
         "Foto Dokumentasi URL",
@@ -1016,10 +1016,10 @@ export const LaporanPresensiPage: React.FC = () => {
 
       const rows = items.map((it, idx) => {
         const actualMins = it.durasiAktualMenit ?? it.durasiMenit ?? 0;
-        const targetMin = it.targetMinMenit ?? 240;
+        const targetMin = it.targetMinMenit ?? 250;
         const jedaMins = it.durasiJedaMenit ?? 0;
         const rasio = Math.min(100, Math.max(0, it.rasioKehadiran ?? Number(((actualMins / targetMin) * 100).toFixed(1))));
-        const keterpenuhan = it.isMemenuhiDurasi ? "MEMENUHI (>= 4 Jam)" : "KURANG DARI TARGET (< 4 Jam)";
+        const keterpenuhan = it.isMemenuhiDurasi ? "MEMENUHI (>= 250 Menit)" : "KURANG DARI TARGET (< 250 Menit)";
         const rwVal = it.assignedRw
           ? formatRwLabel(it.assignedRw)
           : it.kelompok?.cakupanRw
@@ -1856,7 +1856,7 @@ export const LaporanPresensiPage: React.FC = () => {
                     const isBerlangsung = item.status === "BERLANGSUNG";
                     const isIzinSakit = item.status.includes("IZIN") || item.status.includes("SAKIT");
                     const actualMins = item.durasiAktualMenit ?? item.durasiMenit ?? 0;
-                    const targetMin = item.targetMinMenit ?? 240;
+                    const targetMin = item.targetMinMenit ?? 250;
                     const rasio = Math.min(100, Math.max(0, item.rasioKehadiran ?? Number(((actualMins / targetMin) * 100).toFixed(1))));
                     const jedaMins = item.durasiJedaMenit ?? 0;
 
@@ -2000,7 +2000,7 @@ export const LaporanPresensiPage: React.FC = () => {
                           {isMemenuhi ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700 shadow-2xs">
                               <CheckCircle2 size={12} className="text-emerald-600" />
-                              <span>Memenuhi (&ge; 4 Jam)</span>
+                              <span>Memenuhi (&ge; 250 Menit)</span>
                             </span>
                           ) : isBerlangsung ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700 animate-pulse">
@@ -2020,7 +2020,7 @@ export const LaporanPresensiPage: React.FC = () => {
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700">
                               <AlertTriangle size={12} className="text-amber-600" />
-                              <span>Kurang Jam (&lt; 4 Jam)</span>
+                              <span>Kurang Jam (&lt; 250 Menit)</span>
                             </span>
                           )}
                         </td>
@@ -2551,7 +2551,7 @@ export const LaporanPresensiPage: React.FC = () => {
                             {isMemenuhi ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700 shadow-2xs">
                                 <CheckCircle2 size={12} className="text-emerald-600" />
-                                <span>Hadir &amp; Memenuhi (&ge; 4 Jam)</span>
+                                <span>Hadir &amp; Memenuhi (&ge; 250 Menit)</span>
                               </span>
                             ) : isBerlangsung ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700 animate-pulse">
@@ -2571,7 +2571,7 @@ export const LaporanPresensiPage: React.FC = () => {
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700">
                                 <AlertTriangle size={12} className="text-amber-600" />
-                                <span>Kurang Jam (&lt; 4 Jam)</span>
+                                <span>Kurang Jam (&lt; 250 Menit)</span>
                               </span>
                             )}
                           </div>
@@ -2606,7 +2606,7 @@ export const LaporanPresensiPage: React.FC = () => {
                           <div>
                             <span className="text-[10px] font-bold text-slate-400 block">Rasio Sesi</span>
                             <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                              {Math.min(100, Math.max(0, item.rasioKehadiran ?? 0))}% ({item.durasiMenit}/{item.targetMinMenit || 240}m)
+                              {Math.min(100, Math.max(0, item.rasioKehadiran ?? 0))}% ({item.durasiMenit}/{item.targetMinMenit || 250}m)
                             </span>
                           </div>
                         </div>

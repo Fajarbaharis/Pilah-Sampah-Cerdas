@@ -230,7 +230,7 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                {activeTab === "frekuensi" ? "Hasil Evaluasi Kepatuhan & Partisipasi Warga" : "Kemurnian Tonase Pemilahan (kg)"}
+                {activeTab === "frekuensi" ? "Skor Partisipasi dan Kepatuhan Warga" : "Kemurnian Tonase Pemilahan (kg)"}
               </span>
               <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${statusBadgeColor}`}>
                 {statusPredikat}

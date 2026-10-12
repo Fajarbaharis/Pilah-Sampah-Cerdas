@@ -145,7 +145,7 @@ export const MahasiswaMobileHome: React.FC<MahasiswaMobileHomeProps> = ({
           primaryKegiatan?.statusKehadiran === "HADIR_MEMENUHI" ||
           todaySession?.status === "HADIR_MEMENUHI" ||
           Boolean(todaySession?.isMinTargetMet) ||
-          durasi >= 240;
+          durasi >= 250;
         setTodayAttendanceState({
           status: "SELESAI",
           label: isMemenuhi ? "Hadir & Memenuhi" : "Presensi Selesai",

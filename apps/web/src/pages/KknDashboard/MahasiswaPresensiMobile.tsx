@@ -713,6 +713,7 @@ export const MahasiswaPresensiMobile: React.FC = () => {
       // Check-in ke jadwal kegiatan resmi kelompok KKN (sesuai mobile app)
       const resOfficial = await api.post(`/kkn/kegiatan/${primaryKegiatan.id}/mulai`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 90000,
       });
 
       if (resOfficial.data?.success || resOfficial.status === 200 || resOfficial.status === 201) {
@@ -726,6 +727,11 @@ export const MahasiswaPresensiMobile: React.FC = () => {
       }
     } catch (err: any) {
       console.error("[Check-In] Error mulai kegiatan KKN:", err);
+      // Double check apakah server sebenarnya berhasil memproses presensi (misal upload timeout di sisi klien tapi sukses di server)
+      try {
+        await Promise.all([fetchRiwayatPresensi(), fetchKegiatanAktif(true)]);
+      } catch {}
+
       const rawMsg = err.response?.data?.message || err.message || "";
       let cleanMsg = rawMsg;
       if (cleanMsg.includes("OPERATIONAL_HOURS_VIOLATION")) {
@@ -736,6 +742,8 @@ export const MahasiswaPresensiMobile: React.FC = () => {
         cleanMsg = cleanMsg.replace(/^FORBIDDEN:\s*/, "");
       } else if (cleanMsg.includes("SCHEDULE_NOT_FOUND")) {
         cleanMsg = "Jadwal kegiatan posko hari ini belum tersedia.";
+      } else if (cleanMsg.toLowerCase().includes("timeout")) {
+        cleanMsg = "Jaringan lambat saat mengunggah foto bukti. Memeriksa status presensi Anda...";
       }
       showToast.error(cleanMsg || "Gagal melakukan presensi. Periksa sinyal GPS dan coba beberapa saat lagi.");
     } finally {
@@ -979,7 +987,7 @@ export const MahasiswaPresensiMobile: React.FC = () => {
             <div className="space-y-0.5">
               <p className="text-[10px] text-slate-400 font-medium">Durasi Wajib</p>
               <p className="font-bold text-slate-800 dark:text-slate-200">
-                {primaryKegiatan.durasiWajibMenit || 240} Menit ({((primaryKegiatan.durasiWajibMenit || 240) / 60).toFixed(1).replace(/\.0$/, "")} Jam)
+                {primaryKegiatan.durasiWajibMenit || 250} Menit ({((primaryKegiatan.durasiWajibMenit || 250) / 60).toFixed(1).replace(/\.0$/, "")} Jam)
               </p>
             </div>
           </div>
@@ -1675,7 +1683,7 @@ export const MahasiswaPresensiMobile: React.FC = () => {
         <div className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-4 animate-scale-in">
             {(() => {
-              const targetMins = primaryKegiatan?.durasiWajibMenit || 240;
+              const targetMins = primaryKegiatan?.durasiWajibMenit || 250;
               // Ekstrak menit dari elapsedTime (format HH:mm:ss)
               let elapsedMinutes = 0;
               if (elapsedTime && typeof elapsedTime === "string" && elapsedTime.includes(":")) {

@@ -699,7 +699,7 @@ const MonitoringAbsen: React.FC = () => {
 
   // Filter & Search States
   const [attendanceFilterTab, setAttendanceFilterTab] = useState<
-    "ALL" | "ACTIVE" | "COMPLETED" | "IZIN_SAKIT" | "NOT_ATTENDED"
+    "ALL" | "ACTIVE" | "COMPLETED" | "IZIN_SAKIT" | "SAKIT" | "IZIN" | "NOT_ATTENDED"
   >("ALL");
   const [studentSearch, setStudentSearch] = useState<string>("");
   const [displayMode] = useState<"table" | "cards">("table");
@@ -1185,10 +1185,15 @@ const getScheduleStatus = (schedule?: ScheduleActivity | null) => {
       const isIzinSakit = st.includes("IZIN") || st.includes("SAKIT");
       return (Boolean(a.completedAt) || st === "HADIR_MEMENUHI" || st === "HADIR_TIDAK_MEMENUHI" || st === "SELESAI") && !isIzinSakit;
     }).length;
-    const izinSakit = attendance.filter((a) => {
+    const sakit = attendance.filter((a) => {
       const st = String(a.status || "").toUpperCase();
-      return st.includes("IZIN") || st.includes("SAKIT");
+      return st.includes("SAKIT");
     }).length;
+    const izin = attendance.filter((a) => {
+      const st = String(a.status || "").toUpperCase();
+      return st.includes("IZIN") && !st.includes("SAKIT");
+    }).length;
+    const izinSakit = sakit + izin;
     const notAttended = attendance.filter((a) => {
       const st = String(a.status || "").toUpperCase();
       const isIzinSakit = st.includes("IZIN") || st.includes("SAKIT");
@@ -1754,6 +1759,8 @@ const getScheduleStatus = (schedule?: ScheduleActivity | null) => {
       if (attendanceFilterTab === "ACTIVE" && !isActivePresence) return false;
       if (attendanceFilterTab === "COMPLETED" && (!isFinished || isIzinSakit)) return false;
       if (attendanceFilterTab === "IZIN_SAKIT" && !isIzinSakit) return false;
+      if (attendanceFilterTab === "SAKIT" && !isSakit) return false;
+      if (attendanceFilterTab === "IZIN" && (!isIzin || isSakit)) return false;
       if (attendanceFilterTab === "NOT_ATTENDED" && (isHadir || isIzinSakit)) return false;
 
       if (studentSearch.trim()) {
@@ -3592,22 +3599,22 @@ const getScheduleStatus = (schedule?: ScheduleActivity | null) => {
 
           {/* Filter Status Dropdown + Tombol Tambah Manual */}
           <div className="flex items-center gap-2 flex-wrap">
-            {!isDpl && (
-              <div className="relative flex items-center">
-                <select
-                  value={attendanceFilterTab}
-                  onChange={(e) => setAttendanceFilterTab(e.target.value as typeof attendanceFilterTab)}
-                  className="appearance-none pl-3 pr-8 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition cursor-pointer shadow-2xs"
-                >
-                  <option value="ALL">Semua ({attendanceStats.total})</option>
-                  <option value="ACTIVE">🟢 Lapangan ({attendanceStats.active})</option>
-                  <option value="COMPLETED">✨ Selesai ({attendanceStats.completed})</option>
-                  <option value="IZIN_SAKIT">📋 Izin / Sakit ({attendanceStats.izinSakit || 0})</option>
-                  <option value="NOT_ATTENDED">⚪ Belum ({attendanceStats.notAttended})</option>
-                </select>
-                <ChevronDown size={12} className="pointer-events-none absolute right-2.5 text-slate-400" />
-              </div>
-            )}
+            <div className="relative flex items-center">
+              <select
+                value={attendanceFilterTab}
+                onChange={(e) => setAttendanceFilterTab(e.target.value as typeof attendanceFilterTab)}
+                className="appearance-none pl-3 pr-8 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition cursor-pointer shadow-2xs"
+              >
+                <option value="ALL">Semua ({attendanceStats.total})</option>
+                <option value="ACTIVE">🟢 Lapangan ({attendanceStats.active})</option>
+                <option value="COMPLETED">✨ Selesai ({attendanceStats.completed})</option>
+                <option value="SAKIT">🩺 Sakit ({attendanceStats.sakit})</option>
+                <option value="IZIN">📝 Izin ({attendanceStats.izin})</option>
+                <option value="IZIN_SAKIT">📋 Total Izin/Sakit ({attendanceStats.izinSakit || 0})</option>
+                <option value="NOT_ATTENDED">⚪ Belum ({attendanceStats.notAttended})</option>
+              </select>
+              <ChevronDown size={12} className="pointer-events-none absolute right-2.5 text-slate-400" />
+            </div>
 
           </div>
         </div>
