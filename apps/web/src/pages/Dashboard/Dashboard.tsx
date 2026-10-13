@@ -40,6 +40,8 @@ import { BaselineSection } from "../../components/dashboard/BaselineSection";
 import {
   getDateRangeForDay,
   getDateRangeForMonth,
+  getWibIsoRangeForDay,
+  getWibIsoRangeForMonth,
   getPreviousPeriodRange,
   type DateRange,
   type WasteImpactItem,
@@ -2165,14 +2167,18 @@ const Dashboard: React.FC = () => {
           sourceType: filter.selectedSource,
         };
 
-        let primaryRange: DateRange;
-        if (filter.periodMode === "DAILY") {
-          primaryRange = getDateRangeForDay(filter.selectedDate);
+        if (filter.startDate && filter.endDate) {
+          paramsPrimary.startDate = filter.startDate;
+          paramsPrimary.endDate = filter.endDate;
+        } else if (filter.periodMode === "DAILY") {
+          const wibRange = getWibIsoRangeForDay(filter.selectedDate);
+          paramsPrimary.startDate = wibRange.startDate;
+          paramsPrimary.endDate = wibRange.endDate;
         } else {
-          primaryRange = getDateRangeForMonth(filter.selectedYear, filter.selectedMonth);
+          const wibRange = getWibIsoRangeForMonth(filter.selectedYear, filter.selectedMonth);
+          paramsPrimary.startDate = wibRange.startDate;
+          paramsPrimary.endDate = wibRange.endDate;
         }
-        paramsPrimary.startDate = `${primaryRange.startDate}T00:00:00.000Z`;
-        paramsPrimary.endDate = `${primaryRange.endDate}T23:59:59.999Z`;
 
         const resPrimary = await api.get("/dashboard/kpi", { params: paramsPrimary });
         const primaryList = resPrimary.data?.data?.baselineComparison ?? [];
