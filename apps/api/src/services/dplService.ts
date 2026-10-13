@@ -1904,6 +1904,21 @@ export const dplService = {
       leaveRequestsByStudent.set(l.studentId, list);
     }
 
+    // Batch query presensi mandiri (SSOT Mobile Parity)
+    const allPresensiMandiri = await prisma.presensiMandiri.findMany({
+      where: {
+        studentId: { in: studentUserIds },
+        status: "SELESAI",
+      },
+      orderBy: { checkInAt: "desc" },
+    });
+    const presensiMandiriByStudent = new Map<string, typeof allPresensiMandiri>();
+    for (const pm of allPresensiMandiri) {
+      const list = presensiMandiriByStudent.get(pm.studentId) || [];
+      list.push(pm);
+      presensiMandiriByStudent.set(pm.studentId, list);
+    }
+
     // Batch query points via centralized anti-leak function (SSOT)
     const pointsByStudent = await calculateValidIndividualPointsForUsers(studentUserIds);
 
@@ -1916,6 +1931,7 @@ export const dplService = {
     const studentDetails = students.map((st) => {
       const attendances = attendancesByStudent.get(st.userId) || [];
       const leaveRequests = leaveRequestsByStudent.get(st.userId) || [];
+      const mandiriList = presensiMandiriByStudent.get(st.userId) || [];
 
       const sickCount = leaveRequests.filter(
         (r) => r.type === "SAKIT" && r.status === "APPROVED"
@@ -1936,59 +1952,177 @@ export const dplService = {
       const baseScore = Number(st.assessmentScore || 0);
       const finalCalculatedScore = baseScore;
 
-      let totalMinutes = 0;
-      let sumSessionScores = 0;
-      const validSessions = attendances.filter((a) => {
-        const stUpper = String(a.status || "").toUpperCase();
-        return !["TIDAK_ADA_KEGIATAN", "SKIP_KEGIATAN"].includes(stUpper);
-      });
+      // 1. Kumpulkan tanggal-tanggal izin/sakit resmi (APPROVED)
+      const approvedLeaveDays = new Map<string, string>();
+      for (const leave of leaveRequests) {
+        if (leave.status !== "APPROVED") continue;
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate || leave.startDate);
+        const cur = new Date(start.getTime());
+        let daySafety = 0;
+        while (cur <= end && daySafety < 60) {
+          daySafety++;
+          const curWib = new Date(cur.getTime() + 7 * 60 * 60 * 1000);
+          const dateKey = curWib.toISOString().slice(0, 10);
+          const leaveType = String(leave.type || "").toUpperCase().includes("SAKIT") ? "SAKIT" : "IZIN";
+          approvedLeaveDays.set(dateKey, leaveType);
+          cur.setDate(cur.getDate() + 1);
+        }
+      }
+
+      // 2. Kumpulkan raw sessions dari ActivityAttendance (SSOT Mobile Parity: actualInZoneMinutes prioritas)
+      const now = new Date();
+      const rawSessions: {
+        dateKey: string;
+        durationMinutes: number;
+        status: string;
+        isApprovedLeave: boolean;
+        sessionScore: number;
+      }[] = [];
 
       for (const a of attendances) {
-        const stUpper = String(a.status || "").toUpperCase();
-        let mins = Math.min(480, Math.max(0, a.actualInZoneMinutes ?? 0));
-        if (a.checkOutAt && a.attendedAt) {
-          const diffMs = Math.max(
-            0,
-            new Date(a.checkOutAt).getTime() - new Date(a.attendedAt).getTime()
-          );
-          mins = Math.min(480, Math.round(diffMs / (1000 * 60)));
-          totalMinutes += mins;
-        } else if (a.attendedAt) {
-          const isToday = new Date(a.attendedAt).toDateString() === new Date().toDateString();
-          if (isToday) {
-            const diffMs = Math.max(0, Date.now() - new Date(a.attendedAt).getTime());
-            mins = Math.min(480, Math.round(diffMs / (1000 * 60)));
-            totalMinutes += mins;
-          } else {
-            totalMinutes += Math.round((configTargets.targetHarianJam || 4) * 60);
-          }
+        if (!a.attendedAt) continue;
+        const checkInDate = new Date(a.attendedAt);
+        const wibDate = new Date(checkInDate.getTime() + 7 * 60 * 60 * 1000);
+        const dateKey = wibDate.toISOString().slice(0, 10);
+        const isToday = new Date(a.attendedAt).toDateString() === now.toDateString();
+
+        let storedMins = 0;
+        if (a.actualInZoneMinutes !== null && a.actualInZoneMinutes !== undefined) {
+          storedMins = Math.min(480, Math.max(0, a.actualInZoneMinutes));
         }
 
+        let timeDiffMins = 0;
+        if (a.checkOutAt) {
+          const diffMs = new Date(a.checkOutAt).getTime() - new Date(a.attendedAt).getTime();
+          timeDiffMins = Math.min(480, Math.max(0, Math.floor(diffMs / (1000 * 60))));
+        } else if (isToday) {
+          const diffMs = Date.now() - new Date(a.attendedAt).getTime();
+          timeDiffMins = Math.min(480, Math.max(0, Math.floor(diffMs / (1000 * 60))));
+        }
+
+        const durationMins = storedMins > 0 ? storedMins : timeDiffMins;
+        const isLeaveDate = approvedLeaveDays.has(dateKey);
+        const isLeaveStatus = a.status === "SAKIT" || a.status === "IZIN" || a.status === "IZIN_DPL";
+        const isApprovedLeave = isLeaveDate || isLeaveStatus;
+        const leaveType = approvedLeaveDays.get(dateKey) || (String(a.status).toUpperCase().includes("SAKIT") ? "SAKIT" : "IZIN");
+        const effectiveStatus = isApprovedLeave ? leaveType : a.status;
+
+        const stUpper = String(effectiveStatus || "").toUpperCase();
+        let sessionScore = 0;
         if (!["TIDAK_ADA_KEGIATAN", "SKIP_KEGIATAN"].includes(stUpper)) {
-          let sessionScore = 0;
-          if (stUpper === "HADIR_MEMENUHI" || (stUpper === "HADIR" && mins >= targetDailyMinutes)) {
+          if (stUpper === "HADIR_MEMENUHI" || (stUpper === "HADIR" && durationMins >= targetDailyMinutes)) {
             sessionScore = 100;
-          } else if (mins > 0) {
-            sessionScore = Math.min(100, Math.round((mins / targetDailyMinutes) * 100));
+          } else if (durationMins > 0) {
+            sessionScore = Math.min(100, Math.round((durationMins / targetDailyMinutes) * 100));
           } else if (stUpper.includes("IZIN") || stUpper.includes("SAKIT")) {
             sessionScore = 100;
           }
-          sumSessionScores += sessionScore;
         }
+
+        rawSessions.push({
+          dateKey,
+          durationMinutes: durationMins,
+          status: effectiveStatus,
+          isApprovedLeave,
+          sessionScore,
+        });
+      }
+
+      // 3. Tambahkan sesi sah dari Presensi Mandiri (mencegah data tercecer atau unbridged)
+      for (const pm of mandiriList) {
+        if (!pm.checkInAt) continue;
+        const checkInDate = new Date(pm.checkInAt);
+        const wibDate = new Date(checkInDate.getTime() + 7 * 60 * 60 * 1000);
+        const dateKey = wibDate.toISOString().slice(0, 10);
+        const isToday = new Date(pm.checkInAt).toDateString() === now.toDateString();
+
+        let durationMins = 0;
+        if (pm.durasiMenit !== null && pm.durasiMenit !== undefined) {
+          durationMins = Math.min(480, Math.max(0, pm.durasiMenit));
+        } else if (pm.checkOutAt) {
+          const diffMs = new Date(pm.checkOutAt).getTime() - new Date(pm.checkInAt).getTime();
+          durationMins = Math.min(480, Math.max(0, Math.floor(diffMs / (1000 * 60))));
+        } else if (isToday) {
+          const diffMs = Date.now() - new Date(pm.checkInAt).getTime();
+          durationMins = Math.min(480, Math.max(0, Math.floor(diffMs / (1000 * 60))));
+        }
+
+        const isApprovedLeave = approvedLeaveDays.has(dateKey);
+        const pmStatus = durationMins >= targetDailyMinutes ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI";
+        const effectiveStatus = isApprovedLeave ? (approvedLeaveDays.get(dateKey) || "HADIR_MEMENUHI") : pmStatus;
+        const sessionScore = durationMins >= targetDailyMinutes ? 100 : Math.min(100, Math.round((durationMins / targetDailyMinutes) * 100));
+
+        rawSessions.push({
+          dateKey,
+          durationMinutes: durationMins,
+          status: effectiveStatus,
+          isApprovedLeave,
+          sessionScore,
+        });
+      }
+
+      // 4. Deduplikasi cerdas per hari kalender (WIB: UTC+7)
+      const dailyMap = new Map<string, {
+        durationMinutes: number;
+        status: string;
+        isApprovedLeave: boolean;
+        sessionScore: number;
+      }>();
+
+      for (const sess of rawSessions) {
+        if (!dailyMap.has(sess.dateKey)) {
+          dailyMap.set(sess.dateKey, {
+            durationMinutes: sess.durationMinutes,
+            status: sess.status,
+            isApprovedLeave: sess.isApprovedLeave,
+            sessionScore: sess.sessionScore,
+          });
+        } else {
+          const day = dailyMap.get(sess.dateKey)!;
+          day.durationMinutes = Math.max(day.durationMinutes, sess.durationMinutes);
+          day.sessionScore = Math.max(day.sessionScore, sess.sessionScore);
+          if (sess.isApprovedLeave) {
+            day.isApprovedLeave = true;
+            day.status = sess.status;
+          }
+        }
+      }
+
+      // 5. Akumulasi durasi riil & skor sesi
+      let totalMinutes = 0;
+      let sumSessionScores = 0;
+      let validDailyCount = 0;
+
+      for (const day of dailyMap.values()) {
+        const stUpper = String(day.status || "").toUpperCase();
+        if (stUpper === "TIDAK_ADA_KEGIATAN" || stUpper === "SKIP_KEGIATAN") {
+          continue;
+        }
+
+        if (day.isApprovedLeave) {
+          // Skenario 1 (Mobile SSOT): Dispensasi bebas alpa, durasi kumulatif +0 menit
+          sumSessionScores += 100;
+          validDailyCount++;
+          continue;
+        }
+
+        totalMinutes += day.durationMinutes;
+        sumSessionScores += day.sessionScore;
+        validDailyCount++;
       }
 
       const totalHours = Math.floor(totalMinutes / 60);
       const remainingMinutes = totalMinutes % 60;
-      const targetHours = configTargets.targetTotalJam || 200;
-      const progressPercentage = Math.min(
-        100,
-        Math.round((totalMinutes / (targetHours * 60 || 1)) * 100)
-      );
+      const targetHours = Number(configTargets.targetTotalJam) || 250;
+      const progressPercentage = Math.round(
+        (totalMinutes / (targetHours * 60 || 1)) * 1000
+      ) / 10;
 
       const netPoints = Math.max(0, pointsByStudent.get(st.userId) || 0);
       const attendanceRate =
-        validSessions.length > 0
-          ? Math.min(100, Math.max(0, Math.round(sumSessionScores / validSessions.length)))
+        validDailyCount > 0
+          ? Math.min(100, Math.max(0, Math.round(sumSessionScores / validDailyCount)))
           : 0;
 
       return {
@@ -2046,106 +2180,29 @@ export const dplService = {
     role?: string,
     search?: string
   ) => {
-    const whereGroup: any = await getKelompokWhere(dplUserId, role);
-    if (groupId) whereGroup.id = groupId;
+    const studentDetails = await dplService.getStudentDetails(dplUserId, groupId, role, search);
+    return studentDetails.map((st) => {
+      const targetHours = st.targetHours || 250;
+      const targetTotalMinutes = targetHours * 60;
+      const isTargetAchieved = (st.totalMinutes || 0) >= targetTotalMinutes;
 
-    let myGroups = await prisma.kelompokKkn.findMany({
-      where: whereGroup,
-      select: { id: true, name: true },
+      return {
+        id: st.id,
+        userId: st.userId,
+        name: st.name,
+        nim: st.nim,
+        kelompokName: st.kelompokName,
+        fotoProfil: st.fotoProfil,
+        cumulativeStats: {
+          totalActualMinutes: st.totalMinutes,
+          totalActualFormatted: `${st.totalHours} Jam ${st.remainingMinutes} Menit`,
+          targetTotalMinutes,
+          targetTotalFormatted: `${targetHours} Jam`,
+          progressPercentage: Math.min(100, Math.round(st.progressPercentage || 0)),
+          isTargetAchieved,
+        },
+      };
     });
-
-    // Saring kelompok uji coba
-    myGroups = myGroups.filter((g) => !isTestKelompok(g));
-
-    if (myGroups.length === 0) {
-      return [];
-    }
-
-    const myGroupIds = myGroups.map((g) => g.id);
-
-    const studentWhere: any = { kelompokId: { in: myGroupIds } };
-    if (search && search.trim() !== "") {
-      const q = search.trim();
-      studentWhere.OR = [
-        { nim: { contains: q, mode: "insensitive" } },
-        { user: { name: { contains: q, mode: "insensitive" } } },
-        { jurusan: { contains: q, mode: "insensitive" } },
-      ];
-    }
-
-    let students = await prisma.studentKkn.findMany({
-      where: studentWhere,
-      include: {
-        user: { select: { id: true, name: true, fotoProfil: true } },
-        kelompok: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: "asc" },
-    });
-
-    // Saring mahasiswa uji coba / testing
-    students = students.filter((s) => !isTestStudent(s));
-
-    if (students.length === 0) {
-      return [];
-    }
-
-    const configTargets = await dplService.getConfigTargets();
-    const targetHours = configTargets.targetTotalJam || 200;
-    const targetTotalMinutes = targetHours * 60;
-
-    const summaryList = await Promise.all(
-      students.map(async (st) => {
-        const attendances = await prisma.activityAttendance.findMany({
-          where: { studentId: st.userId },
-          select: { attendedAt: true, checkOutAt: true },
-        });
-
-        let totalMinutes = 0;
-        for (const a of attendances) {
-          if (a.checkOutAt && a.attendedAt) {
-            const diffMs = Math.max(
-              0,
-              new Date(a.checkOutAt).getTime() - new Date(a.attendedAt).getTime()
-            );
-            const mins = Math.min(480, Math.round(diffMs / (1000 * 60)));
-            totalMinutes += mins;
-          } else if (a.attendedAt) {
-            const isToday = new Date(a.attendedAt).toDateString() === new Date().toDateString();
-            if (isToday) {
-              const diffMs = Math.max(0, Date.now() - new Date(a.attendedAt).getTime());
-              totalMinutes += Math.min(480, Math.round(diffMs / (1000 * 60)));
-            } else {
-              totalMinutes += Math.round((configTargets.targetHarianJam || 4) * 60);
-            }
-          }
-        }
-
-        const totalHoursActual = Math.floor(totalMinutes / 60);
-        const remainingMinsActual = totalMinutes % 60;
-
-        const progressPercentage = Math.round((totalMinutes / (targetTotalMinutes || 1)) * 100);
-        const isTargetAchieved = totalMinutes >= targetTotalMinutes;
-
-        return {
-          id: st.id,
-          userId: st.userId,
-          name: st.user?.name || "Mahasiswa KKN",
-          nim: st.nim || "-",
-          kelompokName: st.kelompok?.name || "-",
-          fotoProfil: st.user?.fotoProfil || null,
-          cumulativeStats: {
-            totalActualMinutes: totalMinutes,
-            totalActualFormatted: `${totalHoursActual} Jam ${remainingMinsActual} Menit`,
-            targetTotalMinutes: targetTotalMinutes,
-            targetTotalFormatted: `${targetHours} Jam`,
-            progressPercentage: Math.min(100, progressPercentage),
-            isTargetAchieved,
-          },
-        };
-      })
-    );
-
-    return summaryList;
   },
 
   /**

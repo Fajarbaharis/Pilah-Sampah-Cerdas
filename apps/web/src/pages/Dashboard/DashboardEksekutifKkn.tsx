@@ -3604,7 +3604,7 @@ export const DashboardEksekutifKkn: React.FC = () => {
                         <th className="py-3 px-3">NIM</th>
                         <th className="py-3 px-3">Nama Mahasiswa</th>
                         <th className="py-3 px-3">Program Studi</th>
-                        <th className="py-3 px-3 text-center">Presensi Lapangan</th>
+                        <th className="py-3 px-3 text-center" title="Progress terhadap target kumulatif 250 jam">Progress Target</th>
                         <th className="py-3 px-3 text-center">Jam Presensi</th>
                       </tr>
                     </thead>
@@ -3632,8 +3632,8 @@ export const DashboardEksekutifKkn: React.FC = () => {
                             {st.jurusan || "-"} {st.fakultas ? `(${st.fakultas})` : ""}
                           </td>
                           <td className="py-2.5 px-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-md font-extrabold text-[11px] border ${getAttendanceBadgeClass(st.attendanceRate || 0).badge}`}>
-                              {st.attendanceRate || 0}%
+                            <span className={`px-2 py-0.5 rounded-md font-extrabold text-[11px] border ${getAttendanceBadgeClass(st.progressPercentage || 0).badge}`}>
+                              {st.progressPercentage || 0}%
                             </span>
                           </td>
                           <td className="py-2.5 px-3 text-center font-bold text-slate-800 dark:text-slate-200">

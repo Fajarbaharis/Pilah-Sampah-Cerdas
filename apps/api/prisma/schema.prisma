@@ -260,10 +260,20 @@ model User {
   beritaKonten          BeritaKonten[]           @relation("BeritaAuthor")
   presensiMandiri       PresensiMandiri[]        @relation("PresensiMandiriStudent")
 
+  // ── DIRECT COMPANION RELATIONSHIP (SSOT) ──────────────────────────
+  pendampingStudentId   String?                  @map("id_mahasiswa_pendamping")
+  kelompokKknId         String?                  @map("id_kelompok_kkn")
+  pendampingStudent     User?                    @relation("StudentCitizenMentorship", fields: [pendampingStudentId], references: [id], onDelete: SetNull)
+  wargaDampinganList    User[]                   @relation("StudentCitizenMentorship")
+  kelompokKkn           KelompokKkn?             @relation("GroupCitizenMentorship", fields: [kelompokKknId], references: [id], onDelete: SetNull)
+
   @@index([roleId])
   @@index([rwId])
   @@index([rtId])
   @@index([isTestAccount])
+  @@index([pendampingStudentId])
+  @@index([kelompokKknId])
+  @@index([roleId, rwId])
   @@map("pengguna")
 }
 
@@ -457,6 +467,7 @@ model KelompokKkn {
   dplLogbooks             LogbookDpl[]
   presensiMandiri         PresensiMandiri[]
   bins                    Bin[]
+  wargaBinaan             User[]                  @relation("GroupCitizenMentorship")
 
   @@index([dplId])
   @@map("kelompok_kkn")

@@ -1152,7 +1152,7 @@ export const DplDashboardPage: React.FC = () => {
                           <th className="py-3 px-3">NIM</th>
                           <th className="py-3 px-3">Nama Mahasiswa</th>
                           <th className="py-3 px-3">Program Studi</th>
-                          <th className="py-3 px-3 text-center">Presensi Lapangan</th>
+                          <th className="py-3 px-3 text-center" title="Progress terhadap target kumulatif 250 jam">Progress Target</th>
                           <th className="py-3 px-3 text-center">Jam Presensi</th>
                           {isMpl && <th className="py-3 px-3 text-center">Penilaian Mitra</th>}
                         </tr>
@@ -1182,7 +1182,7 @@ export const DplDashboardPage: React.FC = () => {
                             </td>
                             <td className="py-2.5 px-3 text-center">
                               <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/40 rounded-md font-extrabold text-[11px]">
-                                {st.attendanceRate || 0}%
+                                {st.progressPercentage || 0}%
                               </span>
                             </td>
                             <td className="py-2.5 px-3 text-center font-bold text-slate-800 dark:text-slate-200">
