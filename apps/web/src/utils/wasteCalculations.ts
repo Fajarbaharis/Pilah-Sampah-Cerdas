@@ -348,6 +348,35 @@ export interface DateRange {
   label: string;
 }
 
+export const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+/**
+ * Menghasilkan rentang ISO UTC penuh berbasis zona waktu WIB (UTC+7) untuk 1 hari (YYYY-MM-DD).
+ * 00:00:00.000 WIB s/d 23:59:59.999 WIB.
+ */
+export function getWibIsoRangeForDay(dateStr: string): { startDate: string; endDate: string } {
+  const [y, m, d] = dateStr.split("-").map((v) => parseInt(v, 10));
+  const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0) - WIB_OFFSET_MS);
+  const end = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999) - WIB_OFFSET_MS);
+  return {
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+  };
+}
+
+/**
+ * Menghasilkan rentang ISO UTC penuh berbasis zona waktu WIB (UTC+7) untuk 1 bulan kalender.
+ */
+export function getWibIsoRangeForMonth(year: number, monthIndex: number): { startDate: string; endDate: string } {
+  const lastDay = new Date(year, monthIndex, 0).getDate();
+  const start = new Date(Date.UTC(year, monthIndex - 1, 1, 0, 0, 0, 0) - WIB_OFFSET_MS);
+  const end = new Date(Date.UTC(year, monthIndex - 1, lastDay, 23, 59, 59, 999) - WIB_OFFSET_MS);
+  return {
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+  };
+}
+
 /**
  * Menghasilkan rentang tanggal untuk 1 hari tertentu (YYYY-MM-DD).
  */

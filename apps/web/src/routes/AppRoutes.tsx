@@ -163,11 +163,15 @@ const ProtectedRoute: React.FC<{
   }
 
   // Super User has broad administrative access, EXCEPT routes exclusively restricted (e.g. DEVELOPER only)
+  // DAN KECUALI modul IoT yang dikendalikan oleh matriks RBAC IoT dinamis
   if (user.peran === "SUPER_USER") {
-    if (allowedRoles && !allowedRoles.includes("SUPER_USER")) {
-      return <Navigate to="/dasbor" replace />;
+    const isIotResource = resource && (resource.startsWith("iot_") || resource === "internet_of_things");
+    if (!isIotResource) {
+      if (allowedRoles && !allowedRoles.includes("SUPER_USER")) {
+        return <Navigate to="/dasbor" replace />;
+      }
+      return children;
     }
-    return children;
   }
 
   // Strict iOS Safari Enforcer for MAHASISWA_KKN across all protected routes
