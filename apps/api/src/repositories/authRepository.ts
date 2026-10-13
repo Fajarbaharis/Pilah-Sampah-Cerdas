@@ -323,7 +323,22 @@ export class AuthRepository {
       },
     };
 
-    // Prioritas 1A: Dari BinOwnership yang memiliki registeredByStudent
+    // Prioritas 0 (SSOT): Langsung dari pendampingStudentId milik User warga
+    const userDirect = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        pendampingStudentId: true,
+        pendampingStudent: {
+          select: mentorSelect,
+        },
+      },
+    });
+
+    if (userDirect?.pendampingStudent) {
+      return userDirect.pendampingStudent;
+    }
+
+    // Prioritas 1A: Transisi legacy dari BinOwnership yang memiliki registeredByStudent
     const ownership = await prisma.binOwnership.findFirst({
       where: {
         userId,
@@ -348,7 +363,7 @@ export class AuthRepository {
       return ownership.bin.registeredByStudent;
     }
 
-    // Prioritas 1B: Dari Bin langsung jika userId terikat di tabel Bin
+    // Prioritas 1B: Transisi legacy dari Bin langsung jika userId terikat di tabel Bin
     const directBin = await prisma.bin.findFirst({
       where: {
         userId,
@@ -366,67 +381,7 @@ export class AuthRepository {
       return directBin.registeredByStudent;
     }
 
-    // Resolve RW ID jika belum ada (dari user, household, atau bin)
-    let effectiveRwId = rwId;
-    if (!effectiveRwId) {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          rwId: true,
-          households: { select: { rwId: true }, take: 1 },
-          bins: { select: { rwId: true }, take: 1 },
-        },
-      });
-      effectiveRwId = user?.rwId || user?.households?.[0]?.rwId || user?.bins?.[0]?.rwId || null;
-    }
-
-    // Prioritas 2: Cari Mahasiswa aktif yang ditugaskan di RW penugasan tersebut
-    if (effectiveRwId) {
-      const activeStudent = await prisma.user.findFirst({
-        where: {
-          role: { name: "MAHASISWA_KKN" },
-          studentProfile: {
-            assignedRwId: effectiveRwId,
-          },
-        },
-        select: mentorSelect,
-      });
-      if (activeStudent) {
-        return activeStudent;
-      }
-
-      // Prioritas 3: Fallback ke Mahasiswa dari Kelompok KKN yang mencakup RW ini
-      const rwRec = await prisma.rw.findUnique({
-        where: { id: effectiveRwId },
-        select: { name: true },
-      });
-      const rwDigit = rwRec?.name?.replace(/[^\d]/g, "").replace(/^0+/, "");
-      if (rwDigit) {
-        const groups = await prisma.kelompokKkn.findMany({
-          select: { id: true, cakupanRw: true },
-        });
-        const matchedGroup = groups.find((g) => {
-          if (!g.cakupanRw) return false;
-          const str = typeof g.cakupanRw === "string" ? g.cakupanRw : JSON.stringify(g.cakupanRw);
-          return str.includes(rwDigit);
-        });
-        if (matchedGroup) {
-          const groupStudent = await prisma.user.findFirst({
-            where: {
-              role: { name: "MAHASISWA_KKN" },
-              studentProfile: {
-                kelompokId: matchedGroup.id,
-              },
-            },
-            select: mentorSelect,
-          });
-          if (groupStudent) {
-            return groupStudent;
-          }
-        }
-      }
-    }
-
+    // Fallback regex liar lintas kelurahan dieliminasi secara total untuk mencegah companion swapping
     return null;
   }
 
