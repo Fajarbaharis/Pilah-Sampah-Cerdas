@@ -55,6 +55,8 @@ import {
   calculateMonthlyKg,
   getDateRangeForDay,
   getDateRangeForMonth,
+  getWibIsoRangeForDay,
+  getWibIsoRangeForMonth,
   STANDARD_CYCLE_DAYS,
   type WasteSourceType,
   type WastePeriodMode,
@@ -193,13 +195,13 @@ export const WasteImpactSummaryTable: React.FC<WasteImpactSummaryTableProps> = (
     };
 
     if (updated.periodMode === "DAILY") {
-      const range = getDateRangeForDay(updated.selectedDate);
-      updated.startDate = `${range.startDate}T00:00:00.000Z`;
-      updated.endDate = `${range.endDate}T23:59:59.999Z`;
+      const wibRange = getWibIsoRangeForDay(updated.selectedDate);
+      updated.startDate = wibRange.startDate;
+      updated.endDate = wibRange.endDate;
     } else {
-      const range = getDateRangeForMonth(updated.selectedYear, updated.selectedMonth);
-      updated.startDate = `${range.startDate}T00:00:00.000Z`;
-      updated.endDate = `${range.endDate}T23:59:59.999Z`;
+      const wibRange = getWibIsoRangeForMonth(updated.selectedYear, updated.selectedMonth);
+      updated.startDate = wibRange.startDate;
+      updated.endDate = wibRange.endDate;
     }
 
     if (onFilterChange) {

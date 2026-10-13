@@ -10,6 +10,7 @@ import { Download } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useThemeStore } from "../../store/useThemeStore";
 import showToast from "../../utils/showToast";
+import LoginKknHero from "./components/LoginKknHero";
 
 // Format nomor telepon Indonesia: 08xxx, 628xxx, +628xxx, 8xxx atau NIM / NIP DPL
 const PHONE_REGEX = /^\+628[0-9]\d{6,11}$/;
@@ -159,28 +160,28 @@ const Login: React.FC = () => {
     } else {
       const storeErr = useAuthStore.getState().error;
       if (storeErr === "USER_NOT_FOUND") {
-        setIdentifierError("Nomor HP tidak terdaftar di sistem");
+        setIdentifierError("Nomor ponsel tidak terdaftar di sistem.");
       } else if (storeErr === "WRONG_PASSWORD") {
         setPasswordError("Kata sandi salah. Silakan coba lagi.");
         setPassword("");
         setTimeout(() => passwordInputRef.current?.focus(), 50);
       } else if (storeErr === "MAHASISWA_MUST_USE_IOS_SAFARI") {
-        triggerToast("Akses Mahasiswa KKN diwajibkan menggunakan perangkat Apple iPhone dengan peramban Safari.", "error");
-        setIdentifierError("Khusus iPhone + Safari (Android & Desktop dilarang)");
+        triggerToast("Mahasiswa KKN wajib menggunakan perangkat Apple iPhone dengan peramban Safari.", "error");
+        setIdentifierError("Khusus iPhone dengan Safari (Android dan desktop tidak didukung)");
       } else if (storeErr === "ROLE_NOT_ALLOWED_ON_WEB") {
-        triggerToast("Akses Web khusus Pengelola dan Dosen Pembimbing Lapangan (DPL). Warga dan Petugas Pemilah hanya dapat menggunakan aplikasi seluler.", "warning");
-        setIdentifierError("Akses Web ditutup untuk peran ini (Gunakan Aplikasi Seluler)");
+        triggerToast("Akses web khusus Pengelola dan Dosen Pembimbing Lapangan (DPL). Warga dan Petugas Pemilah hanya dapat menggunakan aplikasi seluler.", "warning");
+        setIdentifierError("Akses web ditutup untuk peran ini (Gunakan aplikasi seluler)");
       } else if (storeErr === "USER_INACTIVE") {
         triggerToast("Akun Anda belum aktif atau telah dinonaktifkan.", "warning");
       } else if (storeErr === "USER_PENDING_APPROVAL") {
         triggerToast("Akun Anda belum disetujui oleh pengurus RW setempat.", "warning");
-        setIdentifierError("Akun belum disetujui RW setempat");
+        setIdentifierError("Akun belum disetujui pengurus RW setempat.");
       } else if (storeErr === "SERVICE_UNAVAILABLE") {
-        triggerToast("Server sedang bermasalah, silakan coba lagi nanti", "server");
+        triggerToast("Server sedang bermasalah, silakan coba lagi nanti.", "server");
       } else if (storeErr === "TOO_MANY_ATTEMPTS") {
-        triggerToast("Terlalu banyak percobaan, silakan coba lagi dalam 1 menit", "warning");
+        triggerToast("Terlalu banyak percobaan, silakan coba lagi dalam 1 menit.", "warning");
       } else if (storeErr === "NETWORK_ERROR") {
-        triggerToast("Tidak dapat terhubung ke server, periksa koneksi internet Anda", "network");
+        triggerToast("Tidak dapat terhubung ke server, periksa koneksi internet Anda.", "network");
       } else {
         triggerToast("Gagal masuk ke sistem. Silakan coba lagi.", "error");
       }
@@ -190,40 +191,21 @@ const Login: React.FC = () => {
   const isLoading = isStoreLoading || isLocalLoading;
 
   return (
-    <div className="min-h-screen bg-[#f2f8fd] text-[#0f2142] flex items-center justify-center p-3 sm:p-6 md:p-10 relative overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#f2f8fd] text-[#0f2142] flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 relative overflow-x-hidden font-sans">
       {/* Background Soft Radial Blobs */}
       <div className="fixed w-[60vw] h-[60vw] -left-[25vw] -bottom-[30vw] rounded-full bg-[radial-gradient(closest-side,#dcefff_0%,rgba(220,239,255,0)_100%)] pointer-events-none z-0" />
       <div className="fixed w-[50vw] h-[50vw] -right-[20vw] -top-[25vw] rounded-full bg-[radial-gradient(closest-side,#dcefff_0%,rgba(220,239,255,0)_100%)] pointer-events-none z-0" />
 
       {/* Main Container Card (53% Left Hero / 47% Right Auth) */}
-      <main className="relative z-10 w-full max-w-[1360px] bg-white rounded-[22px] overflow-hidden shadow-[0_30px_70px_-30px_rgba(31,73,125,0.25),0_2px_6px_rgba(31,73,125,0.05)] grid grid-cols-1 lg:grid-cols-[53fr_47fr] animate-fade-in-up">
+      <main className="relative z-10 w-full max-w-[1360px] bg-white rounded-[22px] overflow-hidden shadow-[0_30px_70px_-30px_rgba(31,73,125,0.25),0_2px_6px_rgba(31,73,125,0.05)] grid grid-cols-1 lg:grid-cols-[53fr_47fr] animate-fade-in-up items-stretch">
         
-        {/* ===== Panel Kiri: Hero Ilustrasi ===== */}
-        <section aria-label="Tentang BERSEKA" className="relative flex flex-col justify-between overflow-hidden min-h-[420px] lg:min-h-[640px] bg-[#dceefc]">
-          {/* Full Cover Background Image */}
-          <picture className="absolute inset-0 w-full h-full">
-            <source srcSet="/image/ilustrasi-kkn.webp" type="image/webp" />
-            <img
-              src="/image/ilustrasi-kkn.jpg"
-              alt="Bersih, Sehat, Kampung Asri. Bersama membangun lingkungan yang lebih bersih melalui BERSEKA. KKN Berdampak UNIKOM - Kecamatan Coblong"
-              className="w-full h-full object-cover object-center"
-              loading="eager"
-              decoding="async"
-            />
-          </picture>
+        {/* ===== Panel Kiri: Hero Informasi KKN Tematik (Tampil di bawah form pada layar ponsel agar form langsung terlihat) ===== */}
+        <LoginKknHero className="order-2 lg:order-1 border-t lg:border-t-0 lg:border-r border-slate-100" />
 
-          {/* Accessible Screen-Reader Description */}
-          <div className="sr-only">
-            <h2>Bersih, Sehat, Kampung Asri.</h2>
-            <p>Bersama membangun lingkungan yang lebih bersih melalui BERSEKA.</p>
-            <p>KKN Berdampak UNIKOM - Kecamatan Coblong</p>
-          </div>
-        </section>
-
-        {/* ===== Panel Kanan: Form Login ===== */}
-        <section className="flex flex-col p-6 sm:p-9 md:p-12 lg:p-14 bg-white text-left justify-between">
+        {/* ===== Panel Kanan: Form Login (Tampil di atas pada mobile untuk UX optimal) ===== */}
+        <section className="order-1 lg:order-2 flex flex-col p-6 sm:p-8 md:p-10 lg:p-12 bg-white text-left justify-between">
           
-          {/* Header Bar: Logo & Link Beranda (Selaras dengan Landing Page) */}
+          {/* Header Bar: Logo & Link Beranda (Selaras dengan Identitas Brand) */}
           <div className="flex items-center justify-between gap-4">
             <Link to="/" aria-label="BERSEKA.ID beranda" className="inline-flex items-center text-[#0f2142] no-underline group">
               <picture>
@@ -240,7 +222,7 @@ const Login: React.FC = () => {
               </picture>
             </Link>
 
-            <Link to="/" className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#16894f] hover:underline hover:underline-offset-4 transition-all">
+            <Link to="/" className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#138861] hover:underline hover:underline-offset-4 transition-all">
               <span><span className="hidden sm:inline">Kembali ke </span>Beranda</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
                 <path d="M7 17 17 7M8 7h9v9"/>
@@ -259,10 +241,10 @@ const Login: React.FC = () => {
 
             <form onSubmit={handleSubmit} noValidate className="mt-6 sm:mt-8 space-y-5">
               
-              {/* Field 1: Nomor HP */}
+              {/* Field 1: Nomor Ponsel */}
               <div>
                 <label htmlFor="phone" className="block font-bold text-sm sm:text-[1.02rem] text-[#0f2142] mb-2">
-                  Nomor HP
+                  Nomor ponsel
                 </label>
                 <div className="relative flex items-center">
                   <svg className="absolute left-4 sm:left-5 w-5 h-5 sm:w-6 sm:h-6 text-[#8796ab] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -335,6 +317,7 @@ const Login: React.FC = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 sm:right-4 w-9 h-9 flex items-center justify-center text-[#5d6f88] hover:bg-[#f1f5f9] rounded-lg transition-colors cursor-pointer"
                     aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                    aria-pressed={showPassword}
                   >
                     {showPassword ? (
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 sm:w-6 sm:h-6">
@@ -358,15 +341,15 @@ const Login: React.FC = () => {
 
               {/* Checkbox: Ingat Saya */}
               <div className="pt-1">
-                <label className="inline-flex items-center gap-3 cursor-pointer select-none font-semibold text-sm sm:text-base text-[#0f2142]">
+                <label className="group inline-flex items-center gap-3 cursor-pointer select-none font-semibold text-sm sm:text-base text-[#0f2142]">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="sr-only"
+                    className="sr-only peer"
                   />
-                  <span className={`w-6 h-6 rounded-md border-[1.5px] flex items-center justify-center transition-all ${
-                    rememberMe ? "bg-[#138861] border-[#138861]" : "border-[#dfe6ee] bg-white hover:border-[#138861]"
+                  <span className={`w-6 h-6 rounded-md border-[1.5px] flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-[#138861] ${
+                    rememberMe ? "bg-[#138861] border-[#138861]" : "border-[#dfe6ee] bg-white group-hover:border-[#138861]"
                   }`}>
                     {rememberMe && (
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-white">
@@ -404,38 +387,36 @@ const Login: React.FC = () => {
             </form>
 
             {/* Warning Notice Box: Khusus Mahasiswa KKN */}
-            <aside role="note" className="flex gap-4 mt-6 p-4 sm:p-5 bg-[#fff8e9] border border-[#f6e4b8] rounded-xl text-left">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-[#e48d02] mt-0.5" aria-hidden="true">
+            <aside role="note" className="flex gap-3.5 mt-6 p-4 sm:p-4.5 bg-[#fef9ee] border border-[#f5dfa8] rounded-xl text-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 text-[#d97706] mt-0.5" aria-hidden="true">
                 <circle cx="12" cy="12" r="10"/>
                 <path d="M12 11v6"/>
                 <circle cx="12" cy="7.5" r=".6" fill="currentColor"/>
               </svg>
               <div className="space-y-1">
-                <div className="flex items-center flex-wrap gap-2 sm:gap-4">
-                  <strong className="text-sm sm:text-base font-bold text-[#0f2142]">Khusus Mahasiswa KKN</strong>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fde8b6] text-[#d07c00] text-xs font-semibold">
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5" aria-hidden="true">
+                <div className="flex items-center flex-wrap gap-2 sm:gap-3">
+                  <strong className="text-xs sm:text-sm font-bold text-[#0f2142]">Catatan Mahasiswa KKN</strong>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fde8b6] text-[#b45309] text-xs font-semibold">
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3" aria-hidden="true">
                       <path d="M16.4 12.7c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1ZM13.9 5c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5Z"/>
                     </svg>
                     iPhone · Safari
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-[#2f4260] leading-relaxed m-0">
-                  Presensi dan logbook hanya dapat diakses melalui <b className="text-[#0f2142] font-bold">Safari</b> di <b className="text-[#0f2142] font-bold">Apple iPhone</b>. Akses Android dan peramban lain dibatasi.
+                <p className="text-xs sm:text-[13px] text-[#334155] leading-relaxed m-0">
+                  Presensi dan <em>logbook</em> kegiatan hanya dapat diakses melalui peramban <strong>Safari</strong> pada perangkat <strong>Apple iPhone</strong>. Akses Android dan komputer desktop tidak didukung.
                 </p>
               </div>
             </aside>
           </div>
-
-          {/* Footer Card */}
-          <footer className="mt-8 pt-4 w-full max-w-[560px] mx-auto lg:mx-0">
-            <p className="m-0 pt-3 border-t border-[#e7ecf2] text-center text-xs sm:text-sm text-[#7d8ea6]">
-              © 2026 Universitas Komputer Indonesia
-            </p>
-          </footer>
         </section>
 
       </main>
+
+      {/* Footer Page */}
+      <footer className="relative z-10 mt-5 text-center text-xs text-[#7d8ea6]">
+        <p className="m-0">© 2026 Universitas Komputer Indonesia</p>
+      </footer>
 
       {/* Floating Action Button: Download Aplikasi Seluler APK */}
       <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-8 z-50 group flex items-center justify-center pointer-events-auto">

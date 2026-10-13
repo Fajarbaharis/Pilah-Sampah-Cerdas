@@ -339,12 +339,17 @@ const Monitoring: React.FC = () => {
     return () => clearInterval(pollInterval);
   }, [apiFilterWilayah]);
 
-  // Verified Bins (ONLY bins with valid GPS coordinates)
+  // Verified Bins (ONLY active bins with valid GPS coordinates)
   const verifiedMapBins = useMemo(() => {
     return bins.filter((b) => {
       const lat = Number(b.latitude);
       const lng = Number(b.longitude);
-      return b.latitude !== null && b.longitude !== null && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+      const hasGps = b.latitude !== null && b.longitude !== null && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+      if (!hasGps) return false;
+      const st = (b.status || "").toUpperCase();
+      const rst = ((b as any).realStatus || "").toUpperCase();
+      if (st === "INACTIVE" || rst === "INACTIVE" || st === "PRINTED" || rst === "PRINTED") return false;
+      return st === "ACTIVE_BOUND" || rst === "ACTIVE_BOUND";
     });
   }, [bins]);
 
@@ -356,16 +361,11 @@ const Monitoring: React.FC = () => {
     const countActive = bins.filter((b) => {
       const rst = (b.realStatus || "").toUpperCase();
       const st = (b.status || "").toUpperCase();
-      const baku = ((b as any).statusBaku || "").toUpperCase();
+      if (st === "INACTIVE" || rst === "INACTIVE" || st === "PRINTED" || rst === "PRINTED") return false;
       return (
         rst === "ACTIVE_BOUND" ||
         rst === "ACTIVE" ||
-        baku === "AKTIF_TERPASANG" ||
-        st === "ACTIVE_BOUND" ||
-        st === "NORMAL" ||
-        st === "SEDANG" ||
-        st === "PENUH" ||
-        Boolean(b.userId || b.wargaName)
+        st === "ACTIVE_BOUND"
       );
     }).length;
     return countActive;
@@ -886,7 +886,7 @@ const Monitoring: React.FC = () => {
                 </span>
               </div>
               <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                {totalActiveBoundBins > 0 ? Math.round((verifiedMapBins.length / totalActiveBoundBins) * 100) : 100}% Spasial
+                {totalActiveBoundBins > 0 ? Math.min(100, Math.round((verifiedMapBins.length / totalActiveBoundBins) * 100)) : 100}% Spasial
               </span>
             </div>
             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-medium truncate" title={`${verifiedMapBins.length} terpetakan di GIS, ${unmappedBinsCount} unit belum merekam titik GPS`}>
