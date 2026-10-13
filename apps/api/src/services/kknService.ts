@@ -1773,6 +1773,16 @@ export class KknService {
         },
       });
 
+      if (kknUserId) {
+        await tx.user.update({
+          where: { id: wargaId },
+          data: {
+            pendampingStudentId: kknUserId,
+            kelompokKknId: studentProfile?.kelompokId || null,
+          },
+        });
+      }
+
       const existingOwnership = await tx.binOwnership.findFirst({
         where: { binId: bin.id, userId: wargaId },
       });
@@ -2010,6 +2020,12 @@ export class KknService {
         data: {
           lifecycleState: "FULLY_ACTIVE",
           ...(!targetWarga.rwId && resolvedTargetRwId ? { rwId: resolvedTargetRwId } : {}),
+          ...(kknUserId
+            ? {
+                pendampingStudentId: kknUserId,
+                kelompokKknId: student?.kelompokId || null,
+              }
+            : {}),
         },
       });
     });
@@ -6159,7 +6175,7 @@ export class KknService {
       // 1. Validasi warga
       const warga = await tx.user.findUnique({
         where: { id: wargaId },
-        select: { id: true, name: true, phone: true, address: true, rwId: true },
+        select: { id: true, name: true, phone: true, address: true, rwId: true, pendampingStudentId: true, kelompokKknId: true },
       });
       if (!warga) {
         throw new Error("WARGA_NOT_FOUND");
@@ -6177,7 +6193,12 @@ export class KknService {
         throw new Error("STUDENT_NOT_FOUND");
       }
 
-      // 2. Cari tempat sampah aktif milik warga
+      // Validasi pendamping eksisting
+      if (warga.pendampingStudentId && warga.pendampingStudentId !== kknUserId) {
+        throw new Error("ALREADY_CLAIMED");
+      }
+
+      // 2. Cari tempat sampah aktif milik warga (jika ada)
       const bins = await tx.bin.findMany({
         where: {
           userId: wargaId,
@@ -6194,12 +6215,8 @@ export class KknService {
         },
       });
 
-      if (bins.length === 0) {
-        throw new Error("NO_ACTIVE_BINS");
-      }
-
       // Proteksi Lintas Kelompok: Tolak jika tempat sampah terdaftar di kelompok KKN lain
-      if (student.kelompokId) {
+      if (bins.length > 0 && student.kelompokId) {
         const foreignBin = bins.find((b) => b.kelompokId && b.kelompokId !== student.kelompokId);
         if (foreignBin) {
           throw new Error(
@@ -6208,22 +6225,36 @@ export class KknService {
         }
       }
 
-      // 3. Filter bin yang belum terikat mahasiswa (mandiri)
-      const unassignedBins = bins.filter((b) => b.registeredByStudentId === null);
-      if (unassignedBins.length === 0) {
+      // Validasi jika tempat sampah sudah terikat mahasiswa lain
+      const claimedBin = bins.find(
+        (b) => b.registeredByStudentId !== null && b.registeredByStudentId !== kknUserId
+      );
+      if (claimedBin) {
         throw new Error("ALREADY_CLAIMED");
       }
 
+      const unassignedBins = bins.filter((b) => b.registeredByStudentId === null);
       const unassignedBinIds = unassignedBins.map((b) => b.id);
 
-      // 4. Update Bin untuk menetapkan pendamping & sinkronisasi kelompok
-      await tx.bin.updateMany({
-        where: { id: { in: unassignedBinIds } },
+      // 3. Mutasi SSOT: Set pendampingStudentId dan kelompokKknId langsung pada User warga
+      await tx.user.update({
+        where: { id: wargaId },
         data: {
-          registeredByStudentId: kknUserId,
-          ...(student.kelompokId ? { kelompokId: student.kelompokId } : {}),
+          pendampingStudentId: kknUserId,
+          kelompokKknId: student.kelompokId || null,
         },
       });
+
+      // 4. Update Bin jika ada tempat sampah fisik yang belum terikat
+      if (unassignedBinIds.length > 0) {
+        await tx.bin.updateMany({
+          where: { id: { in: unassignedBinIds } },
+          data: {
+            registeredByStudentId: kknUserId,
+            ...(student.kelompokId ? { kelompokId: student.kelompokId } : {}),
+          },
+        });
+      }
 
       // 5. Buat Notifikasi Konfirmasi Klaim (Tanpa Poin Gamifikasi)
       const notifMessage = `Mengklaim pembimbingan warga mandiri: ${warga.name}`;
@@ -6672,7 +6703,9 @@ export class KknService {
       ];
 
       const currentStudentId =
-        allBins.find((b) => b.registeredByStudentId)?.registeredByStudentId || null;
+        warga.pendampingStudentId ||
+        allBins.find((b) => b.registeredByStudentId)?.registeredByStudentId ||
+        null;
 
       if (
         currentStudentId &&
@@ -6690,7 +6723,16 @@ export class KknService {
         previousStudentName = prevUser?.name || "-";
       }
 
-      // 5. Update Tempat Sampah Warga & Bersihkan Ghost Bin jika ada
+      // 5. Update SSOT Pendamping pada Akun User Warga
+      await tx.user.update({
+        where: { id: cleanWargaId },
+        data: {
+          pendampingStudentId: targetStudent.userId,
+          kelompokKknId: targetStudent.kelompokId || null,
+        },
+      });
+
+      // 6. Update Tempat Sampah Warga & Bersihkan Ghost Bin jika ada
       // Bersihkan ghost bin virtual (BSK-MEMBER-) jika sebelumnya sempat terbentuk
       await tx.bin.deleteMany({
         where: {
