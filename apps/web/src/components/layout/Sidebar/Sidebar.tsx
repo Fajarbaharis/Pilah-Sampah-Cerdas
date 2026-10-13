@@ -986,6 +986,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
     // DEVELOPER memiliki akses absolut ke seluruh menu sistem
     if (userRole === "DEVELOPER") return true;
 
+    // Modul Internet of Things: dynamic RBAC dari IoTSystemConfig adalah otoritatif mutlak!
+    // Bahkan untuk SUPER_USER, jika peran dimatikan di matriks RBAC IoT, menu wajib di-hide.
+    if (resource && (resource.startsWith("iot_") || resource === "internet_of_things")) {
+      return can(resource, "canView");
+    }
+
     // SUPER_USER UNIKOM memiliki akses administratif sistem secara luas,
     // KECUALI jika menu tersebut secara spesifik/eksklusif hanya untuk DEVELOPER
     if (userRole === "SUPER_USER") {
@@ -993,12 +999,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
         return false;
       }
       return true;
-    }
-
-    // Modul Internet of Things: dynamic RBAC dari IoTSystemConfig adalah otoritatif mutlak!
-    // Jika resource iot_* bernilai false pada permissions dinamis, tidak boleh fallback ke allowed statis.
-    if (resource && (resource.startsWith("iot_") || resource === "internet_of_things")) {
-      return can(resource, "canView");
     }
 
     // Khusus role PIMPINAN / PEMIMPIN: jika menu memiliki restriksi `allowed` dan tidak menyertakan PIMPINAN, tolak mutlak (tidak boleh bypass lewat dynamic resource)

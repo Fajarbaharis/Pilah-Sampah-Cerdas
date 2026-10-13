@@ -13,6 +13,8 @@ import {
   getDateRangeForDay,
   getDateRangeForMonth,
   getPreviousPeriodRange,
+  getWibIsoRangeForDay,
+  getWibIsoRangeForMonth,
   type WasteImpactItem,
 } from "./wasteCalculations.js";
 
@@ -109,6 +111,15 @@ describe("wasteCalculations", () => {
     const prevMonth = getPreviousPeriodRange("MONTHLY", "2026-10-01");
     expect(prevMonth.startDate).toBe("2026-09-01");
     expect(prevMonth.endDate).toBe("2026-09-30");
+
+    // WIB ISO Range (UTC+7: 00:00 WIB = 17:00 UTC previous day, 23:59:59.999 WIB = 16:59:59.999 UTC)
+    const wibDay = getWibIsoRangeForDay("2026-10-13");
+    expect(wibDay.startDate).toBe("2026-10-12T17:00:00.000Z");
+    expect(wibDay.endDate).toBe("2026-10-13T16:59:59.999Z");
+
+    const wibMonth = getWibIsoRangeForMonth(2026, 10);
+    expect(wibMonth.startDate).toBe("2026-09-30T17:00:00.000Z");
+    expect(wibMonth.endDate).toBe("2026-10-31T16:59:59.999Z");
   });
 
   it("should aggregate kelurahan impact using weighted calculations", () => {

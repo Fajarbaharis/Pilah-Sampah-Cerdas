@@ -609,7 +609,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (role === "SUPER_USER" && DEVELOPER_EXCLUSIVE_RESOURCES.includes(resource)) {
       return false;
     }
-    if (role === "SUPER_USER") {
+    // Modul Internet of Things tunduk pada konfigurasi RBAC IoT dinamis (SUPER_USER bisa dinonaktifkan)
+    const isIotResource = resource.startsWith("iot_") || resource === "internet_of_things";
+    if (role === "SUPER_USER" && !isIotResource) {
       return true;
     }
     if (!permissions) {

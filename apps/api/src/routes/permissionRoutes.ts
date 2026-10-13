@@ -26,8 +26,45 @@ router.get("/me", async (req, res) => {
   try {
     const userRole = String(req.user?.role || "").toUpperCase();
 
-    // If DEVELOPER or SUPER_USER, return full access directly
-    if (userRole === "DEVELOPER" || userRole === "SUPER_USER") {
+    // Integrasi hak akses dinamis grup IoT dari IoTSystemConfig
+    const iotConfig = await iotService.getOrCreateSystemConfig();
+    const effectiveRole = userRole;
+
+    const rbac = iotConfig.rbacPermissions || {
+      iot_monitoring: Array.isArray(iotConfig.roleAccessMonitoring) ? iotConfig.roleAccessMonitoring : ["DEVELOPER", "SUPER_USER"],
+      iot_data_sensor: Array.isArray(iotConfig.roleAccessDataSensor) ? iotConfig.roleAccessDataSensor : ["DEVELOPER", "SUPER_USER"],
+      iot_perangkat: Array.isArray(iotConfig.roleAccessPerangkat) ? iotConfig.roleAccessPerangkat : ["DEVELOPER", "SUPER_USER"],
+      iot_konfigurasi: Array.isArray(iotConfig.roleAccessKonfigurasi) ? iotConfig.roleAccessKonfigurasi : ["DEVELOPER", "SUPER_USER"],
+    };
+
+    const isRoleAllowed = (allowedList?: string[], targetRole = effectiveRole) => {
+      if (targetRole === "DEVELOPER") return true;
+      if (!Array.isArray(allowedList)) return false;
+      return (
+        allowedList.includes(targetRole) ||
+        (targetRole === "PIMPINAN" && (allowedList.includes("PEMIMPIN") || allowedList.includes("PIMPINAN"))) ||
+        (targetRole === "PEMIMPIN" && (allowedList.includes("PIMPINAN") || allowedList.includes("PEMIMPIN"))) ||
+        ((targetRole === "TASK_FORCE" || targetRole === "PANITIA_TASKFORCE" || targetRole === "TASKFORCE") &&
+          (allowedList.includes("TASK_FORCE") || allowedList.includes("PANITIA_TASKFORCE") || allowedList.includes("TASKFORCE")))
+      );
+    };
+
+    const canMonitoring = isRoleAllowed(rbac.iot_monitoring);
+    const canDataSensor = isRoleAllowed(rbac.iot_data_sensor);
+    const canPerangkat = isRoleAllowed(rbac.iot_perangkat);
+    const canKonfigurasi = isRoleAllowed(rbac.iot_konfigurasi);
+    const canGroup = canMonitoring || canDataSensor || canPerangkat || canKonfigurasi;
+
+    const iotPermissions = {
+      iot_monitoring: { canView: canMonitoring, canCreate: canMonitoring, canEdit: canMonitoring, canDelete: canMonitoring },
+      iot_data_sensor: { canView: canDataSensor, canCreate: canDataSensor, canEdit: canDataSensor, canDelete: canDataSensor },
+      iot_perangkat: { canView: canPerangkat, canCreate: canPerangkat, canEdit: canPerangkat, canDelete: canPerangkat },
+      iot_konfigurasi: { canView: canKonfigurasi, canCreate: canKonfigurasi, canEdit: canKonfigurasi, canDelete: canKonfigurasi },
+      internet_of_things: { canView: canGroup, canCreate: canGroup, canEdit: canGroup, canDelete: canGroup },
+    };
+
+    // If DEVELOPER, return full access directly
+    if (userRole === "DEVELOPER") {
       const allPermissions: Record<
         string,
         { canView: boolean; canCreate: boolean; canEdit: boolean; canDelete: boolean }
@@ -60,6 +97,36 @@ router.get("/me", async (req, res) => {
       return;
     }
 
+    // If SUPER_USER, full access ke fitur reguler, tapi modul IoT patuh pada konfigurasi dinamis IoT!
+    if (userRole === "SUPER_USER") {
+      const superPermissions: Record<
+        string,
+        { canView: boolean; canCreate: boolean; canEdit: boolean; canDelete: boolean }
+      > = {
+        dashboard_utama: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        dashboard_kkn: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        monitoring_sampah: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        laporan_analitik: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        pengangkutan: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        pemanfaatan: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        hasil_pemanfaatan: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        evaluasi_ai: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        manajemen_pengguna: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        manajemen_tempat_sampah: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        manajemen_lokasi: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        master_data_wilayah: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        rw_approval: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        rw_fasilitas: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        poin_warga: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        ide_daur_ulang: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        konfigurasi_sistem: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        audit_trail: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+        ...iotPermissions,
+      };
+      res.json({ success: true, data: superPermissions, role: userRole });
+      return;
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
       select: { roleId: true, role: { select: { name: true } } },
@@ -71,7 +138,7 @@ router.get("/me", async (req, res) => {
 
     const cached = getRolePermissionCache(user.roleId);
     if (cached) {
-      res.json({ success: true, data: cached, role: user.role?.name || userRole });
+      res.json({ success: true, data: { ...cached, ...iotPermissions }, role: user.role?.name || userRole });
       return;
     }
 
@@ -91,40 +158,7 @@ router.get("/me", async (req, res) => {
       ])
     );
 
-    // Integrasi hak akses dinamis grup IoT dari IoTSystemConfig
-    const iotConfig = await iotService.getOrCreateSystemConfig();
-    const effectiveRole = user.role?.name || userRole;
-
-    const rbac = iotConfig.rbacPermissions || {
-      iot_monitoring: Array.isArray(iotConfig.roleAccessMonitoring) ? iotConfig.roleAccessMonitoring : ["DEVELOPER", "SUPER_USER"],
-      iot_data_sensor: Array.isArray(iotConfig.roleAccessDataSensor) ? iotConfig.roleAccessDataSensor : ["DEVELOPER", "SUPER_USER"],
-      iot_perangkat: Array.isArray(iotConfig.roleAccessPerangkat) ? iotConfig.roleAccessPerangkat : ["DEVELOPER", "SUPER_USER"],
-      iot_konfigurasi: Array.isArray(iotConfig.roleAccessKonfigurasi) ? iotConfig.roleAccessKonfigurasi : ["DEVELOPER", "SUPER_USER"],
-    };
-
-    const isRoleAllowed = (allowedList?: string[]) => {
-      if (!Array.isArray(allowedList)) return false;
-      return (
-        allowedList.includes(effectiveRole) ||
-        (effectiveRole === "PIMPINAN" && (allowedList.includes("PEMIMPIN") || allowedList.includes("PIMPINAN"))) ||
-        (effectiveRole === "PEMIMPIN" && (allowedList.includes("PIMPINAN") || allowedList.includes("PEMIMPIN"))) ||
-        ((effectiveRole === "TASK_FORCE" || effectiveRole === "PANITIA_TASKFORCE" || effectiveRole === "TASKFORCE") &&
-          (allowedList.includes("TASK_FORCE") || allowedList.includes("PANITIA_TASKFORCE") || allowedList.includes("TASKFORCE")))
-      );
-    };
-
-    const canMonitoring = isRoleAllowed(rbac.iot_monitoring);
-    const canDataSensor = isRoleAllowed(rbac.iot_data_sensor);
-    const canPerangkat = isRoleAllowed(rbac.iot_perangkat);
-    const canKonfigurasi = isRoleAllowed(rbac.iot_konfigurasi);
-    const canGroup = canMonitoring || canDataSensor || canPerangkat || canKonfigurasi;
-
-    result.iot_monitoring = { canView: canMonitoring, canCreate: canMonitoring, canEdit: canMonitoring, canDelete: canMonitoring };
-    result.iot_data_sensor = { canView: canDataSensor, canCreate: canDataSensor, canEdit: canDataSensor, canDelete: canDataSensor };
-    result.iot_perangkat = { canView: canPerangkat, canCreate: canPerangkat, canEdit: canPerangkat, canDelete: canPerangkat };
-    result.iot_konfigurasi = { canView: canKonfigurasi, canCreate: canKonfigurasi, canEdit: canKonfigurasi, canDelete: canKonfigurasi };
-    result.internet_of_things = { canView: canGroup, canCreate: canGroup, canEdit: canGroup, canDelete: canGroup };
-
+    Object.assign(result, iotPermissions);
     setRolePermissionCache(user.roleId, result);
     res.json({ success: true, data: result, role: user.role?.name || userRole });
   } catch (err: any) {

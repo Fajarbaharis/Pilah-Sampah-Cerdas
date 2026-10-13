@@ -11,7 +11,7 @@ const iotRbacMiddleware = (subPageKey: "iot_monitoring" | "iot_data_sensor" | "i
   return async (req: any, res: any, next: any) => {
     try {
       const userRole = String(req.user?.role || "").toUpperCase();
-      if (userRole === "DEVELOPER" || userRole === "SUPER_USER") {
+      if (userRole === "DEVELOPER") {
         return next();
       }
       const config = await iotService.getOrCreateSystemConfig();
