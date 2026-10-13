@@ -1090,9 +1090,11 @@ export class KknAttendanceService {
       }
     }
 
-    const binConditions: any[] = [];
+    const dampinganConditions: any[] = [];
     if (groupStudentIds.length > 0) {
-      binConditions.push(
+      dampinganConditions.push(
+        { pendampingStudentId: { in: groupStudentIds } },
+        ...(studentProfile?.kelompokId ? [{ kelompokKknId: studentProfile.kelompokId }] : []),
         { bins: { some: { status: "ACTIVE_BOUND", registeredByStudentId: { in: groupStudentIds } } } },
         { binOwnerships: { some: { bin: { status: "ACTIVE_BOUND", registeredByStudentId: { in: groupStudentIds } } } } }
       );
@@ -1101,9 +1103,22 @@ export class KknAttendanceService {
     const wargaList = await prisma.user.findMany({
       where: {
         role: { name: "WARGA" },
-        OR: binConditions.length > 0 ? binConditions : undefined,
+        OR: dampinganConditions.length > 0 ? dampinganConditions : undefined,
       },
       include: {
+        pendampingStudent: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            studentProfile: {
+              select: {
+                nim: true,
+                kelompokId: true,
+              },
+            },
+          },
+        },
         rw: { include: { kelurahan: true } },
         households: { include: { rw: { include: { kelurahan: true } } } },
         pointHistory: true,
@@ -1180,8 +1195,18 @@ export class KknAttendanceService {
       const kelName = u.rw?.kelurahan?.name || household?.rw?.kelurahan?.name || primaryBin?.rw?.kelurahan?.name || "";
 
       const isActivated = !!primaryBin;
-      const registeredStudentId = primaryBin?.registeredByStudentId || binOrganik?.registeredByStudentId || binAnorganik?.registeredByStudentId || null;
-      const registeredStudentName = primaryBin?.registeredByStudent?.name || binOrganik?.registeredByStudent?.name || binAnorganik?.registeredByStudent?.name || null;
+      const registeredStudentId =
+        u.pendampingStudentId ||
+        primaryBin?.registeredByStudentId ||
+        binOrganik?.registeredByStudentId ||
+        binAnorganik?.registeredByStudentId ||
+        null;
+      const registeredStudentName =
+        u.pendampingStudent?.name ||
+        primaryBin?.registeredByStudent?.name ||
+        binOrganik?.registeredByStudent?.name ||
+        binAnorganik?.registeredByStudent?.name ||
+        null;
 
       const totalKg = allSetoranLogs.reduce((sum: number, l: any) => sum + Number(l.berat || 0), 0);
       const totalPoin =
@@ -1208,6 +1233,9 @@ export class KknAttendanceService {
       return {
         registeredStudentId: registeredStudentId || "",
         registeredStudentName: registeredStudentName || "",
+        pendampingStudentId: u.pendampingStudentId || registeredStudentId || null,
+        pendampingStudentName: u.pendampingStudent?.name || registeredStudentName || null,
+        kelompokKknId: u.kelompokKknId || null,
         wargaId: u.id,
         id: u.id,
         wargaName: u.name || "Unknown",
