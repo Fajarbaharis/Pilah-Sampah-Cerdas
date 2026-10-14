@@ -250,6 +250,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         role: userRoleName,
+        isKetua: Boolean(anyUser.studentProfile?.isKetua),
         komunitas_id: user.komunitasId || null,
         phone: user.phone,
         address: isRegisteredWarga ? null : user.address,
@@ -267,7 +268,12 @@ export class AuthService {
         nim: anyUser.studentProfile?.nim || null,
         jurusan: anyUser.studentProfile?.jurusan || null,
         fakultas: anyUser.studentProfile?.fakultas || null,
-        studentProfile: anyUser.studentProfile || null,
+        studentProfile: anyUser.studentProfile
+          ? {
+              ...anyUser.studentProfile,
+              isKetua: Boolean(anyUser.studentProfile.isKetua),
+            }
+          : null,
         petugasProfile: anyUser.petugasProfile || null,
         assignedZone:
           anyUser.petugasProfile?.assignedZone ||
@@ -681,6 +687,7 @@ export class AuthService {
       id: user.id,
       name: user.name,
       role: roleName,
+      isKetua: Boolean(studentProfile?.isKetua),
       komunitas_id: user.komunitasId || null,
       phone: user.phone,
       address: user.address,
@@ -727,7 +734,12 @@ export class AuthService {
         studentProfile?.kelompok?.dosenPembimbing ||
         null,
       dplKelompok: user.dplKelompok || [],
-      studentProfile: studentProfile || null,
+      studentProfile: studentProfile
+        ? {
+            ...studentProfile,
+            isKetua: Boolean(studentProfile.isKetua),
+          }
+        : null,
       petugasProfile: user.petugasProfile || null,
       lifecycleState,
       assignedZone:

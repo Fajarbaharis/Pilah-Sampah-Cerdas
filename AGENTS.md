@@ -120,3 +120,10 @@ Format: `<type>(<scope>): <deskripsi singkat>`
 - `fix(api): perbaiki validasi token jwt staging`
 - `fix(web): perbaiki layout responsive tabel presensi`
 - `chore(ci): update script deployment staging`
+
+---
+
+## 🔄 PROTOKOL SINKRONISASI DENGAN WORKTREE MOBILE (../mobile)
+1. **Worktree Pendamping**: Aplikasi Flutter berada di direktori tetangga: `../mobile`.
+2. **Keterbacaan Kode**: Agent di worktree ini boleh dan dianjurkan membaca kode di `../mobile` (misal `../mobile/lib/services/` atau models) untuk menyelaraskan request/response.
+3. **Pencatatan Kontrak**: Jika membuat endpoint baru atau mengubah response DTO di `apps/api`, agent WAJIB mencatat perubahan tersebut di file `../SYNC_STATE.md`.
