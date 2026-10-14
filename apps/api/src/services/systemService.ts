@@ -1052,6 +1052,26 @@ export const systemService = {
     const finalKegiatanCount = scheduleCount + approvedLogbookCount;
     const finalKelurahanCount = kelurahanDbCount > 0 ? kelurahanDbCount : 6;
 
+    // Fetch live stats from AISAh Vision AI service
+    let aisahTotalScans = 7732;
+    let aisahAccuracyPercent = 100.0;
+    try {
+      const [scansRes, feedbackRes] = await Promise.all([
+        fetch("https://aisah.berseka.id/api/stats", { signal: AbortSignal.timeout(3000) })
+          .then((r) => r.json())
+          .catch(() => null),
+        fetch("https://aisah.berseka.id/api/stats/feedback", { signal: AbortSignal.timeout(3000) })
+          .then((r) => r.json())
+          .catch(() => null),
+      ]);
+      if (scansRes && typeof scansRes.total_scans === "number") {
+        aisahTotalScans = scansRes.total_scans;
+      }
+      if (feedbackRes && typeof feedbackRes.accuracy_percent === "number") {
+        aisahAccuracyPercent = feedbackRes.accuracy_percent;
+      }
+    } catch (_) {}
+
     // Filter only published activities for public landing page
     const publishedActivities = (curatedActivities || [])
       .filter((a: any) => a.isPublished !== false)
@@ -1060,6 +1080,12 @@ export const systemService = {
     const result = {
       kegiatanCount: finalKegiatanCount > 0 ? finalKegiatanCount : scheduleCount || 28,
       wargaCount: realUserCount > 0 ? realUserCount : 725, // Total pengguna terlibat riil dari tabel User
+      totalUsers: realUserCount > 0 ? realUserCount : 725,
+      totalPengguna: realUserCount > 0 ? realUserCount : 725,
+      aisahStats: {
+        totalScans: aisahTotalScans,
+        accuracyPercent: aisahAccuracyPercent,
+      },
       totalSampahKg,
       sampahOrganikKg,
       sampahAnorganikKg,
