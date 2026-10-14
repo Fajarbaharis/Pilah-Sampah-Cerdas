@@ -27,8 +27,8 @@ import {
   Landmark,
   Home,
   UserCheck,
-  Scale,
-  Trees,
+  Camera,
+  ExternalLink,
   Calculator,
   Calendar,
   Clock,
@@ -122,10 +122,87 @@ export const LandingPage: React.FC = () => {
   const [calcPlasticKg, setCalcPlasticKg] = useState<number>(8);
   const [calcOilLiters, setCalcOilLiters] = useState<number>(3);
 
-  // ── Load Dynamic CMS Content (IndexedDB + API Hybrid + Realtime Cross-tab) ───
+  // ── Public Aggregate Stats State (Real Database Integration) ────────────────
+  const [landingStats, setLandingStats] = useState<{
+    totalPengguna?: number;
+    totalUsers?: number;
+    wargaCount?: number;
+    kelurahanCount?: number;
+    kegiatanCount?: number;
+    totalSampahKg?: number;
+    sampahOrganikKg?: number;
+    sampahAnorganikKg?: number;
+    totalPoin?: number;
+    aisahStats?: {
+      totalScans?: number;
+      accuracyPercent?: number;
+    };
+  } | null>(null);
+  const [loadingStats, setLoadingStats] = useState<boolean>(true);
+
+  // ── AISAh Vision AI Realtime State (aisah.berseka.id API) ───────────────────
+  const [aisahRealtimeStats, setAisahRealtimeStats] = useState<{
+    totalScans: number;
+    accuracyPercent: number;
+  }>({
+    totalScans: 7732,
+    accuracyPercent: 100.0,
+  });
+  const [loadingAisahStats, setLoadingAisahStats] = useState<boolean>(true);
+
+  // ── Load Dynamic CMS Content & Real Stats ──────────────────────────────────
   useEffect(() => {
     let isMounted = true;
     let broadcastChannel: BroadcastChannel | null = null;
+
+    const fetchAisahLive = async () => {
+      try {
+        const [scansRes, feedbackRes] = await Promise.allSettled([
+          fetch("https://aisah.berseka.id/api/stats").then((r) => r.json()),
+          fetch("https://aisah.berseka.id/api/stats/feedback").then((r) => r.json()),
+        ]);
+
+        let scans = 0;
+        let accuracy = 0;
+
+        if (scansRes.status === "fulfilled" && typeof scansRes.value?.total_scans === "number") {
+          scans = scansRes.value.total_scans;
+        }
+        if (feedbackRes.status === "fulfilled" && typeof feedbackRes.value?.accuracy_percent === "number") {
+          accuracy = feedbackRes.value.accuracy_percent;
+        }
+
+        if (isMounted && (scans > 0 || accuracy > 0)) {
+          setAisahRealtimeStats((prev) => ({
+            totalScans: scans > 0 ? scans : prev.totalScans,
+            accuracyPercent: accuracy > 0 ? accuracy : prev.accuracyPercent,
+          }));
+        }
+      } catch (err) {
+        console.warn("[LandingPage] Failed direct fetch from aisah.berseka.id:", err);
+      } finally {
+        if (isMounted) setLoadingAisahStats(false);
+      }
+    };
+
+    const fetchStats = async () => {
+      try {
+        const res = await api.get("/system/landing-stats");
+        if (isMounted && res.data?.success && res.data?.data) {
+          setLandingStats(res.data.data);
+          if (res.data.data.aisahStats) {
+            setAisahRealtimeStats((prev) => ({
+              totalScans: res.data.data.aisahStats.totalScans || prev.totalScans,
+              accuracyPercent: res.data.data.aisahStats.accuracyPercent ?? prev.accuracyPercent,
+            }));
+          }
+        }
+      } catch (err) {
+        console.warn("[LandingPage] Failed to fetch live landing stats:", err);
+      } finally {
+        if (isMounted) setLoadingStats(false);
+      }
+    };
 
     const fetchContent = async () => {
       let localTimestamp = 0;
@@ -160,6 +237,8 @@ export const LandingPage: React.FC = () => {
     };
 
     fetchContent();
+    fetchStats();
+    fetchAisahLive();
 
     // Listen to real-time BroadcastChannel from Admin tab
     try {
@@ -261,6 +340,23 @@ export const LandingPage: React.FC = () => {
     ? cmsContent.faqItems
     : DEFAULT_CMS_CONTENT.faqItems;
 
+  // ── Derived Dynamic Stats Values ───────────────────────────────────────────
+  const displayUserCount = useMemo(() => {
+    const count = landingStats?.totalPengguna ?? landingStats?.totalUsers ?? landingStats?.wargaCount;
+    if (count !== undefined && count > 0) {
+      return `${count.toLocaleString("id-ID")}+`;
+    }
+    return "750+";
+  }, [landingStats]);
+
+  const displayKelurahanCount = useMemo(() => {
+    const count = landingStats?.kelurahanCount;
+    if (count !== undefined && count > 0) {
+      return count.toString();
+    }
+    return "6";
+  }, [landingStats]);
+
   // ── Hero Carousel Controls ───────────────────────────────────────────────────
   const goToSlide = useCallback((index: number) => {
     setCurrentSlide((index + slides.length) % slides.length);
@@ -326,62 +422,6 @@ export const LandingPage: React.FC = () => {
     }
     touchStartXRef.current = null;
   };
-
-  // ── Count-Up Intersection Animation for Impact Metrics ────────────────────────
-  const [metricCounts, setMetricCounts] = useState({
-    managed: 0,
-    recycled: 0,
-    emissions: 0,
-    citizens: 0,
-  });
-  const metricsSectionRef = useRef<HTMLDivElement>(null);
-  const animatedRef = useRef<boolean>(false);
-
-  useEffect(() => {
-    const targets = {
-      managed: 128.4,
-      recycled: 67.2,
-      emissions: 193.6,
-      citizens: 2146,
-    };
-
-    const animateMetrics = () => {
-      if (animatedRef.current) return;
-      animatedRef.current = true;
-      const duration = 1500;
-      const start = performance.now();
-
-      const step = (now: number) => {
-        const progress = Math.min((now - start) / duration, 1);
-        const ease = 1 - Math.pow(1 - progress, 3);
-
-        setMetricCounts({
-          managed: parseFloat((targets.managed * ease).toFixed(1)),
-          recycled: parseFloat((targets.recycled * ease).toFixed(1)),
-          emissions: parseFloat((targets.emissions * ease).toFixed(1)),
-          citizens: Math.floor(targets.citizens * ease),
-        });
-
-        if (progress < 1) requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
-    };
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          animateMetrics();
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.25 }
-    );
-
-    if (metricsSectionRef.current) {
-      observer.observe(metricsSectionRef.current);
-    }
-    return () => observer.disconnect();
-  }, []);
 
   // ── Smart Sticky Navbar (Hide on scroll down, show on scroll up) ────────────
   const [isNavbarVisible, setIsNavbarVisible] = useState<boolean>(true);
@@ -505,16 +545,16 @@ export const LandingPage: React.FC = () => {
                   className={activeSection === "pasar" ? "active-link" : ""}
                   onClick={() => setIsNavOpen(false)}
                 >
-                  Pasar Berseka
+                  Pasar BERSEKA
                 </a>
               </li>
               <li>
                 <a
-                  href="#dampak"
-                  className={activeSection === "dampak" ? "active-link" : ""}
+                  href="#aisah"
+                  className={activeSection === "aisah" ? "active-link" : ""}
                   onClick={() => setIsNavOpen(false)}
                 >
-                  Dampak
+                  AISAh AI
                 </a>
               </li>
               <li>
@@ -546,7 +586,7 @@ export const LandingPage: React.FC = () => {
                       setIsNavOpen(false);
                     }}
                   >
-                    FAQ (Tanya Jawab)
+                    Tanya Jawab (FAQ)
                   </a>
                   <button
                     type="button"
@@ -641,8 +681,8 @@ export const LandingPage: React.FC = () => {
                   to="/download"
                   className="landing-btn landing-btn-outline"
                 >
-                  <ArrowRight size={16} />
-                  Download Aplikasi
+                  <Download size={16} strokeWidth={2.2} />
+                  <span>Unduh Aplikasi</span>
                 </Link>
               </div>
             </div>
@@ -668,7 +708,7 @@ export const LandingPage: React.FC = () => {
                     key={slide.id || idx}
                     className="landing-carousel-slide"
                     role="group"
-                    aria-roledescription="slide"
+                    aria-roledescription="salindia"
                     aria-label={`${idx + 1} dari ${slides.length}`}
                   >
                     <figure className="landing-media">
@@ -697,7 +737,7 @@ export const LandingPage: React.FC = () => {
                   prevSlide();
                   restartTimer();
                 }}
-                aria-label="Slide sebelumnya"
+                aria-label="Salindia sebelumnya"
               >
                 <ChevronLeft size={18} strokeWidth={2.4} />
               </button>
@@ -708,20 +748,20 @@ export const LandingPage: React.FC = () => {
                   nextSlide();
                   restartTimer();
                 }}
-                aria-label="Slide berikutnya"
+                aria-label="Salindia berikutnya"
               >
                 <ChevronRight size={18} strokeWidth={2.4} />
               </button>
 
               {/* Dot Indicators */}
-              <div className="landing-carousel-dots" role="tablist" aria-label="Pilih slide">
+              <div className="landing-carousel-dots" role="tablist" aria-label="Pilih salindia">
                 {slides.map((_, idx) => (
                   <button
                     key={idx}
                     type="button"
                     role="tab"
                     aria-selected={currentSlide === idx}
-                    aria-label={`Ke slide ${idx + 1}`}
+                    aria-label={`Ke salindia ${idx + 1}`}
                     onClick={() => {
                       goToSlide(idx);
                       restartTimer();
@@ -734,33 +774,53 @@ export const LandingPage: React.FC = () => {
 
           {/* Stats Bar */}
           <div className="landing-container">
-            <div className="landing-stats">
+            <div className="landing-stats" role="region" aria-label="Statistik Ekosistem BERSEKA">
               <div className="landing-stat">
-                <Users size={30} strokeWidth={1.8} />
-                <div>
-                  <div className="landing-stat-value">750+</div>
-                  <div className="landing-stat-label">Pengguna Pilot</div>
+                <div className="landing-stat-icon-wrap">
+                  <Users size={26} strokeWidth={2} />
+                </div>
+                <div className="landing-stat-content">
+                  <div className="landing-stat-value">
+                    {loadingStats ? (
+                      <span className="landing-stat-skeleton" aria-hidden="true" />
+                    ) : (
+                      displayUserCount
+                    )}
+                  </div>
+                  <div className="landing-stat-label">Pengguna</div>
                 </div>
               </div>
               <div className="landing-stat">
-                <Building2 size={30} strokeWidth={1.8} />
-                <div>
-                  <div className="landing-stat-value">6</div>
+                <div className="landing-stat-icon-wrap">
+                  <Building2 size={26} strokeWidth={2} />
+                </div>
+                <div className="landing-stat-content">
+                  <div className="landing-stat-value">
+                    {loadingStats ? (
+                      <span className="landing-stat-skeleton" aria-hidden="true" />
+                    ) : (
+                      displayKelurahanCount
+                    )}
+                  </div>
                   <div className="landing-stat-label">Kelurahan</div>
                 </div>
               </div>
               <div className="landing-stat">
-                <Database size={30} strokeWidth={1.8} />
-                <div>
+                <div className="landing-stat-icon-wrap">
+                  <Database size={26} strokeWidth={2} />
+                </div>
+                <div className="landing-stat-content">
                   <div className="landing-stat-value">Data</div>
                   <div className="landing-stat-label">Tercatat</div>
                 </div>
               </div>
               <div className="landing-stat">
-                <HeartHandshake size={30} strokeWidth={1.8} />
-                <div>
+                <div className="landing-stat-icon-wrap">
+                  <HeartHandshake size={26} strokeWidth={2} />
+                </div>
+                <div className="landing-stat-content">
                   <div className="landing-stat-value">Kolaborasi</div>
-                  <div className="landing-stat-label">Multi-Pihak</div>
+                  <div className="landing-stat-label">Multipihak</div>
                 </div>
               </div>
             </div>
@@ -922,10 +982,10 @@ export const LandingPage: React.FC = () => {
               </div>
               <p style={{ margin: 0, fontSize: "0.86rem", color: "#2d4436", lineHeight: "1.45" }}>
                 <strong style={{ color: "#0d3d24", fontWeight: 700 }}>
-                  Lokasi penukaran: Posko KKN BERSEKA di masing-masing RW, Kecamatan Coblong, Kota Bandung.
+                  Lokasi penukaran: Posko KKN BERSEKA di setiap RW, Kecamatan Coblong, Kota Bandung.
                 </strong>
                 <br />
-                <span style={{ color: "#52735e", fontSize: "0.82rem" }}>
+                <span style={{ color: "#3d5a47", fontSize: "0.82rem" }}>
                   Tunjukkan kode penukaran kepada petugas saat mengambil produk.
                 </span>
               </p>
@@ -984,7 +1044,7 @@ export const LandingPage: React.FC = () => {
                         {cartSuccessId === prod.id ? (
                           <>
                             <Check size={14} strokeWidth={2.4} />
-                            <span>Tersimpan</span>
+                            <span>Poin Berhasil Ditukar</span>
                           </>
                         ) : (
                           <>
@@ -1001,58 +1061,102 @@ export const LandingPage: React.FC = () => {
         </section>
 
         {/* =========================================================
-            6. DAMPAK YANG TERUKUR (ANIMATED IMPACT METRICS)
+            6. AISAh VISION AI SHOWCASE (aisah.berseka.id)
             ========================================================= */}
-        <section className="landing-section" id="dampak">
-          <div className="landing-container" ref={metricsSectionRef}>
-            <div className="landing-section-head">
-              <h2 className="landing-section-title">Dampak yang Terukur</h2>
-            </div>
-            <div className="landing-metrics">
-              <div className="landing-metric">
-                <Scale size={40} strokeWidth={1.6} />
-                <div>
-                  <div className="landing-metric-label">Sampah Terkelola</div>
-                  <div className="landing-metric-value">
-                    <span>{metricCounts.managed.toLocaleString("id-ID", { minimumFractionDigits: 1 })}</span>
-                    <small>ton</small>
+        <section className="landing-section" id="aisah">
+          <div className="landing-container">
+            <div className="landing-aisah-card">
+              <div className="landing-aisah-info">
+                <div className="landing-aisah-badge">
+                  <Sparkles size={14} className="text-emerald-600" />
+                  <span>Kecerdasan Artifisial Pemilah Sampah</span>
+                </div>
+                <h2 className="landing-aisah-card-title">
+                  AISAh — Asisten Identifikasi Sampah
+                </h2>
+                <p className="landing-aisah-card-desc">
+                  Pindai dan kenali jenis sampah secara otomatis melalui kamera gawai Anda. 
+                  Teknologi AI Vision BERSEKA mendeteksi material objek, mengarahkan penempatan ke tempat sampah pemilahan yang tepat, dan menyajikan estimasi komposisi secara presisi.
+                </p>
+
+                <div className="landing-aisah-features">
+                  <div className="landing-aisah-feat-item">
+                    <div className="landing-aisah-feat-icon">
+                      <Camera size={16} strokeWidth={2.2} />
+                    </div>
+                    <div>
+                      <strong>Pindai Cepat Tanpa Instalasi:</strong> Cukup ambil foto atau unggah gambar langsung dari peramban ponsel maupun desktop.
+                    </div>
                   </div>
-                  <div className="landing-metric-note">Total kumulatif</div>
+                  <div className="landing-aisah-feat-item">
+                    <div className="landing-aisah-feat-icon">
+                      <CheckCircle2 size={16} strokeWidth={2.2} />
+                    </div>
+                    <div>
+                      <strong>Panduan Tiga Wadah Pemilahan:</strong> Rekomendasi langsung penempatan tempat sampah Organik (Hijau), Anorganik (Kuning), atau Residu (Merah).
+                    </div>
+                  </div>
+                  <div className="landing-aisah-feat-item">
+                    <div className="landing-aisah-feat-icon">
+                      <Sparkles size={16} strokeWidth={2.2} />
+                    </div>
+                    <div>
+                      <strong>Kalkulasi Komposisi Fisik:</strong> Menyajikan persentase material untuk mendukung pencatatan sirkularitas dan daur ulang.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="landing-aisah-actions">
+                  <a
+                    href="https://aisah.berseka.id"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="landing-aisah-btn"
+                    aria-label="Buka aplikasi web AISAh di tab baru"
+                  >
+                    <span>Buka aisah.berseka.id</span>
+                    <ExternalLink size={16} strokeWidth={2.2} />
+                  </a>
+                  <span className="landing-aisah-subtext">
+                    Tersedia gratis untuk seluruh warga &amp; komunitas
+                  </span>
                 </div>
               </div>
 
-              <div className="landing-metric">
-                <Recycle size={40} strokeWidth={1.6} />
-                <div>
-                  <div className="landing-metric-label">Sampah Didaur Ulang</div>
-                  <div className="landing-metric-value">
-                    <span>{metricCounts.recycled.toLocaleString("id-ID", { minimumFractionDigits: 1 })}</span>
-                    <small>ton</small>
-                  </div>
-                  <div className="landing-metric-note">52,3% dari total</div>
+              {/* Interactive Visual Preview Box */}
+              <div className="landing-aisah-interactive-preview" aria-hidden="true">
+                <div className="landing-aisah-preview-header">
+                  <span className="landing-aisah-status-dot">AISAh Vision AI Online</span>
+                  <span className="landing-aisah-accuracy-tag">
+                    {loadingAisahStats ? "Akurasi memuat..." : `Akurasi ${aisahRealtimeStats.accuracyPercent.toFixed(1)}%`}
+                  </span>
                 </div>
-              </div>
 
-              <div className="landing-metric">
-                <Trees size={40} strokeWidth={1.6} />
-                <div>
-                  <div className="landing-metric-label">Emisi Terhindari</div>
-                  <div className="landing-metric-value">
-                    <span>{metricCounts.emissions.toLocaleString("id-ID", { minimumFractionDigits: 1 })}</span>
-                    <small>ton CO₂e</small>
+                <div className="landing-aisah-demo-frame">
+                  <div className="landing-aisah-demo-icon">
+                    <Camera size={26} strokeWidth={2} />
                   </div>
-                  <div className="landing-metric-note">Setara menanam 8.431 pohon</div>
+                  <div className="landing-aisah-demo-title">
+                    {aisahRealtimeStats.totalScans.toLocaleString("id-ID")} Sampah Terpindai
+                  </div>
+                  <div className="landing-aisah-demo-subtitle">
+                    Deteksi instan jenis material &amp; wadah tempat sampah yang sesuai secara real-time
+                  </div>
                 </div>
-              </div>
 
-              <div className="landing-metric">
-                <Users size={40} strokeWidth={1.6} />
-                <div>
-                  <div className="landing-metric-label">Partisipasi Warga</div>
-                  <div className="landing-metric-value">
-                    <span>{metricCounts.citizens.toLocaleString("id-ID")}</span>
+                <div className="landing-aisah-pill-grid">
+                  <div className="landing-aisah-pill org">
+                    <span className="pill-dot">🟢 Hijau</span>
+                    <span className="pill-name">Organik</span>
                   </div>
-                  <div className="landing-metric-note">Warga aktif berpartisipasi</div>
+                  <div className="landing-aisah-pill inorg">
+                    <span className="pill-dot">🟡 Kuning</span>
+                    <span className="pill-name">Anorganik</span>
+                  </div>
+                  <div className="landing-aisah-pill res">
+                    <span className="pill-dot">🔴 Merah</span>
+                    <span className="pill-name">Residu</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1135,7 +1239,7 @@ export const LandingPage: React.FC = () => {
                     <circle cx="12" cy="8" r="3.5" /><circle cx="8" cy="14" r="3.5" /><circle cx="16" cy="14" r="3.5" /><circle cx="12" cy="17" r="3.5" /><circle cx="7" cy="9" r="3.5" /><circle cx="17" cy="9" r="3.5" />
                   </svg>
                 </div>
-                <p>Menguatkan kolaborasi multi-pihak untuk mencapai tujuan pembangunan berkelanjutan.</p>
+                <p>Menguatkan kolaborasi multipihak untuk mencapai tujuan pembangunan berkelanjutan.</p>
               </div>
             </div>
           </div>
@@ -1247,14 +1351,14 @@ export const LandingPage: React.FC = () => {
                 <div className="landing-contact-item">
                   <Phone size={20} strokeWidth={1.8} />
                   <div>
-                    <small>WhatsApp Hotline</small>
+                    <small>Saluran WhatsApp</small>
                     <strong>+62 857-1551-6065</strong>
                   </div>
                 </div>
                 <div className="landing-contact-item">
                   <Mail size={20} strokeWidth={1.8} />
                   <div>
-                    <small>Email Resmi</small>
+                    <small>Pos-el / Email Resmi</small>
                     <strong>cdc@unikom.ac.id</strong>
                   </div>
                 </div>
@@ -1303,7 +1407,7 @@ export const LandingPage: React.FC = () => {
                 </picture>
               </a>
               <p>
-                Platform pengelolaan sampah terpadu berbasis teknologi dan kolaborasi multi-pihak
+                Platform pengelolaan sampah terpadu berbasis teknologi dan kolaborasi multipihak
                 untuk mewujudkan kampung lebih bersih, sehat, dan asri.
               </p>
               <div className="landing-social">
@@ -1336,8 +1440,8 @@ export const LandingPage: React.FC = () => {
                 <li><a href="#">Beranda</a></li>
                 <li><a href="#tentang">Tentang</a></li>
                 <li><a href="#program">Program</a></li>
-                <li><a href="#pasar">Pasar Berseka</a></li>
-                <li><a href="#dampak">Dampak</a></li>
+                <li><a href="#pasar">Pasar BERSEKA</a></li>
+                <li><a href="#aisah">AISAh AI</a></li>
                 <li><a href="#berita">Berita</a></li>
               </ul>
             </div>
@@ -2052,7 +2156,7 @@ export const LandingPage: React.FC = () => {
                     <Phone size={18} />
                   </div>
                   <div>
-                    <span className="text-[10px] text-green-700 font-bold block uppercase tracking-wider">WhatsApp Hotline</span>
+                    <span className="text-[10px] text-green-700 font-bold block uppercase tracking-wider">Saluran WhatsApp</span>
                     <span className="text-xs font-black text-green-950">+62 857-1551-6065</span>
                   </div>
                 </a>
@@ -2065,7 +2169,7 @@ export const LandingPage: React.FC = () => {
                     <Mail size={18} />
                   </div>
                   <div>
-                    <span className="text-[10px] text-blue-700 font-bold block uppercase tracking-wider">Email Resmi</span>
+                    <span className="text-[10px] text-blue-700 font-bold block uppercase tracking-wider">Pos-el / Email Resmi</span>
                     <span className="text-xs font-black text-blue-950">admin@berseka.id</span>
                     <span className="text-[10px] text-slate-500 block font-normal">Cadangan: admin.berseka@gmail.com</span>
                   </div>
