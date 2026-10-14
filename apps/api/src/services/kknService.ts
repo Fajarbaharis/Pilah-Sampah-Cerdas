@@ -177,13 +177,19 @@ export class KknService {
       throw new Error("STUDENT_NOT_FOUND");
     }
 
+    const studentIds = [userId, student?.id].filter(Boolean) as string[];
+
     // Total registered bins
     const totalRegistered = isSuperOrAdmin
       ? await prisma.bin.count({ where: { status: "ACTIVE_BOUND" } })
       : await prisma.bin.count({
           where: {
             status: "ACTIVE_BOUND",
-            registeredByStudentId: userId,
+            OR: [
+              { registeredByStudentId: { in: studentIds } },
+              { user: { pendampingStudentId: { in: studentIds } } },
+              { binOwnerships: { some: { user: { pendampingStudentId: { in: studentIds } } } } },
+            ],
           },
         });
 
@@ -308,6 +314,7 @@ export class KknService {
               role: { name: "WARGA" },
               NOT: {
                 OR: [
+                  { pendampingStudentId: { not: null } },
                   { bins: { some: { registeredByStudentId: { not: null } } } },
                   { binOwnerships: { some: { bin: { registeredByStudentId: { not: null } } } } },
                 ],
@@ -316,12 +323,12 @@ export class KknService {
           })
         : 0;
     } else {
-      const studentIds = [userId, student?.id].filter(Boolean) as string[];
       const wargaDampingan = prisma.user.findMany
         ? await prisma.user.findMany({
             where: {
               role: { name: "WARGA" },
               OR: [
+                { pendampingStudentId: { in: studentIds } },
                 { bins: { some: { registeredByStudentId: { in: studentIds } } } },
                 { binOwnerships: { some: { bin: { registeredByStudentId: { in: studentIds } } } } },
               ],
@@ -363,6 +370,7 @@ export class KknService {
             ],
             NOT: {
               OR: [
+                { pendampingStudentId: { not: null } },
                 { bins: { some: { registeredByStudentId: { not: null } } } },
                 { binOwnerships: { some: { bin: { registeredByStudentId: { not: null } } } } },
               ],

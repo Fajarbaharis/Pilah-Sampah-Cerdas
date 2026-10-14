@@ -48,6 +48,7 @@ vi.mock("../repositories/authRepository.js", () => {
   return {
     authRepository: {
       findUserByPhone: vi.fn(),
+      findUserById: vi.fn(),
       registerWargaTx: vi.fn(),
       createRefreshToken: vi.fn(),
       findRoleByName: vi.fn(),
@@ -354,6 +355,78 @@ describe("AuthService - registerWarga security", () => {
 
       const resolved = await authService.resolveRtRwId("5");
       expect(resolved).toBe(5);
+    });
+  });
+
+  describe("AuthService - isKetua Payload Exposure (Leader Authorization)", () => {
+    it("should expose isKetua: true at root user and studentProfile on login for KKN leader", async () => {
+      const mockLeader = {
+        id: "leader-1",
+        name: "Ketua KKN",
+        phone: "081299990001",
+        password: "hashed_password",
+        status: "Aktif",
+        role: { name: "MAHASISWA_KKN" },
+        studentProfile: {
+          id: "sp-1",
+          nim: "10123999",
+          isKetua: true,
+        },
+      };
+
+      vi.mocked(authRepository.findUserByPhone).mockResolvedValue(mockLeader as any);
+      vi.mocked(prisma.pointHistory.aggregate).mockResolvedValue({ _sum: { points: 0 } } as any);
+
+      const res = await authService.login("081299990001", "password123");
+
+      expect(res.user.isKetua).toBe(true);
+      expect(res.user.studentProfile?.isKetua).toBe(true);
+    });
+
+    it("should expose isKetua: false at root user and studentProfile on login for non-leader student", async () => {
+      const mockMember = {
+        id: "member-1",
+        name: "Anggota KKN",
+        phone: "081299990002",
+        password: "hashed_password",
+        status: "Aktif",
+        role: { name: "MAHASISWA_KKN" },
+        studentProfile: {
+          id: "sp-2",
+          nim: "10123998",
+          isKetua: false,
+        },
+      };
+
+      vi.mocked(authRepository.findUserByPhone).mockResolvedValue(mockMember as any);
+      vi.mocked(prisma.pointHistory.aggregate).mockResolvedValue({ _sum: { points: 0 } } as any);
+
+      const res = await authService.login("081299990002", "password123");
+
+      expect(res.user.isKetua).toBe(false);
+      expect(res.user.studentProfile?.isKetua).toBe(false);
+    });
+
+    it("should expose isKetua in getCurrentUser (/auth/me)", async () => {
+      const mockLeaderUser = {
+        id: "leader-1",
+        name: "Ketua KKN",
+        phone: "081299990001",
+        role: { name: "MAHASISWA_KKN" },
+        studentProfile: {
+          id: "sp-1",
+          nim: "10123999",
+          isKetua: true,
+        },
+      };
+
+      vi.mocked(authRepository.findUserById).mockResolvedValue(mockLeaderUser as any);
+      vi.mocked(prisma.pointHistory.aggregate).mockResolvedValue({ _sum: { points: 0 } } as any);
+
+      const res = await authService.getCurrentUser("leader-1");
+
+      expect(res.isKetua).toBe(true);
+      expect(res.studentProfile?.isKetua).toBe(true);
     });
   });
 });
