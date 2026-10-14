@@ -52,7 +52,7 @@ async function reconcileAttendanceStatus() {
   console.log(`Total sesi presensi ditemukan: ${attendances.length}`);
 
   let correctedCount = 0;
-  const targetMinMinutes = 250; // 250 Menit (4 Jam 10 Menit)
+  const targetMinMinutes = 240; // 240 Menit (4 Jam 0 Menit)
 
   for (const att of attendances) {
     const st = String(att.status || '').toUpperCase();
