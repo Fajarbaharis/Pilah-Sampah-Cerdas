@@ -11,6 +11,7 @@ import { useAuthStore } from "../../store/useAuthStore";
 import { useThemeStore } from "../../store/useThemeStore";
 import showToast from "../../utils/showToast";
 import LoginKknHero from "./components/LoginKknHero";
+import ForgotPasswordModal from "./components/ForgotPasswordModal";
 
 // Format nomor telepon Indonesia: 08xxx, 628xxx, +628xxx, 8xxx atau NIM / NIP DPL
 const PHONE_REGEX = /^\+628[0-9]\d{6,11}$/;
@@ -51,6 +52,7 @@ const Login: React.FC = () => {
   // UX State
   const [isLocalLoading, setIsLocalLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Validation States
   const [identifierError, setIdentifierError] = useState("");
@@ -339,8 +341,8 @@ const Login: React.FC = () => {
                 )}
               </div>
 
-              {/* Checkbox: Ingat Saya */}
-              <div className="pt-1">
+              {/* Checkbox: Ingat Saya & Lupa Kata Sandi */}
+              <div className="pt-1 flex items-center justify-between">
                 <label className="group inline-flex items-center gap-3 cursor-pointer select-none font-semibold text-sm sm:text-base text-[#0f2142]">
                   <input
                     type="checkbox"
@@ -359,6 +361,14 @@ const Login: React.FC = () => {
                   </span>
                   <span>Ingat saya</span>
                 </label>
+
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="font-bold text-xs sm:text-sm text-[#138861] hover:text-[#0e6e4e] hover:underline cursor-pointer transition-colors"
+                >
+                  Lupa kata sandi?
+                </button>
               </div>
 
               {/* Tombol Submit */}
@@ -434,6 +444,19 @@ const Login: React.FC = () => {
           </Link>
         </div>
       </div>
+
+      {/* Modal Lupa Kata Sandi */}
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+        onSuccessReset={(resetPhone) => {
+          setIdentifier(resetPhone.replace(/^\+62/, "0"));
+          setShowForgotPassword(false);
+          setTimeout(() => {
+            passwordInputRef.current?.focus();
+          }, 200);
+        }}
+      />
     </div>
   );
 };

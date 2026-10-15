@@ -1187,10 +1187,37 @@ export class AuthService {
   }
 
   /**
-   * Request OTP via WhatsApp (Fonnte API)
+   * Request OTP via WhatsApp (Self-Hosted Baileys Gateway)
+   * Mendukung opsi requireExistingUser: true untuk alur Lupa Kata Sandi (validasi nomor terdaftar).
    */
-  async requestOtp(rawPhone: string) {
+  async requestOtp(rawPhone: string, options?: { requireExistingUser?: boolean }) {
     const phone = formatPhoneNumber(rawPhone);
+
+    // Validasi keberadaan akun jika dipanggil dari alur Lupa Password
+    if (options?.requireExistingUser) {
+      const cleanPhone = phone.replace(/^\+?62/, "0").replace(/\s|-/g, "");
+      const altPhone = cleanPhone.startsWith("0") ? "+62" + cleanPhone.substring(1) : cleanPhone;
+      const subPhone = cleanPhone.length > 5 ? cleanPhone.substring(cleanPhone.length - 8) : cleanPhone;
+
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: phone },
+            { phone: cleanPhone },
+            { phone: altPhone },
+            { phone: { endsWith: subPhone } },
+          ],
+        },
+        select: { id: true, name: true, status: true, phone: true },
+      });
+
+      if (!user) {
+        throw new Error("USER_NOT_FOUND: Nomor ponsel tidak terdaftar dalam sistem BERSEKA.");
+      }
+      if (user.status && !["Aktif", "ACTIVE", "aktif"].includes(user.status)) {
+        throw new Error("USER_INACTIVE: Akun dengan nomor ini berstatus non-aktif. Silakan hubungi admin.");
+      }
+    }
 
     // Generate 6-digit random OTP
     const code = Math.floor(100000 + Math.random() * 900000).toString();
