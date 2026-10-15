@@ -404,7 +404,7 @@ router.post("/change-password", authMiddleware, authController.changePassword);
  *       200:
  *         description: OTP berhasil dikirim
  */
-router.post("/forgot-password", otpRateLimiter, authController.requestOtp);
+router.post("/forgot-password", otpRateLimiter, authController.forgotPassword);
 
 router.post(
   "/register/admin-dlh",

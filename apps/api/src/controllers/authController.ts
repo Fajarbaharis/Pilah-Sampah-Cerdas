@@ -1113,15 +1113,40 @@ export class AuthController {
 
   async forgotPassword(req: Request, res: Response): Promise<void> {
     try {
-      const { email } = req.body;
-      const token = await authService.forgotPassword(email);
-      res.status(200).json({ success: true, token });
-    } catch (error: any) {
-      if (error.message === "EMAIL_NOT_FOUND") {
-        res.status(404).json({ success: false, message: "Email tidak terdaftar" });
-      } else {
-        res.status(500).json({ success: false, message: error.message });
+      const { phone, email } = req.body;
+      const targetPhone = phone || (!email?.includes("@") ? email : undefined);
+
+      if (targetPhone) {
+        const result = await authService.requestOtp(targetPhone, { requireExistingUser: true });
+        res.status(200).json(result);
+        return;
       }
+
+      if (email) {
+        const token = await authService.forgotPassword(email);
+        res.status(200).json({ success: true, token });
+        return;
+      }
+
+      res.status(400).json({
+        success: false,
+        error: "VALIDATION_ERROR",
+        message: "Nomor WhatsApp (phone) atau email wajib diisi",
+      });
+    } catch (error: any) {
+      console.error("[ForgotPassword Error]", error);
+      const isNotFound =
+        error.message?.includes("USER_NOT_FOUND") ||
+        error.message?.includes("EMAIL_NOT_FOUND") ||
+        error.message?.includes("tidak terdaftar");
+      const isInactive = error.message?.includes("USER_INACTIVE");
+      const statusCode = isNotFound ? 404 : isInactive ? 403 : 400;
+
+      res.status(statusCode).json({
+        success: false,
+        error: isNotFound ? "USER_NOT_FOUND" : isInactive ? "USER_INACTIVE" : "BAD_REQUEST",
+        message: error.message?.replace(/^[A-Z_]+:\s*/, "") || "Gagal memproses lupa kata sandi",
+      });
     }
   }
 
