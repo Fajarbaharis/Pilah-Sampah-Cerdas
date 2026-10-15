@@ -8,6 +8,7 @@ import { prisma } from "../lib/prisma.js";
 
 import { authRepository } from "../repositories/authRepository.js";
 import { calculateValidIndividualPoints } from "./pointService.js";
+import { sendWhatsAppMessage } from "./otpService.js";
 
 import { comparePassword, hashPassword } from "../utils/hashUtils.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwtUtils.js";
@@ -1208,25 +1209,10 @@ export class AuthService {
       },
     });
 
-    // Send via Fonnte API
-    const fonnteToken = process.env.FONNTE_TOKEN || "mrHbMDmd5sorX6KQexgb";
+    // Send via Self-Hosted WhatsApp Gateway (Primary) with Fonnte fallback
     const target = phone.startsWith("+") ? phone.slice(1) : phone;
-
-    try {
-      const body = new URLSearchParams({
-        target,
-        message: `Kode OTP BERSEKA Anda adalah: ${code}. Kode ini berlaku selama 5 menit. Jangan bagikan kode ini kepada siapapun.`,
-      });
-      const response = await fetch("https://api.fonnte.com/send", {
-        method: "POST",
-        headers: { Authorization: fonnteToken },
-        body,
-      });
-      const resData = await response.json();
-      console.log(`[Fonnte OTP] Phone: ${target} | Result:`, resData);
-    } catch (err) {
-      console.error("[Fonnte OTP Exception]", err);
-    }
+    const message = `*BERSEKA — Kode OTP Reset Kata Sandi*\n\nKode OTP Anda adalah: *${code}*.\n\nKode ini berlaku selama *5 menit*. Jangan bagikan kode ini kepada siapapun demi keamanan akun Anda.\n\nJika Anda tidak meminta reset kata sandi, abaikan pesan ini.`;
+    await sendWhatsAppMessage(target, message, code);
 
     return {
       success: true,

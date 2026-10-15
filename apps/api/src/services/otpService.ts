@@ -49,42 +49,76 @@ function generateOtp(): string {
   return randomInt(100000, 999999).toString();
 }
 
-/** ─── Kirim pesan WA via Fonnte API ─── */
-async function sendFonnteMessage(phone: string, message: string): Promise<boolean> {
-  const token = process.env.FONNTE_TOKEN;
-  if (!token) {
-    // ponytail: FONNTE_TOKEN belum diset — OTP muncul di devOtp saat development
-    console.warn("[OTP] FONNTE_TOKEN tidak diset di .env — OTP tidak terkirim via WhatsApp.");
-    return false;
-  }
+/** ─── Kirim pesan WA via Self-Hosted Baileys Gateway (dengan fallback Fonnte) ─── */
+export async function sendWhatsAppMessage(
+  phone: string,
+  message: string,
+  otpCode?: string
+): Promise<boolean> {
+  const gatewayUrl = process.env.WA_GATEWAY_URL || "http://127.0.0.1:8798";
+  const apiKey = process.env.WA_GATEWAY_API_KEY || "bsk_wa_secret_2026";
 
-  // Fonnte menerima format 628xxx (tanpa +)
-  const fonnteDest = phone.replace(/^\+/, "");
-
+  // 1. Primary: Self-Hosted Baileys Gateway
   try {
-    const res = await fetch("https://api.fonnte.com/send", {
+    const endpoint = otpCode ? `${gatewayUrl}/send-otp` : `${gatewayUrl}/send`;
+    const payload = otpCode
+      ? { phone, otp: otpCode }
+      : { target: phone, message };
+
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: {
-        Authorization: token,
         "Content-Type": "application/json",
+        "x-api-key": apiKey,
       },
-      body: JSON.stringify({
-        target: fonnteDest,
-        message,
-        countryCode: "62",
-      }),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(6000),
     });
 
-    const data = (await res.json()) as { status?: boolean; detail?: string };
-    if (!data.status) {
-      console.error("[OTP] Fonnte API error:", data.detail);
-      return false;
+    if (res.ok) {
+      const data = (await res.json()) as { success?: boolean };
+      if (data.success) {
+        return true;
+      }
     }
-    return true;
-  } catch (err) {
-    console.error("[OTP] Gagal menghubungi Fonnte:", err);
-    return false;
+  } catch (err: any) {
+    console.warn("[WhatsApp Gateway] Local gateway unavailable:", err.message);
   }
+
+  // 2. Fallback: Fonnte API jika token tersedia
+  const fonnteToken = process.env.FONNTE_TOKEN;
+  if (fonnteToken) {
+    const fonnteDest = phone.replace(/^\+/, "");
+    try {
+      const res = await fetch("https://api.fonnte.com/send", {
+        method: "POST",
+        headers: {
+          Authorization: fonnteToken,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          target: fonnteDest,
+          message,
+          countryCode: "62",
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      const data = (await res.json()) as { status?: boolean; detail?: string };
+      if (data.status) {
+        return true;
+      }
+    } catch (err: any) {
+      console.error("[OTP] Gagal menghubungi Fonnte fallback:", err.message);
+    }
+  }
+
+  // 3. Mock Console Log di Non-Production
+  if (process.env.NODE_ENV !== "production") {
+    console.info(`[OTP DEV MOCK] Destination: ${phone} | Content: ${otpCode || message}`);
+  }
+
+  return false;
 }
 
 export class OtpService {
@@ -121,11 +155,11 @@ export class OtpService {
       `Jangan bagikan kode ini kepada siapapun.\n\n` +
       `Jika Anda tidak meminta reset kata sandi, abaikan pesan ini.`;
 
-    const sent = await sendFonnteMessage(normalized, message);
+    const sent = await sendWhatsAppMessage(normalized, message, otp);
 
-    // Di development tanpa FONNTE_TOKEN: log OTP ke server console (tidak pernah ke response client)
+    // Di development tanpa gateway: log OTP ke server console
     if (!sent && process.env.NODE_ENV === "development") {
-      console.info(`[OTP DEV] OTP untuk ${normalized}: ${otp} (hanya tampil di server log development)`);
+      console.info(`[OTP DEV] OTP untuk ${normalized}: ${otp}`);
     }
 
     return { sent };
