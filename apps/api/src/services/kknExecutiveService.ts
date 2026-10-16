@@ -654,7 +654,7 @@ export const kknExecutiveService = {
     const rasioPercentage = Math.round((currentAvgHours / targetHours) * 100);
     const remainingHours = Math.max(0, targetHours - currentAvgHours);
 
-    // Weekly Trends: 8-week KKN period (August - October 2026)
+    // Weekly Trends: 10-week KKN period (August - October 2026, M1 - M10)
     const weeklyDefs = [
       { week: "M1", start: new Date("2026-08-12T00:00:00Z"), end: new Date("2026-08-18T23:59:59Z") },
       { week: "M2", start: new Date("2026-08-19T00:00:00Z"), end: new Date("2026-08-25T23:59:59Z") },
@@ -664,19 +664,30 @@ export const kknExecutiveService = {
       { week: "M6", start: new Date("2026-09-16T00:00:00Z"), end: new Date("2026-09-22T23:59:59Z") },
       { week: "M7", start: new Date("2026-09-23T00:00:00Z"), end: new Date("2026-09-29T23:59:59Z") },
       { week: "M8", start: new Date("2026-09-30T00:00:00Z"), end: new Date("2026-10-06T23:59:59Z") },
+      { week: "M9", start: new Date("2026-10-07T00:00:00Z"), end: new Date("2026-10-13T23:59:59Z") },
+      { week: "M10", start: new Date("2026-10-14T00:00:00Z"), end: new Date("2026-10-20T23:59:59Z") },
     ];
 
-    const weeklyAttendances = await prisma.activityAttendance.findMany({
-      where: attendanceWhere,
-      select: { attendedAt: true, actualInZoneMinutes: true },
-    });
+    const [weeklyAttendances, weeklyMandiri] = await Promise.all([
+      prisma.activityAttendance.findMany({
+        where: attendanceWhere,
+        select: { attendedAt: true, actualInZoneMinutes: true },
+      }),
+      prisma.presensiMandiri.findMany({
+        where: mandiriWhere,
+        select: { checkInAt: true, durasiMenit: true },
+      }),
+    ]);
 
     let runningMinutes = 0;
     const weeklyTrends = weeklyDefs.map((w) => {
-      const weekMins = weeklyAttendances
+      const poskoMins = weeklyAttendances
         .filter((a) => a.attendedAt >= w.start && a.attendedAt <= w.end)
         .reduce((sum, curr) => sum + (curr.actualInZoneMinutes || 0), 0);
-      runningMinutes += weekMins;
+      const mandiriMins = weeklyMandiri
+        .filter((m) => m.checkInAt >= w.start && m.checkInAt <= w.end)
+        .reduce((sum, curr) => sum + (curr.durasiMenit || 0), 0);
+      runningMinutes += poskoMins + mandiriMins;
       const avgH = totalMahasiswa > 0 ? Math.round(runningMinutes / totalMahasiswa / 60) : 0;
       return {
         week: w.week,

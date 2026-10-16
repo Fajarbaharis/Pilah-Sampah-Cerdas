@@ -381,7 +381,7 @@ export const dashboardController = {
 
   getWasteExecutiveReport: async (req: Request, res: Response) => {
     try {
-      const { wilayah, periode, startDate, endDate, hari, jamMulai, jamSelesai } = req.query;
+      const { wilayah, periode, startDate, endDate, hari, jamMulai, jamSelesai, sourceType } = req.query;
       const user = req.user;
       const isDevOnly = user?.role === "DEVELOPER";
       const includeTestAccounts = req.query.includeTestAccounts === "true" && isDevOnly;
@@ -395,6 +395,7 @@ export const dashboardController = {
         jamMulai: jamMulai as string,
         jamSelesai: jamSelesai as string,
         includeTestAccounts,
+        sourceType: sourceType as any,
       });
 
       res.status(200).json({

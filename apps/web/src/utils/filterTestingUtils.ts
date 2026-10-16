@@ -15,6 +15,7 @@
  */
 
 export const HIDE_TEST_ACCOUNTS_KEY = "berseka_hide_test_accounts";
+export const DEV_SHOW_LAPORAN_PIMPINAN_KEY = "dev_show_laporan_pimpinan";
 
 /**
  * Mendapatkan role pengguna aktif dari storage lokal secara aman
@@ -38,6 +39,34 @@ export function getCurrentUserRole(): string | null {
 export function isCurrentUserDeveloper(): boolean {
   const role = getCurrentUserRole();
   return String(role || "").toUpperCase() === "DEVELOPER";
+}
+
+/**
+ * Memeriksa status konfigurasi: Apakah grup Laporan ditampilkan di sidebar Pimpinan?
+ * Default: true (Muncul). Jika dimatikan oleh DEVELOPER ("false"), grup Laporan tidak muncul di sidebar Pimpinan.
+ */
+export function shouldShowLaporanPimpinan(): boolean {
+  if (typeof window === "undefined") return true;
+  const val = localStorage.getItem(DEV_SHOW_LAPORAN_PIMPINAN_KEY);
+  if (val === "false") {
+    return false;
+  }
+  return true; // Default ON
+}
+
+/**
+ * Mengubah status toggle visibilitas grup Laporan di sidebar Pimpinan
+ * Hanya dapat diubah oleh peran DEVELOPER
+ */
+export function setShowLaporanPimpinanSetting(show: boolean): boolean {
+  if (typeof window === "undefined") return false;
+  if (!isCurrentUserDeveloper()) {
+    console.warn("[filterTestingUtils] Akses ditolak: Hanya peran DEVELOPER yang dapat mengubah setelan ini.");
+    return false;
+  }
+  localStorage.setItem(DEV_SHOW_LAPORAN_PIMPINAN_KEY, show ? "true" : "false");
+  window.dispatchEvent(new Event("developer_config_changed"));
+  return true;
 }
 
 /**

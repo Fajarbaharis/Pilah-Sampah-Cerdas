@@ -27,12 +27,10 @@ import {
   Globe,
   Coins,
   Radio,
-  Cpu,
   BookOpen,
   X,
   Shield,
   Sliders,
-  GraduationCap,
   Activity,
   BarChart3,
   Terminal,
@@ -42,9 +40,13 @@ import {
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../../store/useAuthStore";
 import type { UserRole } from "../../../store/useAuthStore";
-import showToast from "../../../utils/showToast";
 import type { LucideIcon } from "lucide-react";
 import { isStagingEnv } from "../../../utils/envUtils";
+import api from "../../../utils/api";
+import {
+  shouldShowLaporanPimpinan,
+  DEV_SHOW_LAPORAN_PIMPINAN_KEY,
+} from "../../../utils/filterTestingUtils";
 // import FallingLeavesBackground from "./FallingLeavesBackground";
 
 interface SidebarProps {
@@ -959,6 +961,37 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
   // TASKFORCE mendapat akses menu yang sama persis dengan PIMPINAN
   const isPimpinanOrTaskforce = isPimpinan || isTaskforce;
 
+  // Toggle visibilitas grup menu Laporan khusus untuk peran PIMPINAN (Diatur oleh DEVELOPER di Developer Settings)
+  const [showLaporanPimpinan, setShowLaporanPimpinan] = React.useState<boolean>(() => shouldShowLaporanPimpinan());
+
+  React.useEffect(() => {
+    const handleConfigChange = () => {
+      setShowLaporanPimpinan(shouldShowLaporanPimpinan());
+    };
+    window.addEventListener("developer_config_changed", handleConfigChange);
+    window.addEventListener("storage", handleConfigChange);
+
+    // Sinkronisasi dinamis dari API server saat mount
+    api
+      .get("/configs")
+      .then((res) => {
+        if (res.data?.data && Array.isArray(res.data.data)) {
+          const cfg = res.data.data.find((c: any) => c.key === DEV_SHOW_LAPORAN_PIMPINAN_KEY);
+          if (cfg && cfg.value !== undefined) {
+            const val = cfg.value !== "false";
+            setShowLaporanPimpinan(val);
+            localStorage.setItem(DEV_SHOW_LAPORAN_PIMPINAN_KEY, val ? "true" : "false");
+          }
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      window.removeEventListener("developer_config_changed", handleConfigChange);
+      window.removeEventListener("storage", handleConfigChange);
+    };
+  }, []);
+
   const handleMobileItemClick = () => {
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
       onClose();
@@ -1086,6 +1119,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
       }
       return [];
     }
+    if (groupLabel === "Laporan") {
+      const isPimpinanRole = isPimpinan || (userRole as string) === "PIMPINAN" || (userRole as string) === "PEMIMPIN";
+      if (isPimpinanRole && !showLaporanPimpinan) {
+        return [];
+      }
+    }
 
     return (items || [])
       .filter((c: any) => hasAccess(c.allowed, c.resource))
@@ -1109,6 +1148,39 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
           icon: LayoutDashboard,
           label: "Dasbor",
           allowed: ALL_ROLES,
+        },
+        {
+          type: "group",
+          label: "Laporan",
+          icon: BarChart3,
+          allowed: [
+            "DEVELOPER",
+            "SUPER_USER",
+            "PIMPINAN",
+            "PEMIMPIN",
+          ] as UserRole[],
+          children: [
+            {
+              to: "/laporan/kkn",
+              label: "Kuliah Kerja Nyata",
+              allowed: [
+                "DEVELOPER",
+                "SUPER_USER",
+                "PIMPINAN",
+                "PEMIMPIN",
+              ] as UserRole[],
+            },
+            {
+              to: "/laporan/tata-kelola-sampah",
+              label: "Tata Kelola Sampah",
+              allowed: [
+                "DEVELOPER",
+                "SUPER_USER",
+                "PIMPINAN",
+                "PEMIMPIN",
+              ] as UserRole[],
+            },
+          ],
         },
       ],
     },
@@ -1465,42 +1537,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
                 "ADMIN_DLH",
                 "CAMAT",
                 "LURAH",
-              ] as UserRole[],
-            },
-          ],
-        },
-        {
-          type: "group",
-          label: "Laporan",
-          icon: BarChart3,
-          allowed: [
-            "DEVELOPER",
-            "SUPER_USER",
-            "ADMIN_DLH",
-            "CAMAT",
-            "LURAH",
-            "PANITIA_TASKFORCE",
-          ] as UserRole[],
-          children: [
-            {
-              to: "/laporan/kkn",
-              label: "Laporan Kegiatan KKN",
-              allowed: [
-                "DEVELOPER",
-                "SUPER_USER",
-                "PANITIA_TASKFORCE",
-              ] as UserRole[],
-            },
-            {
-              to: "/laporan/tata-kelola-sampah",
-              label: "Laporan Tata Kelola Sampah",
-              allowed: [
-                "DEVELOPER",
-                "SUPER_USER",
-                "ADMIN_DLH",
-                "CAMAT",
-                "LURAH",
-                "PANITIA_TASKFORCE",
               ] as UserRole[],
             },
           ],
@@ -2197,7 +2233,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
   const effectiveSections = menuSections.filter((sec) => {
     if (
       (sec.header === "MASTER DATA" || sec.header === "INFORMASI") &&
-      (isPimpinan || userRole === "PIMPINAN" || (userRole as string) === "PEMIMPIN")
+      (isPimpinan || (userRole as string) === "PIMPINAN" || (userRole as string) === "PEMIMPIN")
     ) {
       return false;
     }
@@ -2244,7 +2280,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
               {effectiveSections.map((sec, idx) => {
                 const visibleItems = sec.items.filter((item) => {
                   if (!hasAccess(item.allowed, (item as any).resource)) return false;
-                  if (item.type === "group") {
+                  if ((item as any).type === "group") {
                     const kids = getFilteredGroupChildren(item.label, (item as any).children);
                     return kids.length > 0;
                   }
@@ -2314,7 +2350,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
               {effectiveSections.map((sec) => {
                 const visibleItems = sec.items.filter((item) => {
                   if (!hasAccess(item.allowed, (item as any).resource)) return false;
-                  if (item.type === "group") {
+                  if ((item as any).type === "group") {
                     const kids = getFilteredGroupChildren(item.label, (item as any).children);
                     return kids.length > 0;
                   }
