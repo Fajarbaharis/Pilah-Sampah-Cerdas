@@ -711,12 +711,13 @@ const ManajemenPengguna: React.FC = () => {
       rwsArr = Array.from(new Set(matches.map((m: string) => String(m).padStart(2, "0"))));
     }
 
-    const mhsKelompokId = u.studentProfile?.kelompokId || u.studentProfile?.kelompok?.id || u.kelompokId;
-    const assignedKelompokIds = (u.role || selectedRole) === "MAHASISWA_KKN"
+    const targetRole = (typeof u.role === "string" ? u.role : u.role?.name) || u.roleName || (selectedRole !== "Semua" ? selectedRole : "WARGA");
+    const mhsKelompokId = u.studentProfile?.kelompokId || u.studentProfile?.kelompok?.id || u.kelompokId || "";
+    const assignedKelompokIds = targetRole === "MAHASISWA_KKN"
       ? (mhsKelompokId ? [String(mhsKelompokId)] : [])
       : (u.dplKelompok && Array.isArray(u.dplKelompok) ? u.dplKelompok.map((k: any) => String(k.id)) : []);
 
-    const isPimpinanOrTaskforce = ["PEMIMPIN", "PANITIA_TASKFORCE"].includes(u.role || selectedRole);
+    const isPimpinanOrTaskforce = ["PEMIMPIN", "PANITIA_TASKFORCE"].includes(targetRole);
     const rawProdi = u.programStudi || u.prodi || u.studentProfile?.jurusan || (isPimpinanOrTaskforce ? "Universitas Komputer Indonesia" : "Manajemen");
     const cleanedProdi = cleanProdiName(rawProdi);
     const extractedJenjang = extractJenjang(rawProdi, u.jenjangPendidikan || u.studentProfile?.jenjangPendidikan);
@@ -726,7 +727,7 @@ const ManajemenPengguna: React.FC = () => {
       address: u.address || "",
       password: "",
       confirmPassword: "",
-      roleName: u.role || selectedRole || "WARGA",
+      roleName: targetRole,
       phone: u.phone || "",
       status: u.status || "Aktif",
       rtRwId: matchedAreaId,
@@ -841,15 +842,15 @@ const ManajemenPengguna: React.FC = () => {
       if (formData.roleName === "MAHASISWA_KKN") {
         if (formData.nim) payload.nim = formData.nim;
         payload.programStudi = formData.prodi || formData.programStudi;
-        const selectedKelId = formData.dplKelompokIds?.[0] || null;
+        const selectedKelId = formData.dplKelompokIds?.[0] || selectedUser?.studentProfile?.kelompokId || selectedUser?.kelompokId || null;
         payload.kelompokId = selectedKelId;
-        payload.dplId = formData.dplId || null;
+        payload.dplId = formData.dplId || selectedUser?.studentProfile?.kelompok?.dplId || null;
         payload.studentProfile = {
           nim: formData.nim,
           jurusan: formData.prodi || formData.programStudi,
           jenjangPendidikan: formData.jenjangPendidikan,
           kelompokId: selectedKelId,
-          dplId: formData.dplId || null,
+          dplId: payload.dplId,
           sks: Number(formData.sks) || 0,
         };
         payload.sks = Number(formData.sks) || 0;
