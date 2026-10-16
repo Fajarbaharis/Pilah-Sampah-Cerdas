@@ -26,7 +26,8 @@ const MasterData: React.FC = () => {
   const [mahasiswas, setMahasiswas] = useState<any[]>([]);
   const [loadingMahasiswa, setLoadingMahasiswa] = useState(false);
   const [mhsSearch, setMhsSearch] = useState("");
-  const [selectedMhsDetail, setSelectedMhsDetail] = useState<any | null>(null);
+  const [mhsSksFilter, setMhsSksFilter] = useState("Semua");
+  const [selectedMhsDetail, setSelectedMhsDetail] = useState<any>(null);
 
   const fetchMahasiswas = async () => {
     setLoadingMahasiswa(true);
@@ -46,16 +47,23 @@ const MasterData: React.FC = () => {
   }, [fetchMasterData]);
 
   const filteredMahasiswas = useMemo(() => {
-    if (!mhsSearch.trim()) return mahasiswas;
-    const q = mhsSearch.toLowerCase();
-    return mahasiswas.filter(
-      (m) =>
-        (m.name || "").toLowerCase().includes(q) ||
-        (m.studentProfile?.nim || m.nim || "").toLowerCase().includes(q) ||
-        (m.phone || "").toLowerCase().includes(q) ||
-        (m.studentProfile?.kelompok?.name || "").toLowerCase().includes(q)
-    );
-  }, [mahasiswas, mhsSearch]);
+    let list = mahasiswas;
+    if (mhsSearch.trim()) {
+      const q = mhsSearch.toLowerCase();
+      list = list.filter(
+        (m) =>
+          (m.name || "").toLowerCase().includes(q) ||
+          (m.studentProfile?.nim || m.nim || "").toLowerCase().includes(q) ||
+          (m.phone || "").toLowerCase().includes(q) ||
+          (m.studentProfile?.kelompok?.name || "").toLowerCase().includes(q)
+      );
+    }
+    if (mhsSksFilter !== "Semua") {
+      const targetSks = Number(mhsSksFilter);
+      list = list.filter((m) => Number(m.studentProfile?.sks ?? 0) === targetSks);
+    }
+    return list;
+  }, [mahasiswas, mhsSearch, mhsSksFilter]);
 
   const [deleteModalConfig, setDeleteModalConfig] = useState<{
     isOpen: boolean;
@@ -182,15 +190,36 @@ const MasterData: React.FC = () => {
         {activeTab === "mahasiswa" && (
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 pb-2">
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Cari Nama, NIM, No. WA, Kelompok..."
-                  value={mhsSearch}
-                  onChange={(e) => setMhsSearch(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 pl-10 pr-4 py-2 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                />
+              <div className="flex items-center gap-2.5 w-full md:w-auto flex-wrap">
+                <div className="relative w-full md:w-80">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Cari Nama, NIM, No. WA, Kelompok..."
+                    value={mhsSearch}
+                    onChange={(e) => setMhsSearch(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 pl-10 pr-4 py-2 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  />
+                </div>
+                <select
+                  value={mhsSksFilter}
+                  onChange={(e) => setMhsSksFilter(e.target.value)}
+                  className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl text-xs font-bold outline-none cursor-pointer text-slate-700 dark:text-slate-300"
+                >
+                  <option value="Semua">Semua Beban SKS</option>
+                  <option value="0">0 SKS (Reguler)</option>
+                  <option value="6">6 SKS</option>
+                  <option value="10">10 SKS</option>
+                  <option value="11">11 SKS</option>
+                  <option value="12">12 SKS</option>
+                  <option value="13">13 SKS</option>
+                  <option value="14">14 SKS</option>
+                  <option value="16">16 SKS</option>
+                  <option value="17">17 SKS</option>
+                  <option value="18">18 SKS</option>
+                  <option value="19">19 SKS</option>
+                  <option value="20">20 SKS</option>
+                </select>
               </div>
               <p className="text-xs text-slate-500 font-semibold">
                 Menampilkan {filteredMahasiswas.length} dari total {mahasiswas.length} Mahasiswa
