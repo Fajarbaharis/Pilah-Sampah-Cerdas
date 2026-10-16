@@ -216,6 +216,7 @@ const ManajemenPengguna: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState(roleFromUrl);
 
   useEffect(() => {
+    setSelectedSksFilter("Semua");
     if (rawRoleParam) {
       const normalized = normalizeRoleFromUrl(rawRoleParam);
       if (normalized !== selectedRole) {
@@ -227,6 +228,10 @@ const ManajemenPengguna: React.FC = () => {
   }, [rawRoleParam, allowedRoleTabs]);
   const [selectedStatus, setSelectedStatus] = useState("Semua");
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+
+  // SKS Filter State (Khusus Mahasiswa KKN)
+  const [selectedSksFilter, setSelectedSksFilter] = useState<string>("Semua");
+  const [isSksDropdownOpen, setIsSksDropdownOpen] = useState(false);
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"add" | "edit">("add");
@@ -706,12 +711,13 @@ const ManajemenPengguna: React.FC = () => {
       rwsArr = Array.from(new Set(matches.map((m: string) => String(m).padStart(2, "0"))));
     }
 
-    const mhsKelompokId = u.studentProfile?.kelompokId || u.studentProfile?.kelompok?.id || u.kelompokId;
-    const assignedKelompokIds = (u.role || selectedRole) === "MAHASISWA_KKN"
+    const targetRole = (typeof u.role === "string" ? u.role : u.role?.name) || u.roleName || (selectedRole !== "Semua" ? selectedRole : "WARGA");
+    const mhsKelompokId = u.studentProfile?.kelompokId || u.studentProfile?.kelompok?.id || u.kelompokId || "";
+    const assignedKelompokIds = targetRole === "MAHASISWA_KKN"
       ? (mhsKelompokId ? [String(mhsKelompokId)] : [])
       : (u.dplKelompok && Array.isArray(u.dplKelompok) ? u.dplKelompok.map((k: any) => String(k.id)) : []);
 
-    const isPimpinanOrTaskforce = ["PEMIMPIN", "PANITIA_TASKFORCE"].includes(u.role || selectedRole);
+    const isPimpinanOrTaskforce = ["PEMIMPIN", "PANITIA_TASKFORCE"].includes(targetRole);
     const rawProdi = u.programStudi || u.prodi || u.studentProfile?.jurusan || (isPimpinanOrTaskforce ? "Universitas Komputer Indonesia" : "Manajemen");
     const cleanedProdi = cleanProdiName(rawProdi);
     const extractedJenjang = extractJenjang(rawProdi, u.jenjangPendidikan || u.studentProfile?.jenjangPendidikan);
@@ -721,7 +727,7 @@ const ManajemenPengguna: React.FC = () => {
       address: u.address || "",
       password: "",
       confirmPassword: "",
-      roleName: u.role || selectedRole || "WARGA",
+      roleName: targetRole,
       phone: u.phone || "",
       status: u.status || "Aktif",
       rtRwId: matchedAreaId,
@@ -836,15 +842,15 @@ const ManajemenPengguna: React.FC = () => {
       if (formData.roleName === "MAHASISWA_KKN") {
         if (formData.nim) payload.nim = formData.nim;
         payload.programStudi = formData.prodi || formData.programStudi;
-        const selectedKelId = formData.dplKelompokIds?.[0] || null;
+        const selectedKelId = formData.dplKelompokIds?.[0] || selectedUser?.studentProfile?.kelompokId || selectedUser?.kelompokId || null;
         payload.kelompokId = selectedKelId;
-        payload.dplId = formData.dplId || null;
+        payload.dplId = formData.dplId || selectedUser?.studentProfile?.kelompok?.dplId || null;
         payload.studentProfile = {
           nim: formData.nim,
           jurusan: formData.prodi || formData.programStudi,
           jenjangPendidikan: formData.jenjangPendidikan,
           kelompokId: selectedKelId,
-          dplId: formData.dplId || null,
+          dplId: payload.dplId,
           sks: Number(formData.sks) || 0,
         };
         payload.sks = Number(formData.sks) || 0;
@@ -1033,18 +1039,28 @@ const ManajemenPengguna: React.FC = () => {
     });
   }, [studentsList, studentSearchFilter]);
 
-  // Kelurahan filtered users
+  // Kelurahan & SKS filtered users
   const filteredUsers = useMemo(() => {
-    if (selectedKelurahanFilter === "Semua") return users;
-    const target = selectedKelurahanFilter.toLowerCase().trim();
-    return users.filter((u: any) => {
-      const kel = detectKelurahanName(u).toLowerCase();
-      const rawKel = (u.kelurahan || "").toLowerCase();
-      const addr = (u.address || "").toLowerCase();
-      const wil = (u.wilayah || "").toLowerCase();
-      return kel.includes(target) || rawKel.includes(target) || addr.includes(target) || wil.includes(target);
-    });
-  }, [users, selectedKelurahanFilter]);
+    let list = users;
+    if (selectedKelurahanFilter !== "Semua") {
+      const target = selectedKelurahanFilter.toLowerCase().trim();
+      list = list.filter((u: any) => {
+        const kel = detectKelurahanName(u).toLowerCase();
+        const rawKel = (u.kelurahan || "").toLowerCase();
+        const addr = (u.address || "").toLowerCase();
+        const wil = (u.wilayah || "").toLowerCase();
+        return kel.includes(target) || rawKel.includes(target) || addr.includes(target) || wil.includes(target);
+      });
+    }
+    if (selectedRole === "MAHASISWA_KKN" && selectedSksFilter !== "Semua") {
+      const targetSks = Number(selectedSksFilter);
+      list = list.filter((u: any) => {
+        const userSks = Number(u.studentProfile?.sks ?? u.sks ?? 0);
+        return userSks === targetSks;
+      });
+    }
+    return list;
+  }, [users, selectedKelurahanFilter, selectedRole, selectedSksFilter]);
 
   // Pagination calculation
   const totalPages = Math.ceil(filteredUsers.length / rowsPerPage) || 1;
@@ -1456,6 +1472,68 @@ const ManajemenPengguna: React.FC = () => {
                 </>
               )}
             </div>
+
+            {/* SKS Filter Dropdown (Khusus Mahasiswa KKN) */}
+            {selectedRole === "MAHASISWA_KKN" && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSksDropdownOpen(!isSksDropdownOpen);
+                    setIsKelurahanDropdownOpen(false);
+                    setIsStatusDropdownOpen(false);
+                  }}
+                  className="flex items-center gap-2 px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-all cursor-pointer"
+                >
+                  <span className={`w-2 h-2 rounded-full ${selectedSksFilter !== "Semua" ? "bg-indigo-500 shadow-xs shadow-indigo-500/50" : "bg-slate-400"}`} />
+                  <span>{selectedSksFilter === "Semua" ? "Semua SKS" : `${selectedSksFilter} SKS`}</span>
+                  <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${isSksDropdownOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {isSksDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setIsSksDropdownOpen(false)} />
+                    <div className="absolute right-0 mt-1.5 w-44 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl shadow-lg z-30 p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-150 max-h-60 overflow-y-auto">
+                      {[
+                        { value: "Semua", label: "Semua Beban SKS" },
+                        { value: "0", label: "0 SKS (Reguler)" },
+                        { value: "6", label: "6 SKS" },
+                        { value: "10", label: "10 SKS" },
+                        { value: "11", label: "11 SKS" },
+                        { value: "12", label: "12 SKS" },
+                        { value: "13", label: "13 SKS" },
+                        { value: "14", label: "14 SKS" },
+                        { value: "16", label: "16 SKS" },
+                        { value: "17", label: "17 SKS" },
+                        { value: "18", label: "18 SKS" },
+                        { value: "19", label: "19 SKS" },
+                        { value: "20", label: "20 SKS" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSksFilter(opt.value);
+                            setIsSksDropdownOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          className={`flex items-center justify-between w-full px-3 py-2 text-xs font-extrabold rounded-lg transition-all text-left cursor-pointer ${
+                            selectedSksFilter === opt.value
+                              ? "bg-[#009966]/10 text-[#009966] dark:text-emerald-400"
+                              : "text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                          }`}
+                        >
+                          <span>{opt.label}</span>
+                          {selectedSksFilter === opt.value && (
+                            <CheckCircle size={13} className="text-[#009966] dark:text-emerald-400 shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Status Akun Filter Dropdown */}
             <div className="relative">
@@ -2718,12 +2796,14 @@ const ManajemenPengguna: React.FC = () => {
                                       onChange={(e) => setFormData({ ...formData, sks: Number(e.target.value) })}
                                       className="w-full h-9.5 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 dark:bg-slate-800 focus:border-[#009966] focus:ring-2 focus:ring-[#009966]/10 focus:bg-white dark:focus:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-100 cursor-pointer transition-all outline-none"
                                     >
-                                      <option value={0}>0 SKS</option>
+                                      <option value={0}>0 SKS (Reguler)</option>
                                       <option value={6}>6 SKS</option>
+                                      <option value={10}>10 SKS</option>
                                       <option value={11}>11 SKS</option>
                                       <option value={12}>12 SKS</option>
                                       <option value={13}>13 SKS</option>
                                       <option value={14}>14 SKS</option>
+                                      <option value={16}>16 SKS</option>
                                       <option value={17}>17 SKS</option>
                                       <option value={18}>18 SKS</option>
                                       <option value={19}>19 SKS</option>

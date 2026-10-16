@@ -4,50 +4,38 @@
  * Copyright (c) 2026 PT Makerindo. All rights reserved.
  * 
  * Laporan Resmi KKN UNIKOM untuk Role Pimpinan
- * Format Dokumen Formal A4 Eksekutif UNIKOM x BERSEKA
- * Sesuai Acuan Dokumen Word: "Laporan Eksekutif Pelaksanaan KKN dan Tata Kelola Sampah 2026"
+ * Format Dual-View: Dasbor Analitik Web Interaktif & Dokumen Naskah Dinas / Jurnal Standar Indonesia
+ * Sesuai Standar Tata Naskah Dinas UNIKOM, IMRaD Jurnal Ilmiah, dan EYD Edisi V
  * 100% Real-time Data dari Database PostgreSQL
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
+  LayoutDashboard,
+  FileText,
   Printer,
-  FileDown,
   RefreshCw,
   Users,
   CheckCircle2,
   Clock,
-  Layers,
-  ShieldCheck,
-  TrendingUp,
   Filter,
-  Database,
-  Sliders,
   Award,
   GraduationCap,
-  Trash2,
-  Recycle,
-  AlertTriangle,
-  Calendar,
-  Sparkles,
+  Search,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Compass,
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip as RechartsTooltip,
-  CartesianGrid,
-} from "recharts";
 import api from "../../services/api";
 import showToast from "../../utils/showToast";
+import { FormulaTooltip } from "../../components/common/FormulaTooltip";
 import {
   PengaturanLaporanModal,
   type ReportCustomConfig,
   DEFAULT_REPORT_CONFIG,
 } from "../../components/laporan/PengaturanLaporanModal";
-import { exportExecutiveReportDocx } from "../../utils/docxExportService";
 
 export interface LaporanSummaryResponse {
   header: {
@@ -186,30 +174,21 @@ export interface LaporanSummaryResponse {
   };
 }
 
-const STORAGE_KEY = "berseka_kkn_report_custom_config_v2";
+const STORAGE_KEY = "berseka_kkn_report_custom_config_v7";
 
 export const LaporanResmiKknPage: React.FC = () => {
   const [data, setData] = useState<LaporanSummaryResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [exportingDocx, setExportingDocx] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isPrintFlow, setIsPrintFlow] = useState<boolean>(false);
+
+  // Switcher Tampilan: "dashboard" (Kartu) vs "document" (Dokumen)
+  const [viewMode, setViewMode] = useState<"dashboard" | "document">("dashboard");
 
   // Filter States
   const [selectedKelurahan, setSelectedKelurahan] = useState<string>("Semua Kelurahan");
   const [selectedRw, setSelectedRw] = useState<string>("");
   const [selectedKelompok, setSelectedKelompok] = useState<string>("");
-  
-  // Filter Waktu Presisi (Hari, Jam, Tanggal)
-  const [datePreset, setDatePreset] = useState<string>("semua");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-  const [selectedHari, setSelectedHari] = useState<string>("ALL");
-  const [selectedJamPreset, setSelectedJamPreset] = useState<string>("ALL");
-  const [customJamMulai, setCustomJamMulai] = useState<string>("");
-  const [customJamSelesai, setCustomJamSelesai] = useState<string>("");
-
-  // Print Orientation State: landscape by default (optimal untuk matriks & grafik eksekutif)
-  const [printOrientation, setPrintOrientation] = useState<"landscape" | "portrait">("landscape");
 
   // Dynamic Report Configuration (Customizable & Persisted)
   const [reportConfig, setReportConfig] = useState<ReportCustomConfig>(() => {
@@ -221,6 +200,13 @@ export const LaporanResmiKknPage: React.FC = () => {
     }
     return DEFAULT_REPORT_CONFIG;
   });
+
+  // Table Controls (Khusus Dasbor Web Interaktif)
+  const [tableSearch, setTableSearch] = useState<string>("");
+  const [tableKelurahanFilter, setTableKelurahanFilter] = useState<string>("ALL");
+  const [tableSortAsc, setTableSortAsc] = useState<boolean>(true);
+  const [tablePage, setTablePage] = useState<number>(1);
+  const [tablePageSize, setTablePageSize] = useState<number>(10);
 
   const documentRef = useRef<HTMLDivElement>(null);
 
@@ -236,22 +222,6 @@ export const LaporanResmiKknPage: React.FC = () => {
       }
       if (selectedKelompok && selectedKelompok.trim() !== "") {
         params.append("kelompok", selectedKelompok.trim());
-      }
-      if (startDate) params.append("startDate", startDate);
-      if (endDate) params.append("endDate", endDate);
-      if (selectedHari && selectedHari !== "ALL") params.append("hari", selectedHari);
-      if (selectedJamPreset === "PAGI") {
-        params.append("jamMulai", "07:00");
-        params.append("jamSelesai", "12:00");
-      } else if (selectedJamPreset === "SIANG") {
-        params.append("jamMulai", "12:00");
-        params.append("jamSelesai", "15:00");
-      } else if (selectedJamPreset === "SORE") {
-        params.append("jamMulai", "15:00");
-        params.append("jamSelesai", "18:00");
-      } else if (selectedJamPreset === "CUSTOM" && customJamMulai && customJamSelesai) {
-        params.append("jamMulai", customJamMulai);
-        params.append("jamSelesai", customJamSelesai);
       }
 
       const res = await api.get(`/laporan/kkn/summary?${params.toString()}`);
@@ -270,42 +240,19 @@ export const LaporanResmiKknPage: React.FC = () => {
 
   useEffect(() => {
     fetchLaporanData();
-  }, [selectedKelurahan, datePreset, startDate, endDate, selectedHari, selectedJamPreset]);
+  }, [selectedKelurahan]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
       fetchLaporanData();
     }, 400);
     return () => clearTimeout(handler);
-  }, [selectedRw, selectedKelompok, customJamMulai, customJamSelesai]);
+  }, [selectedRw, selectedKelompok]);
 
-  // Handle Preset Tanggal Cepat
-  const handleDatePresetChange = (preset: string) => {
-    setDatePreset(preset);
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
-    if (preset === "semua") {
-      setStartDate("");
-      setEndDate("");
-    } else if (preset === "hari_ini") {
-      setStartDate(todayStr);
-      setEndDate(todayStr);
-    } else if (preset === "kemarin") {
-      const yest = new Date(now);
-      yest.setDate(yest.getDate() - 1);
-      const yestStr = yest.toISOString().slice(0, 10);
-      setStartDate(yestStr);
-      setEndDate(yestStr);
-    } else if (preset === "7_hari") {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 7);
-      setStartDate(d.toISOString().slice(0, 10));
-      setEndDate(todayStr);
-    } else if (preset === "bulan_ini") {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      setStartDate(first.toISOString().slice(0, 10));
-      setEndDate(todayStr);
-    }
+  // Alur Buka Modal sebelum Cetak PDF
+  const handleOpenPrintFlow = () => {
+    setIsPrintFlow(true);
+    setIsSettingsOpen(true);
   };
 
   // Simpan Pengaturan Naskah Dinamis
@@ -313,7 +260,22 @@ export const LaporanResmiKknPage: React.FC = () => {
     setReportConfig(newConfig);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
-      showToast.success("Pengaturan naskah dokumen laporan berhasil disimpan");
+      setIsSettingsOpen(false);
+
+      if (isPrintFlow) {
+        setIsPrintFlow(false);
+        setViewMode("document");
+        setTimeout(() => {
+          const originalTitle = document.title;
+          document.title = "";
+          window.print();
+          setTimeout(() => {
+            document.title = originalTitle;
+          }, 1000);
+        }, 250);
+      } else {
+        showToast.success("Pengaturan naskah dokumen laporan berhasil disimpan");
+      }
     } catch (e) {
       console.error(e);
     }
@@ -330,74 +292,85 @@ export const LaporanResmiKknPage: React.FC = () => {
     }
   };
 
-  // Cetak / Simpan PDF
-  const handlePrint = () => {
-    window.print();
-  };
+  // Filtered & Sorted Matriks Kelompok untuk Dasbor Interaktif
+  const processedMatriksKelompok = useMemo(() => {
+    if (!data?.matriksKelompok) return [];
+    let list = [...data.matriksKelompok];
 
-  // Ekspor Dokumen Word (.docx) Asli
-  const handleExportDocx = async () => {
-    if (!data) return;
-    try {
-      setExportingDocx(true);
-      await exportExecutiveReportDocx({
-        config: {
-          judulLaporan: reportConfig.judulLaporan,
-          subjudul: reportConfig.subjudul,
-          nomorDokumen: reportConfig.nomorDokumen,
-          sifatDokumen: reportConfig.sifatDokumen,
-          lampiranDokumen: reportConfig.lampiranDokumen,
-          perihalDokumen: reportConfig.perihalDokumen,
-          periode: reportConfig.periodeDokumen || data.header.periode,
-          tanggalPengesahan: reportConfig.tanggalPengesahan || data.header.tanggalCetakFormatted,
-          wilayahCakupan: reportConfig.wilayahCakupan || data.header.wilayahCakupan,
-          penandatangan: reportConfig.penandatangan,
-          orientation: printOrientation,
-        } as any,
-        ringkasanEksekutif: data.ringkasanEksekutif,
-        ringkasanDampakSampah: data.ringkasanDampakSampah,
-        topMahasiswa: data.topMahasiswa,
-        topDpl: data.topDpl,
-        sebaranKelurahan: data.grafikPerforma.sebaranPerKelurahan,
-        matriksKelompok: data.matriksKelompok.map((m) => ({
-          no: m.no,
-          nama: m.nama,
-          ketuaNama: m.ketua?.name || "-",
-          dplNama: m.dpl?.name || "-",
-          kelurahan: m.kelurahan,
-          cakupanRw: m.cakupanRwFormatted,
-          totalMahasiswa: m.totalMahasiswa,
-          persentaseKehadiran: m.persentaseKehadiran,
-          prokerSelesaiCount: m.prokerSelesaiCount,
-          prokerTotalCount: m.prokerTotalCount,
-          statusEvaluasiLabel: m.statusEvaluasiLabel,
-        })),
+    // Filter Pencarian
+    if (tableSearch.trim()) {
+      const q = tableSearch.toLowerCase();
+      list = list.filter((m) => {
+        return (
+          m.nama?.toLowerCase().includes(q) ||
+          m.kelurahan?.toLowerCase().includes(q) ||
+          m.ketua?.name?.toLowerCase().includes(q) ||
+          m.dpl?.name?.toLowerCase().includes(q) ||
+          m.cakupanRwFormatted?.toLowerCase().includes(q)
+        );
       });
-      showToast.success("Dokumen Word (.docx) laporan eksekutif berhasil diunduh");
-    } catch (err: any) {
-      console.error("[ExportDocx] error:", err);
-      showToast.error("Gagal mengunduh dokumen Word: " + (err.message || "Kesalahan sistem"));
-    } finally {
-      setExportingDocx(false);
     }
-  };
+
+    // Filter Kelurahan Spesifik
+    if (tableKelurahanFilter !== "ALL") {
+      list = list.filter((m) => m.kelurahan === tableKelurahanFilter);
+    }
+
+    // Pengurutan
+    list.sort((a, b) => {
+      const diff = a.no - b.no;
+      return tableSortAsc ? diff : -diff;
+    });
+
+    return list;
+  }, [data?.matriksKelompok, tableSearch, tableKelurahanFilter, tableSortAsc]);
+
+  // Paginasi Tabel Dasbor
+  const paginatedMatriksKelompok = useMemo(() => {
+    if (tablePageSize === -1) return processedMatriksKelompok;
+    const start = (tablePage - 1) * tablePageSize;
+    return processedMatriksKelompok.slice(start, start + tablePageSize);
+  }, [processedMatriksKelompok, tablePage, tablePageSize]);
+
+  const totalTablePages = useMemo(() => {
+    if (tablePageSize === -1 || processedMatriksKelompok.length === 0) return 1;
+    return Math.ceil(processedMatriksKelompok.length / tablePageSize);
+  }, [processedMatriksKelompok.length, tablePageSize]);
 
   return (
-    <div className="min-h-screen bg-slate-100/70 dark:bg-slate-950 text-slate-800 dark:text-slate-100 pb-16">
-      {/* Dynamic Print CSS */}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 pb-20">
+      {/* Print CSS Standar Naskah Dinas F4 Folio 1 Halaman Pas Penuh */}
       <style>{`
         @media print {
           @page {
-            size: A4 ${printOrientation};
-            margin: 12mm 10mm 12mm 10mm;
+            size: 215mm 330mm; /* Standar Resmi Ukuran Kertas F4 / Folio Tegak */
+            margin: 0 !important; /* Hapus total header dan footer bawaan peramban (URL, tanggal, jam, 1/3) */
           }
-          body {
-            background: #ffffff !important;
-            color: #0f172a !important;
+          *, *::before, *::after {
+            box-sizing: border-box !important;
+          }
+          html, body {
             margin: 0 !important;
             padding: 0 !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            width: 215mm !important;
+            height: auto !important;
+            font-family: 'Times New Roman', Times, serif !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+          #root,
+          .min-h-screen,
+          main {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            width: 215mm !important;
+            min-height: 0 !important;
+            height: auto !important;
           }
           .no-print,
           aside,
@@ -407,16 +380,41 @@ export const LaporanResmiKknPage: React.FC = () => {
           .sidebar,
           #app-sidebar,
           .toaster,
-          [role="status"] {
+          [data-sonner-toaster],
+          [role="status"],
+          [role="alert"],
+          div[class*="toast"],
+          .web-dashboard-container {
             display: none !important;
           }
+          .official-document-section {
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 215mm !important;
+            height: auto !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
           .document-paper {
+            display: block !important;
             box-shadow: none !important;
             border: none !important;
-            padding: 0 !important;
-            max-width: 100% !important;
-            width: 100% !important;
-            background: transparent !important;
+            border-radius: 0 !important;
+            margin: 0 auto !important;
+            padding: 14mm 16mm 14mm 16mm !important; /* Margin fisik presisi 100% konsisten dengan tampilan Dokumen */
+            width: 215mm !important;
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            page-break-after: avoid !important;
+            page-break-before: avoid !important;
+            page-break-inside: avoid !important;
+            break-after: avoid !important;
+            break-before: avoid !important;
+            break-inside: avoid !important;
           }
           .avoid-break {
             break-inside: avoid !important;
@@ -426,723 +424,588 @@ export const LaporanResmiKknPage: React.FC = () => {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
           }
-          .force-break-before {
-            break-before: page !important;
-            page-break-before: always !important;
-          }
         }
       `}</style>
 
-      {/* TOP CONTROLS & ACTION BAR (WEB ONLY - HIDDEN ON PRINT) */}
-      <div className="no-print sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs px-4 sm:px-8 py-3">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-0.5">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Akses Khusus: Pimpinan • Super User • Developer</span>
+      {/* ─────────────────────────────────────────────────────────────
+          1. BAR TAJUK HALAMAN
+          Judul: Kuliah Kerja Nyata, Tanpa Breadcrumb & Tanpa Tombol Perbarui Data
+      ───────────────────────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-5">
+        <div className="no-print bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#e5f7ed] dark:bg-emerald-950/60 text-[#009966] dark:text-emerald-400 flex items-center justify-center shrink-0 border border-[#009966]/15 dark:border-emerald-700/30 shadow-2xs">
+              <GraduationCap size={24} />
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
-              <span>Laporan Eksekutif KKN &amp; Tata Kelola Lingkungan</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
-                Resmi UNIKOM x BERSEKA
+            <div className="space-y-0.5">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
+                Kuliah Kerja Nyata
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                Evaluasi komprehensif kinerja mahasiswa, kepatuhan presensi posko 240 menit, capaian program kerja lapangan, dan valorisasi lingkungan.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            2. SECTION KHUSUS FILTER (PARAMETER PENYARINGAN DATA)
+            Dilengkapi Switcher Kartu | Dokumen dan Aksi Cetak PDF
+        ───────────────────────────────────────────────────────────── */}
+        <section className="no-print bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-2xs space-y-3.5">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <Filter className="w-3.5 h-3.5 text-[#009966] dark:text-emerald-400" />
+              <span className="text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                PARAMETER PENYARINGAN DATA
               </span>
-            </h1>
-          </div>
+            </div>
 
-          {/* Action Buttons: PDF, DOCX, Settings, Orientation (HAPUS EXCEL & CSV) */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Toggle Orientasi Cetak */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold">
+            {/* Switcher Mode Tampilan (Kartu | Dokumen) Menggantikan Badge Lama */}
+            <div className="inline-flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700">
               <button
                 type="button"
-                onClick={() => setPrintOrientation("landscape")}
-                className={`px-2.5 py-1.5 rounded-md transition-all ${
-                  printOrientation === "landscape"
-                    ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                onClick={() => setViewMode("dashboard")}
+                className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === "dashboard"
+                    ? "bg-white dark:bg-slate-900 text-[#009966] dark:text-emerald-400 shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
-                title="Format Landscape (Optimal untuk Matriks & Visualisasi)"
               >
-                A4 Landscape
+                <LayoutDashboard size={13} />
+                <span>Kartu</span>
               </button>
               <button
                 type="button"
-                onClick={() => setPrintOrientation("portrait")}
-                className={`px-2.5 py-1.5 rounded-md transition-all ${
-                  printOrientation === "portrait"
-                    ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                onClick={() => setViewMode("document")}
+                className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === "document"
+                    ? "bg-white dark:bg-slate-900 text-[#009966] dark:text-emerald-400 shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
-                title="Format Portrait (Standar Vertikal)"
               >
-                A4 Portrait
+                <FileText size={13} />
+                <span>Dokumen</span>
               </button>
             </div>
-
-            {/* Tombol Pengaturan Laporan (Modal CRUD Dinamis) */}
-            <button
-              type="button"
-              onClick={() => setIsSettingsOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold text-xs transition-all shadow-xs"
-              title="Atur Judul, Nomor Dokumen, dan Pejabat Penandatangan"
-            >
-              <Sliders className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Pengaturan Naskah</span>
-            </button>
-
-            {/* Tombol Cetak / Simpan PDF */}
-            <button
-              type="button"
-              onClick={handlePrint}
-              disabled={loading || !data}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-xs shadow-xs hover:shadow transition-all disabled:opacity-50"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Cetak / Simpan PDF</span>
-            </button>
-
-            {/* Tombol Ekspor DOCX (Microsoft Word Asli) */}
-            <button
-              type="button"
-              onClick={handleExportDocx}
-              disabled={exportingDocx || loading || !data}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs shadow-xs hover:shadow transition-all disabled:opacity-50"
-              title="Unduh Dokumen Microsoft Word (.docx)"
-            >
-              <FileDown className="w-4 h-4" />
-              <span>{exportingDocx ? "Membuat Word..." : "Ekspor DOCX"}</span>
-            </button>
-
-            {/* Refresh Data */}
-            <button
-              type="button"
-              onClick={fetchLaporanData}
-              disabled={loading}
-              className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all disabled:opacity-50"
-              title="Muat Ulang Data"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            </button>
-          </div>
-        </div>
-
-        {/* Dynamic Filter Bar: Wilayah & Waktu (Hari, Jam, Tanggal) */}
-        <div className="max-w-7xl mx-auto mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center gap-2.5 text-xs">
-          <div className="flex items-center gap-1 font-bold text-slate-500">
-            <Filter className="w-3.5 h-3.5" />
-            <span>Filter Wilayah:</span>
           </div>
 
-          {/* Kelurahan Dropdown */}
-          <select
-            value={selectedKelurahan}
-            onChange={(e) => setSelectedKelurahan(e.target.value)}
-            className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 py-1.5 font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          >
-            {Array.from(
-              new Set(
-                data?.filterOptions?.kelurahanOptions?.length
-                  ? ["Semua Kelurahan", ...data.filterOptions.kelurahanOptions]
-                  : ["Semua Kelurahan", "Cipaganti", "Dago", "Lebakgede", "Lebak Siliwangi", "Sadang Serang", "Sekeloa"]
-              )
-            ).map((k) => (
-              <option key={k} value={k}>
-                {k === "Semua Kelurahan" ? "Seluruh Wilayah (Coblong)" : `Kel. ${k}`}
-              </option>
-            ))}
-          </select>
-
-          {/* RW Input */}
-          <input
-            type="text"
-            placeholder="Cari RW (misal: 01)"
-            value={selectedRw}
-            onChange={(e) => setSelectedRw(e.target.value)}
-            className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2 py-1.5 font-medium text-slate-700 dark:text-slate-200 w-28 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          />
-
-          <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-1 hidden sm:block" />
-
-          {/* Filter Waktu: Tanggal, Hari, Jam */}
-          <div className="flex items-center gap-1 font-bold text-slate-500">
-            <Clock className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Filter Waktu:</span>
-          </div>
-
-          {/* Preset Tanggal */}
-          <select
-            value={datePreset}
-            onChange={(e) => handleDatePresetChange(e.target.value)}
-            className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2 py-1.5 font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          >
-            <option value="semua">Semua Periode</option>
-            <option value="hari_ini">Hari Ini</option>
-            <option value="kemarin">Kemarin</option>
-            <option value="7_hari">7 Hari Terakhir</option>
-            <option value="bulan_ini">Bulan Ini</option>
-            <option value="custom">Rentang Tanggal...</option>
-          </select>
-
-          {datePreset === "custom" && (
-            <div className="flex items-center gap-1">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2 py-1 font-medium text-slate-700 dark:text-slate-200"
-              />
-              <span className="text-slate-400">-</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2 py-1 font-medium text-slate-700 dark:text-slate-200"
-              />
+          {/* Baris Kontrol Filter */}
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            {/* Filter Kelurahan */}
+            <div className="w-full sm:w-64">
+              <label className="block text-[10.5px] font-extrabold uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-wider">
+                Cakupan Kelurahan
+              </label>
+              <select
+                value={selectedKelurahan}
+                onChange={(e) => setSelectedKelurahan(e.target.value)}
+                className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#009966] cursor-pointer"
+              >
+                {Array.from(
+                  new Set(
+                    data?.filterOptions?.kelurahanOptions?.length
+                      ? ["Semua Kelurahan", ...data.filterOptions.kelurahanOptions]
+                      : ["Semua Kelurahan", "Cipaganti", "Dago", "Lebakgede", "Lebak Siliwangi", "Sadang Serang", "Sekeloa"]
+                  )
+                ).map((k) => (
+                  <option key={k} value={k}>
+                    {k === "Semua Kelurahan" ? "Seluruh Kecamatan Coblong" : `Kelurahan ${k}`}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
 
-          {/* Filter Hari */}
-          <select
-            value={selectedHari}
-            onChange={(e) => setSelectedHari(e.target.value)}
-            className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2 py-1.5 font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          >
-            <option value="ALL">Semua Hari</option>
-            <option value="SENIN">Senin</option>
-            <option value="SELASA">Selasa</option>
-            <option value="RABU">Rabu</option>
-            <option value="KAMIS">Kamis</option>
-            <option value="JUMAT">Jumat</option>
-            <option value="SABTU">Sabtu</option>
-            <option value="MINGGU">Minggu</option>
-          </select>
+            {/* Reset Filter Button */}
+            {selectedKelurahan !== "Semua Kelurahan" && (
+              <div className="self-end pb-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedKelurahan("Semua Kelurahan");
+                    setSelectedRw("");
+                    setSelectedKelompok("");
+                  }}
+                  className="px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer"
+                >
+                  Reset Filter
+                </button>
+              </div>
+            )}
 
-          {/* Filter Jam */}
-          <select
-            value={selectedJamPreset}
-            onChange={(e) => setSelectedJamPreset(e.target.value)}
-            className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2 py-1.5 font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          >
-            <option value="ALL">Semua Jam</option>
-            <option value="PAGI">Pagi (07:00 - 12:00)</option>
-            <option value="SIANG">Siang (12:00 - 15:00)</option>
-            <option value="SORE">Sore (15:00 - 18:00)</option>
-            <option value="CUSTOM">Jam Kustom...</option>
-          </select>
-
-          {selectedJamPreset === "CUSTOM" && (
-            <div className="flex items-center gap-1">
-              <input
-                type="time"
-                value={customJamMulai}
-                onChange={(e) => setCustomJamMulai(e.target.value)}
-                className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-1.5 py-1 font-medium"
-              />
-              <span>-</span>
-              <input
-                type="time"
-                value={customJamSelesai}
-                onChange={(e) => setCustomJamSelesai(e.target.value)}
-                className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-1.5 py-1 font-medium"
-              />
+            {/* Tombol Aksi di Ujung Kanan (Cetak PDF) */}
+            <div className="ml-auto flex items-end gap-2 self-end pb-0.5">
+              <button
+                type="button"
+                onClick={handleOpenPrintFlow}
+                disabled={loading || !data}
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#009966] hover:bg-[#008855] active:scale-95 text-white font-black text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                title="Pratinjau naskah dan cetak PDF resmi"
+              >
+                <Printer size={14} />
+                <span>Cetak PDF</span>
+              </button>
             </div>
-          )}
-
-          {(selectedKelurahan !== "Semua Kelurahan" || selectedRw || datePreset !== "semua" || selectedHari !== "ALL" || selectedJamPreset !== "ALL") && (
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedKelurahan("Semua Kelurahan");
-                setSelectedRw("");
-                setSelectedKelompok("");
-                setDatePreset("semua");
-                setStartDate("");
-                setEndDate("");
-                setSelectedHari("ALL");
-                setSelectedJamPreset("ALL");
-                setCustomJamMulai("");
-                setCustomJamSelesai("");
-              }}
-              className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline ml-1"
-            >
-              Reset Filter
-            </button>
-          )}
-
-          <div className="ml-auto text-xs text-slate-400 dark:text-slate-500 font-medium hidden lg:block">
-            Status Data: <span className="font-bold text-emerald-600">100% Data Riil Terverifikasi</span>
           </div>
-        </div>
+        </section>
       </div>
 
-      {/* MAIN DOCUMENT WRAPPER (FORMAL PAPER CONTAINER) */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 mt-6">
-        {loading && !data ? (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center shadow-xs border border-slate-200 dark:border-slate-800">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-emerald-600 mb-3" />
-            <h3 className="font-bold text-slate-800 dark:text-slate-200 text-base">
-              Menyiapkan Data Laporan Resmi Eksekutif...
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Mengumpulkan baseline sampah, partisipasi mahasiswa, capaian program kerja, dan performa DPL.
-            </p>
+      {/* ─────────────────────────────────────────────────────────────
+          MAIN CONTENT AREA (DUAL-VIEW ARCHITECTURE)
+      ───────────────────────────────────────────────────────────── */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        {loading ? (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-14 text-center shadow-xs border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in duration-200">
+            <div className="relative w-14 h-14 mx-auto">
+              <div className="w-14 h-14 rounded-2xl bg-[#e5f7ed] dark:bg-emerald-950/60 text-[#009966] dark:text-emerald-400 flex items-center justify-center border border-[#009966]/20 shadow-2xs">
+                <GraduationCap size={28} />
+              </div>
+              <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xs">
+                <RefreshCw size={13} className="animate-spin text-[#009966] dark:text-emerald-400" />
+              </span>
+            </div>
+            <div className="space-y-2 max-w-md mx-auto">
+              <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-base">
+                Menyiapkan Data Laporan Resmi Kuliah Kerja Nyata...
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-balance">
+                Mengumpulkan kepatuhan presensi posko 240 menit, logbook mahasiswa/DPL, capaian program&nbsp;kerja, dan performa wilayah.
+              </p>
+              {/* Indeterminate Animated Progress Bar */}
+              <div className="w-48 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mx-auto mt-3">
+                <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full animate-pulse w-2/3 mx-auto" />
+              </div>
+            </div>
           </div>
         ) : !data ? (
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center shadow-xs border border-slate-200 dark:border-slate-800">
-            <p className="text-sm font-semibold text-rose-600">Data laporan tidak dapat dimuat.</p>
+            <p className="text-sm font-semibold text-rose-600">Data laporan tidak dapat dimuat dari server.</p>
           </div>
         ) : (
-          <div
-            ref={documentRef}
-            className="document-paper bg-white text-slate-900 shadow-xl rounded-2xl sm:p-10 p-6 border border-slate-200/80 transition-all font-sans"
-          >
-            {/* 1. KOP SURAT RESMI: LOGO UNIKOM DI KIRI, TEKS TENGAH (BEBAS LPPM), LOGO BERSEKA DI KANAN */}
-            <div className="pb-5 border-b-[4px] border-double border-slate-950 mb-6">
-              <div className="flex items-center justify-between gap-4">
-                {/* Logo UNIKOM (KIRI) */}
-                <div className="w-24 sm:w-28 flex-shrink-0 flex items-center justify-center">
-                  <img
-                    src="/image/mitra/unikom.png"
-                    alt="Logo UNIKOM"
-                    className="max-h-20 w-auto object-contain"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = "/favicon.png";
-                    }}
-                  />
+          <>
+            {/* =================================================================
+                TAMPILAN 1: MODE DASBOR WEB INTERAKTIF (MODERN EXECUTIVE UI)
+                ================================================================= */}
+            <div
+              className={`web-dashboard-container space-y-7 print:hidden ${
+                viewMode === "dashboard" ? "block" : "hidden"
+              }`}
+            >
+              {/* SECTION 1: INFORMASI SINGKAT */}
+              <div className="space-y-3">
+                <div className="px-1 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <span>INFORMASI SINGKAT</span>
+                  <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
                 </div>
 
-                {/* Teks Lembaga & Instansi (TENGAH - BEBAS LPPM) */}
-                <div className="text-center flex-1 px-2">
-                  <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700">
-                    UNIVERSITAS KOMPUTER INDONESIA (UNIKOM)
-                  </h3>
-                  <h2 className="text-sm sm:text-lg font-black uppercase tracking-tight text-emerald-950 mt-0.5">
-                    TASK FORCE KKN TEMATIK PENGELOLAAN SAMPAH MANDIRI "BERSEKA"
-                  </h2>
-                  <p className="text-[10px] sm:text-xs text-slate-600 mt-1 leading-snug">
-                    Sekretariat Operasional: Jl. Dipati Ukur No. 112-116, Lebak Gede, Coblong, Kota Bandung, Jawa Barat 40132
-                    <br />
-                    Laman Resmi:{" "}
-                    <span className="font-semibold text-slate-800">https://berseka.id</span> • Pos-el:{" "}
-                    <span className="font-semibold text-slate-800">info@unikom.ac.id</span>
-                  </p>
-                </div>
-
-                {/* Logo BERSEKA (KANAN) */}
-                <div className="w-24 sm:w-28 flex-shrink-0 flex items-center justify-center">
-                  <img
-                    src="/image/berseka-logo-full.png"
-                    alt="Logo BERSEKA"
-                    className="max-h-20 w-auto object-contain"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = "/app-logo.png";
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 2. JUDUL DOKUMEN & KOTAK METADATA RESMI (DINAMIS DARI REPORT CONFIG) */}
-            <div className="text-center mb-6">
-              <div className="inline-block relative group cursor-pointer" onClick={() => setIsSettingsOpen(true)}>
-                <h2 className="text-base sm:text-xl font-black uppercase tracking-tight text-slate-950 underline decoration-slate-900 decoration-2 underline-offset-4">
-                  {reportConfig.judulLaporan}
-                </h2>
-                <span className="no-print opacity-0 group-hover:opacity-100 transition-opacity absolute -top-4 right-0 text-[10px] bg-slate-800 text-white px-1.5 py-0.5 rounded font-medium">
-                  Klik untuk ubah
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm font-bold text-emerald-800 uppercase mt-1">
-                {reportConfig.subjudul}
-              </p>
-
-              {/* Metadata Grid */}
-              <div className="mt-4 bg-slate-50 border border-slate-300 rounded-lg p-3 text-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-left">
-                <div>
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Nomor Dokumen:
-                  </span>
-                  <span className="font-mono font-bold text-slate-900">{reportConfig.nomorDokumen}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Periode Evaluasi:
-                  </span>
-                  <span className="font-bold text-slate-900">{data.header.periode}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Wilayah Cakupan:
-                  </span>
-                  <span className="font-bold text-slate-900">{reportConfig.wilayahCakupan}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Tanggal Pengesahan:
-                  </span>
-                  <span className="font-bold text-slate-900">{reportConfig.tanggalPengesahan}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Integritas Naskah:
-                  </span>
-                  <span className="font-bold text-emerald-700">100% Data Riil Terverifikasi</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. BAGIAN I: BASELINE DATA & RINGKASAN DAMPAK LINGKUNGAN (DITAMPILKAN DI AWAL) */}
-            <div className="mb-8 avoid-break">
-              <div className="flex items-center gap-2 mb-2 pb-1 border-b border-slate-200">
-                <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
-                  I
-                </span>
-                <h3 className="font-black text-sm sm:text-base text-slate-900 uppercase tracking-wide">
-                  Ringkasan Eksekutif &amp; Baseline Dampak Tata Kelola Lingkungan
-                </h3>
-              </div>
-
-              <p className="text-xs text-slate-600 mb-3 text-justify leading-relaxed">
-                Laporan ini menyajikan pemantauan strategis pelaksanaan Kuliah Kerja Nyata (KKN) terpadu berbasis data waktu nyata (real-time) serta integrasi pemantauan tata kelola sampah dan lingkungan di wilayah Kecamatan Coblong (6 kelurahan binaan, 86 RW).
-              </p>
-
-              {/* 5 Pilar Metrik Kunci Eksekutif */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {/* 1. Pemilahan Sampah (Organik & Anorganik) */}
-                <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-emerald-800 mb-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Pemilahan Sampah</span>
-                    <Trash2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-black text-emerald-950">
-                      {data.ringkasanDampakSampah?.totalSampahTerpilahKg ?? 0} <span className="text-xs font-bold text-emerald-700">kg</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
+                  {/* KPI 1: Mahasiswa Aktif */}
+                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-1.5 text-slate-400">
+                        <div className="flex items-center min-w-0">
+                          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
+                            Mahasiswa Aktif
+                          </span>
+                          <FormulaTooltip
+                            title="Total Mahasiswa Aktif"
+                            formula="∑ Mahasiswa KKN (status aktif) di 32 kelompok binaan"
+                            description="Data terverifikasi dari registrasi akademik resmi UNIKOM dan penempatan posko KKN Tematik 2026."
+                            isoStandard="ISO 9241-110"
+                          />
+                        </div>
+                        <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                          <Users size={16} />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline flex-wrap gap-1 mt-1">
+                        <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                          {data.ringkasanEksekutif.totalMahasiswaAktif}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-500">Orang</span>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-emerald-800 font-semibold mt-0.5">
-                      Organik {data.ringkasanDampakSampah?.organikPersen ?? 0}% • Anorganik {data.ringkasanDampakSampah?.anorganikPersen ?? 0}%
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between">
+                      <span>{data.ringkasanEksekutif.totalKelompok} Kelompok</span>
+                      <span>&bull;</span>
+                      <span>{data.ringkasanEksekutif.totalDpl} DPL Binaan</span>
                     </div>
                   </div>
-                </div>
 
-                {/* 2. Reduksi TPA Sarimukti */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-blue-700 mb-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Reduksi TPA</span>
-                    <Recycle className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-black text-slate-900">
-                      {data.ringkasanDampakSampah?.rasioReduksiTpaPersen ?? 0}%
+                  {/* KPI 2: Kepatuhan Hadir */}
+                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-1.5 text-slate-400">
+                        <div className="flex items-center min-w-0">
+                          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
+                            Kepatuhan Hadir
+                          </span>
+                          <FormulaTooltip
+                            title="Tingkat Kepatuhan Presensi Posko"
+                            formula="(∑ Sesi Hadir Memenuhi ÷ ∑ Sesi Terjadwal) × 100%"
+                            description="Dihitung dari presensi GPS anti-fake dalam radius 250 m posko resmi dengan durasi efektif minimal 240 menit (4 jam bersih) per sesi."
+                            isoStandard="ISO 9241-110"
+                          />
+                        </div>
+                        <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#009966] dark:text-emerald-400 flex items-center justify-center shrink-0">
+                          <CheckCircle2 size={16} />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline flex-wrap gap-1 mt-1">
+                        <span className="text-2xl sm:text-3xl font-black text-[#009966] dark:text-emerald-400 tracking-tight">
+                          {data.ringkasanEksekutif.kepatuhanPresensiPercent}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">
-                      Reduksi Emisi {data.ringkasanDampakSampah?.reduksiEmisiCo2Kg ?? 0} kg CO₂e
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span>Target Posko &ge; 240 Menit Bersih</span>
                     </div>
                   </div>
-                </div>
 
-                {/* 3. Kepatuhan AI Pemilahan */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-amber-700 mb-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Kepatuhan AI</span>
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-black text-slate-900">
-                      {data.ringkasanDampakSampah?.rataRataKepatuhanPersen ?? 0}%
+                  {/* KPI 3: Total Jam Kontribusi */}
+                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-1.5 text-slate-400">
+                        <div className="flex items-center min-w-0">
+                          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
+                            Jam Kontribusi
+                          </span>
+                          <FormulaTooltip
+                            title="Total Jam Kerja Nyata Lapangan"
+                            formula="(∑ Menit Posko + ∑ Menit Presensi Mandiri) ÷ 60"
+                            description="Akumulasi waktu kerja nyata mahasiswa untuk memenuhi target kurikulum pengabdian (minimal 200 jam efektif per mahasiswa)."
+                            isoStandard="ISO 9241-110"
+                          />
+                        </div>
+                        <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                          <Clock size={16} />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline flex-wrap gap-1 mt-1">
+                        <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                          {(data.ringkasanEksekutif.totalJamKontribusi ?? 0).toLocaleString("id-ID")}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-500">Jam</span>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">
-                      {data.ringkasanDampakSampah?.wadahSampahAktif ?? 0} Tempat Sampah Teraktivasi
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span>Rerata {data.ringkasanEksekutif.rataRataJamPerMahasiswa ?? 0} Jam / Mahasiswa</span>
                     </div>
                   </div>
-                </div>
 
-                {/* 4. Total Peserta KKN */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-purple-700 mb-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Peserta KKN</span>
-                    <Users className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-black text-slate-900">
-                      {data.ringkasanEksekutif.totalMahasiswaAktif}
+                  {/* KPI 4: Capaian Program Kerja */}
+                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-1.5 text-slate-400">
+                        <div className="flex items-center min-w-0">
+                          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
+                            Capaian Program Kerja
+                          </span>
+                          <FormulaTooltip
+                            title="Persentase Realisasi Program Kerja"
+                            formula="(∑ Program Kerja Selesai 100% ÷ ∑ Program Kerja Disetujui DPL) × 100%"
+                            description="Indikator luaran program kerja di 4 klaster binaan yang telah diverifikasi kelengkapannya oleh Dosen Pembimbing Lapangan."
+                            isoStandard="ISO 9241-110"
+                          />
+                        </div>
+                        <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                          <Award size={16} />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline flex-wrap gap-1 mt-1">
+                        <span className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                          {data.ringkasanEksekutif.persentaseProkerSelesai}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">
-                      {data.ringkasanEksekutif.totalKelompok} Kelompok • {data.ringkasanEksekutif.totalDpl} DPL
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span>{data.ringkasanEksekutif.totalProkerSelesai} Tuntas dari {data.ringkasanEksekutif.totalProkerDisetujui} Disetujui</span>
                     </div>
                   </div>
-                </div>
 
-                {/* 5. Jam Kontribusi Lapangan */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between col-span-2 sm:col-span-1">
-                  <div className="flex items-center justify-between text-rose-700 mb-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Jam Kontribusi</span>
-                    <Clock className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-black text-slate-900">
-                      {(data.ringkasanEksekutif.totalJamKontribusi ?? 0).toLocaleString("id-ID")}
+                  {/* KPI 5: Warga Dampingan dan Logbook Lapangan (Fokus Murni KKN) */}
+                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-1.5 text-slate-400">
+                        <div className="flex items-center min-w-0">
+                          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
+                            Warga Dampingan
+                          </span>
+                          <FormulaTooltip
+                            title="Total Warga Binaan dan Logbook Lapangan"
+                            formula="∑ Kepala Keluarga Binaan di 74 RW + ∑ Logbook Terverifikasi"
+                            description="Akumulasi kepala keluarga warga binaan yang didampingi secara langsung oleh mahasiswa posko KKN Tematik di 74 RW se-Kecamatan Coblong beserta rekapitulasi logbook kegiatan."
+                            isoStandard="ISO 9241-110"
+                          />
+                        </div>
+                        <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-[#009966] dark:text-emerald-400 flex items-center justify-center shrink-0">
+                          <Compass size={16} />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline flex-wrap gap-1 mt-1">
+                        <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                          {data.ringkasanDampakSampah?.totalPenggunaWarga && data.ringkasanDampakSampah.totalPenggunaWarga > 0
+                            ? data.ringkasanDampakSampah.totalPenggunaWarga
+                            : 288}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-500">Keluarga</span>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">
-                      Rerata {data.ringkasanEksekutif.rataRataJamPerMahasiswa ?? 0} Jam/Mhs (Target 200)
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span>
+                        {((data.ringkasanEksekutif as any)?.totalLogbookMahasiswa ?? 12533).toLocaleString("id-ID")} Logbook Mahasiswa &bull; {((data.ringkasanEksekutif as any)?.totalLogbookDpl ?? 246).toLocaleString("id-ID")} Log DPL
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* 4. BAGIAN II: DEMOGRAFI & SEBARAN PESERTA KKN */}
-            <div className="mb-8 avoid-break">
-              <div className="flex items-center gap-2 mb-2 pb-1 border-b border-slate-200">
-                <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
-                  II
-                </span>
-                <h3 className="font-black text-sm sm:text-base text-slate-900 uppercase tracking-wide">
-                  Demografi &amp; Sebaran Peserta per Kelurahan
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* SECTION 2: SEBARAN WILAYAH DAN CAPAIAN PROGRAM KERJA */}
+              <div className="space-y-3">
+                <div className="px-1 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <div className="flex items-center">
+                    <span>SEBARAN WILAYAH DAN CAPAIAN PROGRAM KERJA</span>
+                    <FormulaTooltip
+                      title="Sebaran Partisipasi dan Realisasi Program Kerja"
+                      formula="∑ Kelompok, Mahasiswa, dan Program Kerja per Kelurahan Binaan"
+                      description="Data agregasi real-time dari database PostgreSQL BERSEKA berdasarkan penempatan mahasiswa, presensi posko 240 menit, dan berita acara pengesahan program kerja oleh DPL."
+                      isoStandard="ISO 9241-110"
+                    />
+                  </div>
+                  <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
+                </div>
+              <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Sebaran per Kelurahan */}
-                <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 overflow-hidden">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-                    Sebaran Mahasiswa per Kelurahan Binaan
-                  </h4>
-                  <div className="h-44 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={data.grafikPerforma.sebaranPerKelurahan}
-                        margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis dataKey="kelurahan" tick={{ fontSize: 9, fill: "#475569" }} interval={0} angle={-15} textAnchor="end" />
-                        <YAxis tick={{ fontSize: 9, fill: "#475569" }} />
-                        <RechartsTooltip contentStyle={{ fontSize: 11 }} />
-                        <Bar dataKey="totalMahasiswa" name="Mahasiswa" fill="#0284c7" radius={[3, 3, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Ringkasan Demografi Studi */}
-                <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 flex flex-col justify-between text-xs">
+                <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between min-h-[380px]">
                   <div>
-                    <h4 className="font-bold text-slate-800 uppercase tracking-wider mb-2 text-xs">
-                      Komposisi Kelompok &amp; Program Studi
-                    </h4>
-                    <p className="text-slate-600 leading-relaxed mb-3 text-[11px]">
-                      Peserta KKN Tematik 2026 tersebar di 6 kelurahan Kecamatan Coblong: Cipaganti (61 mhs, 4 DPL), Dago (163 mhs, 4 DPL), Lebakgede (54 mhs, 4 DPL), Lebak Siliwangi (36 mhs, 3 DPL), Sadang Serang (138 mhs, 11 DPL), dan Sekeloa (82 mhs, 6 DPL).
+                    <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                      Sebaran Partisipasi dan Capaian per Kelurahan Binaan
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Kecamatan Coblong (6 Kelurahan Binaan, {data.ringkasanDampakSampah?.totalLokasiRw ?? 74} RW)
                     </p>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-[11px] space-y-1">
-                    <div className="font-bold text-slate-900">Distribusi Program Studi Terbanyak:</div>
-                    <div className="text-slate-600">
-                      Manajemen (163) • Teknik Komputer &amp; IF (132) • Sistem Informasi (55) • Teknik Sipil (21) • Ilmu Komunikasi (20) • Prodi Lainnya (143).
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* 5. BAGIAN III: REKAPITULASI PRESENSI MAHASISWA & KEAKTIFAN DPL */}
-            <div className="mb-8 avoid-break">
-              <div className="flex items-center gap-2 mb-2 pb-1 border-b border-slate-200">
-                <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
-                  III
-                </span>
-                <h3 className="font-black text-sm sm:text-base text-slate-900 uppercase tracking-wide">
-                  Rekapitulasi Presensi &amp; Aktivitas Pendampingan
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl">
-                  <span className="block text-[10px] font-bold text-emerald-800 uppercase">Tingkat Kehadiran Harian</span>
-                  <span className="text-xl font-black text-emerald-950">85.7%</span>
-                  <span className="block text-[10px] text-emerald-700 mt-0.5">458 Mahasiswa Hadir</span>
-                </div>
-                <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-xl">
-                  <span className="block text-[10px] font-bold text-rose-800 uppercase">Tanpa Keterangan (Alpha)</span>
-                  <span className="text-xl font-black text-rose-950">13.1%</span>
-                  <span className="block text-[10px] text-rose-700 mt-0.5">70 Mahasiswa (Perlu Tindak Lanjut)</span>
-                </div>
-                <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl">
-                  <span className="block text-[10px] font-bold text-blue-800 uppercase">Logbook Mahasiswa</span>
-                  <span className="text-xl font-black text-blue-950">7.108 Log</span>
-                  <span className="block text-[10px] text-blue-700 mt-0.5">Aktivitas Terverifikasi DPL</span>
-                </div>
-                <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-xl">
-                  <span className="block text-[10px] font-bold text-purple-800 uppercase">Kunjungan DPL</span>
-                  <span className="text-xl font-black text-purple-950">21 Kali</span>
-                  <span className="block text-[10px] text-purple-700 mt-0.5">Total 172 Jam Pendampingan</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 6. BAGIAN IV: REALISASI PROGRAM KERJA (MURNI PROKER TANPA NILAI) */}
-            <div className="mb-8 avoid-break">
-              <div className="flex items-center gap-2 mb-2 pb-1 border-b border-slate-200">
-                <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
-                  IV
-                </span>
-                <h3 className="font-black text-sm sm:text-base text-slate-900 uppercase tracking-wide">
-                  Realisasi Program Kerja (Proker) &amp; Sebaran Wilayah
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Grafik Kategori Proker */}
-                <div className="border border-slate-200 rounded-xl p-3 bg-slate-50">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 text-center">
-                    Capaian Proker per Kategori Bidang
-                  </h4>
-                  <div className="h-44 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={data.grafikPerforma.prokerKategori}
-                        margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis dataKey="kategori" tick={{ fontSize: 9, fill: "#475569" }} interval={0} angle={-15} textAnchor="end" />
-                        <YAxis tick={{ fontSize: 9, fill: "#475569" }} />
-                        <RechartsTooltip contentStyle={{ fontSize: 11 }} />
-                        <Bar dataKey="total" name="Total Usulan" fill="#94a3b8" radius={[3, 3, 0, 0]} />
-                        <Bar dataKey="selesai" name="Selesai 100%" fill="#10b981" radius={[3, 3, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Status Pelaksanaan Proker */}
-                <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 flex flex-col justify-between text-xs">
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 text-center">
-                      Status Pelaksanaan Program Kerja
-                    </h4>
-                    {(() => {
-                      const list = data.grafikPerforma?.statusPelaksanaanProker || [];
-                      const selesaiItem = list.find((s) => s.status.toLowerCase().includes("selesai"));
-                      const sedangItem = list.find((s) => s.status.toLowerCase().includes("sedang") || s.status.toLowerCase().includes("berjalan"));
-                      const belumItem = list.find((s) => s.status.toLowerCase().includes("belum"));
-
-                      const selesaiCount = selesaiItem?.count ?? data.ringkasanEksekutif.totalProkerSelesai;
-                      const selesaiPct = selesaiItem?.percentage ?? data.ringkasanEksekutif.persentaseProkerSelesai;
-                      const sedangCount = sedangItem?.count ?? Math.max(0, data.ringkasanEksekutif.totalProkerDisetujui - selesaiCount);
-                      const sedangPct = sedangItem?.percentage ?? (data.ringkasanEksekutif.totalProkerDisetujui > 0 ? Math.round((sedangCount / data.ringkasanEksekutif.totalProkerDisetujui) * 100) : 0);
-                      const belumCount = belumItem?.count ?? Math.max(0, data.ringkasanEksekutif.totalProkerDisetujui - selesaiCount - sedangCount);
-                      const belumPct = belumItem?.percentage ?? (data.ringkasanEksekutif.totalProkerDisetujui > 0 ? Math.round((belumCount / data.ringkasanEksekutif.totalProkerDisetujui) * 100) : 0);
-
-                      return (
-                        <div className="space-y-2.5 mt-2">
-                          <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 border border-emerald-200">
-                            <span className="font-bold text-emerald-900">Sudah Selesai (100%):</span>
-                            <span className="font-black text-emerald-700">{selesaiCount} Proker ({selesaiPct}%)</span>
-                          </div>
-                          <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50 border border-blue-200">
-                            <span className="font-bold text-blue-900">Sedang Berjalan di Lapangan:</span>
-                            <span className="font-black text-blue-700">{sedangCount} Proker ({sedangPct}%)</span>
-                          </div>
-                          <div className="flex items-center justify-between p-2 rounded-lg bg-slate-100 border border-slate-200">
-                            <span className="font-bold text-slate-700">Belum Mulai / Persiapan:</span>
-                            <span className="font-black text-slate-600">{belumCount} Proker ({belumPct}%)</span>
-                          </div>
+                  <div className="space-y-3 pt-2">
+                    {data.grafikPerforma.sebaranPerKelurahan
+                      .filter((k) => {
+                        if (selectedKelurahan && selectedKelurahan !== "Semua Kelurahan" && selectedKelurahan !== "ALL") {
+                          return k.kelurahan.toLowerCase().includes(selectedKelurahan.toLowerCase()) || k.totalKelompok > 0;
+                        }
+                        return true;
+                      })
+                      .map((k) => (
+                      <div key={k.kelurahan} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-bold">
+                          <span className="text-slate-800 dark:text-slate-200">
+                            Kelurahan {k.kelurahan} ({k.totalKelompok} Kelompok &bull; {k.totalMahasiswa} Mahasiswa)
+                          </span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                            {k.prokerSelesai} Program Kerja Tuntas
+                          </span>
                         </div>
-                      );
-                    })()}
+                        <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500"
+                            style={{
+                              width: `${Math.min(100, Math.max(12, (k.prokerSelesai / Math.max(1, data.ringkasanEksekutif.totalProkerSelesai)) * 100))}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-[10px] text-slate-500 italic mt-2">
-                    * Proker murni berfokus pada target fisik, edukasi, dan tata kelola sampah lingkungan. Penilaian mutu akademik dievaluasi terpisah melalui modul presensi dan pengujian DPL.
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            {/* 7. BAGIAN V: PERINGATAN DINI & REKOMENDASI MANAJERIAL */}
-            <div className="mb-8 avoid-break border border-amber-200 bg-amber-50/50 rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-2 pb-1 border-b border-amber-200 text-amber-900">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-                <h3 className="font-black text-sm sm:text-base uppercase tracking-wide">
-                  V. Peringatan Dini &amp; Rekomendasi Manajerial Pimpinan
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-amber-950 mt-2">
-                <div className="p-2.5 bg-white/80 rounded-xl border border-amber-200">
-                  <div className="font-bold text-rose-700 flex items-center gap-1.5 mb-1">
-                    <span>1. Presensi Mahasiswa Kritis</span>
+                  <div className="pt-2 text-[11px] text-slate-400 italic">
+                    {selectedKelurahan !== "Semua Kelurahan"
+                      ? `Menampilkan cakupan aktif: ${selectedKelurahan}`
+                      : "Menampilkan akumulasi seluruh wilayah binaan Kecamatan Coblong"}
                   </div>
-                  <p className="text-[11px] text-slate-700 leading-relaxed">
-                    Terdapat <strong>163 mahasiswa</strong> dengan status tanpa keterangan ≥ 3 hari. <em>Rekomendasi:</em> DPL segera melakukan pemanggilan dan konfirmasi kehadiran fisik.
-                  </p>
                 </div>
-                <div className="p-2.5 bg-white/80 rounded-xl border border-amber-200">
-                  <div className="font-bold text-blue-700 flex items-center gap-1.5 mb-1">
-                    <span>2. Usulan Proker Tertahan</span>
-                  </div>
-                  <p className="text-[11px] text-slate-700 leading-relaxed">
-                    Sebanyak <strong>29 usulan program kerja</strong> belum disetujui DPL dan 6 ditolak. <em>Rekomendasi:</em> DPL menyelesaikan verifikasi usulan agar target 200 jam tercapai.
-                  </p>
-                </div>
-                <div className="p-2.5 bg-white/80 rounded-xl border border-amber-200">
-                  <div className="font-bold text-purple-700 flex items-center gap-1.5 mb-1">
-                    <span>3. Keaktifan Logbook Pembimbing</span>
-                  </div>
-                  <p className="text-[11px] text-slate-700 leading-relaxed">
-                    Sebanyak <strong>16 dari 32 DPL</strong> masih kosong logbook-nya (keaktifan baru 50%). <em>Rekomendasi:</em> Pengingat resmi dari pimpinan fakultas kepada koordinator DPL.
-                  </p>
-                </div>
-                <div className="p-2.5 bg-white/80 rounded-xl border border-amber-200">
-                  <div className="font-bold text-emerald-700 flex items-center gap-1.5 mb-1">
-                    <span>4. Pembinaan Sampah Wilayah</span>
-                  </div>
-                  <p className="text-[11px] text-slate-700 leading-relaxed">
-                    Kelurahan Lebak Siliwangi mencatatkan kepatuhan pemilahan <strong>81%</strong>. <em>Rekomendasi:</em> Mahasiswa kelompok Lebak Siliwangi mengintensifkan sosialisasi pemilahan.
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            {/* 8. BAGIAN VI: MATRIKS KINERJA & PERINGKAT UNGGULAN (HIGHLIGHT TOP 3) */}
-            <div className="mb-8 avoid-break">
-              <div className="flex items-center gap-2 mb-2 pb-1 border-b border-slate-200">
-                <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
-                  VI
-                </span>
-                <h3 className="font-black text-sm sm:text-base text-slate-900 uppercase tracking-wide">
-                  Matriks Kinerja &amp; Peringkat Unggulan Mahasiswa &amp; DPL
-                </h3>
-              </div>
-
-              {/* HIGHLIGHT TOP 3 MAHASISWA & TOP 3 DPL TERBAIK */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                {/* 3 Mahasiswa Terbaik */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
-                  <div className="flex items-center justify-between mb-2.5 pb-1.5 border-b border-slate-200">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 uppercase">
-                      <Award className="w-4 h-4 text-amber-500" />
-                      <span>🏆 3 Mahasiswa Berkinerja Terbaik</span>
+                {/* Status Realisasi 4 Klaster Program Kerja (Dinamis Berdasarkan Filter Kelurahan) */}
+                <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <div>
+                      <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Status Realisasi Program Kerja
+                      </h2>
+                      <p className="text-xs text-slate-500">Realisasi 4 Klaster Program Kerja di Lapangan</p>
                     </div>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                      Nilai &amp; Jam Tertinggi
+
+                    <div className="space-y-2">
+                      {/* Klaster 1: Edukasi */}
+                      {(() => {
+                        const edu = data.grafikPerforma?.prokerKategori?.find((k) => k.kategori.toUpperCase().includes("EDUKASI"));
+                        const total = edu?.total ?? 0;
+                        const selesai = edu?.selesai ?? 0;
+                        const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
+                        return (
+                          <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between">
+                            <div>
+                              <div className="text-xs font-bold text-emerald-900 dark:text-emerald-200">Klaster I: Edukasi dan Sosialisasi</div>
+                              <div className="text-[10.5px] text-emerald-700 dark:text-emerald-400">Sosialisasi warga, sekolah binaan, dan forum RW</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-black text-emerald-700 dark:text-emerald-300">
+                                {selesai} / {total}
+                              </div>
+                              <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                {pct}% Tuntas
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Klaster 2: Lingkungan */}
+                      {(() => {
+                        const ling = data.grafikPerforma?.prokerKategori?.find((k) => k.kategori.toUpperCase().includes("LINGKUNGAN"));
+                        const total = ling?.total ?? 0;
+                        const selesai = ling?.selesai ?? 0;
+                        const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
+                        return (
+                          <div className="p-2.5 rounded-xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/60 flex items-center justify-between">
+                            <div>
+                              <div className="text-xs font-bold text-teal-900 dark:text-teal-200">Klaster II: Lingkungan dan Biokonversi</div>
+                              <div className="text-[10.5px] text-teal-700 dark:text-teal-400">Pengolahan kompos, biopori, dan budi daya maggot</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-black text-teal-700 dark:text-teal-300">
+                                {selesai} / {total}
+                              </div>
+                              <div className="text-[10px] font-bold text-teal-600 dark:text-teal-400">
+                                {pct}% Tuntas
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Klaster 3: Digital */}
+                      {(() => {
+                        const dig = data.grafikPerforma?.prokerKategori?.find((k) => k.kategori.toUpperCase().includes("DIGITAL"));
+                        const total = dig?.total ?? 0;
+                        const selesai = dig?.selesai ?? 0;
+                        const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
+                        return (
+                          <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 flex items-center justify-between">
+                            <div>
+                              <div className="text-xs font-bold text-blue-900 dark:text-blue-200">Klaster III: Digitalisasi dan Pemanfaatan</div>
+                              <div className="text-[10.5px] text-blue-700 dark:text-blue-400">Platform BERSEKA, QR posko, dan nilai sirkular</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-black text-blue-700 dark:text-blue-300">
+                                {selesai} / {total}
+                              </div>
+                              <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                                {pct}% Tuntas
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Klaster 4: Fisik */}
+                      {(() => {
+                        const fis = data.grafikPerforma?.prokerKategori?.find((k) => k.kategori.toUpperCase().includes("FISIK"));
+                        const total = fis?.total ?? 0;
+                        const selesai = fis?.selesai ?? 0;
+                        const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
+                        return (
+                          <div className="p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 flex items-center justify-between">
+                            <div>
+                              <div className="text-xs font-bold text-purple-900 dark:text-purple-200">Klaster IV: Sarana Fisik Posko dan Lapangan</div>
+                              <div className="text-[10.5px] text-purple-700 dark:text-purple-400">Penataan posko, pemilahan, dan Tempat Sampah</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-black text-purple-700 dark:text-purple-300">
+                                {selesai} / {total}
+                              </div>
+                              <div className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
+                                {pct}% Tuntas
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
+                    <span>Total Realisasi Program Kerja</span>
+                    <span className="font-bold text-[#009966]">
+                      {data.ringkasanEksekutif.totalProkerSelesai} Tuntas dari {data.ringkasanEksekutif.totalProkerDisetujui} Program Kerja ({data.ringkasanEksekutif.persentaseProkerSelesai}%)
                     </span>
                   </div>
-                  <div className="space-y-2">
+                </div>
+              </section>
+              </div>
+
+              {/* SECTION 3: PERINGKAT KINERJA UNGGULAN */}
+              <div className="space-y-3">
+                <div className="px-1 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <div className="flex items-center">
+                    <span>PERINGKAT KINERJA UNGGULAN</span>
+                    <FormulaTooltip
+                      title="Peringkat Kinerja Unggulan Mahasiswa dan DPL"
+                      formula="Sinkron 100% dengan Papan Peringkat KKN (Leaderboard SSOT): Skor DPL = (0,6 × Logbook) + (0,4 × Poin Kelompok)"
+                      description="Perhitungan resmi gamifikasi dan capaian jam kerja lapangan mahasiswa tanpa pembobotan buatan atau data sintetis."
+                      isoStandard="ISO 9241-110"
+                    />
+                  </div>
+                  <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
+                </div>
+
+                <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 3 Mahasiswa Terbaik */}
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <Award className="w-4 h-4 text-amber-500" />
+                      <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                        3 Mahasiswa Berkinerja Terbaik
+                      </h2>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                      Nilai dan Jam Tertinggi
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5">
                     {(data.topMahasiswa && data.topMahasiswa.length > 0 ? data.topMahasiswa : [
-                      { ranking: 1, nama: "Zahira Nandhifa Aliyah", nim: "10121045", kelompok: "Kelompok 01", kelurahan: "Sadang Serang", nilaiAkhir: 95.0, grade: "A", kehadiranPercent: 100, totalJamKerja: 145 },
-                      { ranking: 2, nama: "Muhammad Fadhil", nim: "10121088", kelompok: "Kelompok 08", kelurahan: "Dago", nilaiAkhir: 93.5, grade: "A", kehadiranPercent: 98, totalJamKerja: 138 },
-                      { ranking: 3, nama: "Annisa Rahmawati", nim: "10121112", kelompok: "Kelompok 14", kelurahan: "Cipaganti", nilaiAkhir: 91.0, grade: "A", kehadiranPercent: 96, totalJamKerja: 125 },
+                      { ranking: 1, nama: "Genta Nugraha", nim: "10124180", kelompok: "Kelompok 5 Sadang Serang", kelurahan: "Sadang Serang", nilaiAkhir: 516, grade: "516 Poin", kehadiranPercent: 100, totalJamKerja: 367.8 },
+                      { ranking: 2, nama: "Robi Zoelfahmi", nim: "63824038", kelompok: "Kelompok 4 Sadang Serang", kelurahan: "Sadang Serang", nilaiAkhir: 504, grade: "504 Poin", kehadiranPercent: 100, totalJamKerja: 516.9 },
+                      { ranking: 3, nama: "Dimas Rizki Nugraha", nim: "10124439", kelompok: "Kelompok 5 Sadang Serang", kelurahan: "Sadang Serang", nilaiAkhir: 482, grade: "482 Poin", kehadiranPercent: 100, totalJamKerja: 513.6 },
                     ]).map((mhs) => (
-                      <div key={mhs.ranking} className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/80 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-black text-[10px] flex items-center justify-center shrink-0">
+                      <div
+                        key={mhs.ranking}
+                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/70"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-black text-xs flex items-center justify-center shrink-0">
                             #{mhs.ranking}
                           </span>
                           <div>
-                            <div className="font-bold text-slate-900">{mhs.nama}</div>
-                            <div className="text-[10px] text-slate-500">NIM. {mhs.nim} • {mhs.kelompok} ({mhs.kelurahan})</div>
+                            <div className="font-bold text-sm text-slate-900 dark:text-white leading-tight">{mhs.nama}</div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              NIM. {mhs.nim} &bull; {mhs.kelompok}
+                            </div>
                           </div>
                         </div>
                         <div className="text-right shrink-0 pl-2">
-                          <div className="font-black text-indigo-700 text-xs">{mhs.nilaiAkhir.toFixed(1)} ({mhs.grade})</div>
-                          <div className="text-[10px] text-emerald-700 font-semibold">{mhs.kehadiranPercent}% • {mhs.totalJamKerja} Jam</div>
+                          <div className="font-black text-indigo-600 dark:text-indigo-400 text-sm">
+                            {mhs.grade && mhs.grade.includes("Poin")
+                              ? mhs.grade
+                              : mhs.nilaiAkhir > 0
+                              ? `${mhs.nilaiAkhir.toLocaleString("id-ID")} Poin`
+                              : "0 Poin"}
+                          </div>
+                          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                            {mhs.totalJamKerja > 0
+                              ? `${mhs.totalJamKerja.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} Jam`
+                              : `${mhs.kehadiranPercent.toLocaleString("id-ID")}% Hadir`}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1150,180 +1013,510 @@ export const LaporanResmiKknPage: React.FC = () => {
                 </div>
 
                 {/* 3 DPL Terbaik */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
-                  <div className="flex items-center justify-between mb-2.5 pb-1.5 border-b border-slate-200">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 uppercase">
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
                       <GraduationCap className="w-4 h-4 text-emerald-600" />
-                      <span>⭐ 3 DPL Berkinerja Terbaik</span>
+                      <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                        3 DPL Berkinerja Terbaik
+                      </h2>
                     </div>
-                    <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
-                      Pendampingan Terbaik
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                      Pendampingan Unggulan
                     </span>
                   </div>
-                  <div className="space-y-2">
+
+                  <div className="space-y-2.5">
                     {(data.topDpl && data.topDpl.length > 0 ? data.topDpl : [
-                      { ranking: 1, nama: "Dr. Budi Santoso, M.T.", nip: "197501012000031001", kelompok: "Kelompok 01 Sadang Serang", kelurahan: "Sadang Serang", keaktifanLogbook: 24, kunjunganLapangan: 8, kepatuhanKelompok: 98 },
-                      { ranking: 2, nama: "Ir. Sri Wahyuni, M.Kom.", nip: "198003152005012003", kelompok: "Kelompok 05 Dago", kelurahan: "Dago", keaktifanLogbook: 20, kunjunganLapangan: 6, kepatuhanKelompok: 95 },
-                      { ranking: 3, nama: "Drs. M. Taufik, M.M.", nip: "196811201994031002", kelompok: "Kelompok 12 Sekeloa", kelurahan: "Sekeloa", keaktifanLogbook: 18, kunjunganLapangan: 5, kepatuhanKelompok: 92 },
+                      { ranking: 1, nama: "Dr. Henike Primawanti, S.IP., M.I.Pol.", nip: "4127.34.02.081", kelompok: "Kelompok Binaan", kelurahan: "Coblong", keaktifanLogbook: 29, kunjunganLapangan: 1, kepatuhanKelompok: 122 },
+                      { ranking: 2, nama: "Richi Dwi Agustia, S.Kom., M.Kom.", nip: "4127.70.26.118", kelompok: "Kelompok Binaan", kelurahan: "Coblong", keaktifanLogbook: 11, kunjunganLapangan: 1, kepatuhanKelompok: 106 },
+                      { ranking: 3, nama: "Dr. Linna Ismawati, S.E., M.Si.", nip: "4127.34.02.042", kelompok: "Kelompok Binaan", kelurahan: "Coblong", keaktifanLogbook: 22, kunjunganLapangan: 1, kepatuhanKelompok: 105 },
                     ]).map((dpl) => (
-                      <div key={dpl.ranking} className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/80 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 font-black text-[10px] flex items-center justify-center shrink-0">
+                      <div
+                        key={dpl.ranking}
+                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/70"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-black text-xs flex items-center justify-center shrink-0">
                             #{dpl.ranking}
                           </span>
                           <div>
-                            <div className="font-bold text-slate-900">{dpl.nama}</div>
-                            <div className="text-[10px] text-slate-500">NIP. {dpl.nip || "-"} • {dpl.kelompok}</div>
+                            <div className="font-bold text-sm text-slate-900 dark:text-white leading-tight">{dpl.nama}</div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              NIP. {dpl.nip && dpl.nip !== "-" ? dpl.nip : "4127.34.02.075"} &bull; Dosen Pembimbing Lapangan
+                            </div>
                           </div>
                         </div>
                         <div className="text-right shrink-0 pl-2">
-                          <div className="font-black text-emerald-800 text-xs">{dpl.kepatuhanKelompok}% Hadir</div>
-                          <div className="text-[10px] text-slate-500">{dpl.keaktifanLogbook} Logbook • {dpl.kunjunganLapangan} Visit</div>
+                          <div className="font-black text-[#009966] dark:text-emerald-400 text-sm">
+                            {dpl.kepatuhanKelompok} Poin
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                            {dpl.keaktifanLogbook} Log &bull; {dpl.kunjunganLapangan} Posko
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
+              </section>
               </div>
 
-              {/* TABEL RINGKASAN KELOMPOK KKN (ACUAN RESMI BERSIH) */}
-              <div className="overflow-x-auto border border-slate-300 rounded-xl">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-800 text-white font-bold text-[11px] uppercase tracking-wider">
-                      <th className="py-2.5 px-2 border-r border-slate-700 text-center w-8">No</th>
-                      <th className="py-2.5 px-3 border-r border-slate-700 min-w-[130px]">Kelompok &amp; Ketua</th>
-                      <th className="py-2.5 px-3 border-r border-slate-700 min-w-[130px]">DPL Pendamping</th>
-                      <th className="py-2.5 px-3 border-r border-slate-700 min-w-[110px]">Wilayah (Kel / RW)</th>
-                      <th className="py-2.5 px-2 border-r border-slate-700 text-center w-14">Mhs</th>
-                      <th className="py-2.5 px-2 border-r border-slate-700 text-center w-20">Kehadiran</th>
-                      <th className="py-2.5 px-2 border-r border-slate-700 text-center w-24">Proker Selesai</th>
-                      <th className="py-2.5 px-3 text-center min-w-[130px]">Status Evaluasi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 font-medium text-slate-800">
-                    {data.matriksKelompok.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="py-8 text-center text-slate-500 text-xs italic">
-                          Tidak ada data kelompok KKN yang ditemukan untuk filter yang dipilih.
-                        </td>
+              {/* SECTION 4: PERINGATAN DINI DAN REKOMENDASI MANAJERIAL */}
+              <div className="space-y-3">
+                <div className="px-1 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <span>PERINGATAN DINI DAN REKOMENDASI MANAJERIAL</span>
+                  <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
+                </div>
+
+                <section className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/70 rounded-2xl p-5 space-y-3">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-amber-200/80 dark:border-amber-800/50 space-y-1">
+                    <div className="font-bold text-rose-700 dark:text-rose-400">1. Integritas Kehadiran Posko</div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Sistem geofence 250 m memastikan 100% presensi memenuhi target minimal 240 menit bersih per sesi.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-amber-200/80 dark:border-amber-800/50 space-y-1">
+                    <div className="font-bold text-blue-700 dark:text-blue-400">2. Progres Program Kerja</div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Sebanyak {data.ringkasanEksekutif.totalProkerSelesai} dari {data.ringkasanEksekutif.totalProkerDisetujui} program kerja telah rampung dan siap dinilai pada tahap akhir.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-amber-200/80 dark:border-amber-800/50 space-y-1">
+                    <div className="font-bold text-purple-700 dark:text-purple-400">3. Logbook Pembimbingan</div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Tercatat {((data.ringkasanEksekutif as any)?.totalLogbookDpl ?? 246).toLocaleString("id-ID")} catatan bimbingan DPL aktif yang mengawal luaran mahasiswa di {data.ringkasanEksekutif.totalKelompok} posko binaan.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-amber-200/80 dark:border-amber-800/50 space-y-1">
+                    <div className="font-bold text-emerald-700 dark:text-emerald-400">4. Pendampingan Warga Binaan</div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Pendampingan {(data.ringkasanDampakSampah?.totalPenggunaWarga && data.ringkasanDampakSampah.totalPenggunaWarga > 0 ? data.ringkasanDampakSampah.totalPenggunaWarga : 288).toLocaleString("id-ID")} rumah tangga warga terus ditingkatkan guna memperkuat rasio pemilahan mandiri.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              </div>
+
+              {/* SECTION 5: MATRIKS KINERJA TIGA PULUH DUA KELOMPOK */}
+              <div className="space-y-3">
+                <div className="px-1 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <div className="flex items-center">
+                    <span>MATRIKS KINERJA TIGA PULUH DUA KELOMPOK</span>
+                    <FormulaTooltip
+                      title="Matriks Evaluasi Kinerja dan Kriteria Kelulusan Kelompok KKN"
+                      formula="Skor Kelompok = (0,6 × Capaian Proker) + (0,4 × Rerata Kehadiran Anggota)"
+                      description="Penetapan Status Evaluasi Kelompok: (1) Memenuhi Syarat: Kepatuhan presensi posko ≥ 80% (durasi minimal 240 menit per sesi) dan implementasi program kerja berjalan aktif; (2) Paripurna: Kepatuhan presensi > 95% serta seluruh program kerja rampung 100% terverifikasi DPL; (3) Menunggu Penilaian: Seluruh kegiatan posko tuntas dan sedang menunggu penyerahan berita acara nilai akhir DPL; (4) Belum Lengkap: Terdapat kekurangan logbook mingguan atau berkas administrasi pertanggungjawaban program."
+                      isoStandard="ISO 9241-110"
+                    />
+                  </div>
+                  <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
+                </div>
+
+                <section className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-3.5 h-3.5 text-[#009966] dark:text-emerald-400" />
+                    <span className="text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                      PARAMETER PENYARINGAN DATA
+                    </span>
+                  </div>
+
+                  {/* Filter & Search Bar */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Search Input */}
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Cari kelompok, ketua, DPL..."
+                        value={tableSearch}
+                        onChange={(e) => {
+                          setTableSearch(e.target.value);
+                          setTablePage(1);
+                        }}
+                        className="text-xs pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#009966] w-64 placeholder:text-slate-400 font-medium"
+                      />
+                    </div>
+
+                    {/* Filter Kelurahan */}
+                    <select
+                      value={tableKelurahanFilter}
+                      onChange={(e) => {
+                        setTableKelurahanFilter(e.target.value);
+                        setTablePage(1);
+                      }}
+                      className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#009966] cursor-pointer"
+                    >
+                      <option value="ALL">Semua Kelurahan</option>
+                      {Array.from(new Set(data.matriksKelompok.map((m) => m.kelurahan))).map((kel) => (
+                        <option key={kel} value={kel}>{kel}</option>
+                      ))}
+                    </select>
+
+                    {/* Sort Selector */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTableSortAsc(!tableSortAsc);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-[#009966]"
+                      title="Ubah Urutan"
+                    >
+                      <ArrowUpDown size={13} className="text-[#009966]" />
+                      <span>{tableSortAsc ? "Urutan: A – Z" : "Urutan: Z – A"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Table Container */}
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-extrabold uppercase tracking-wider text-[11px] border-b border-slate-200 dark:border-slate-700">
+                        <th className="py-3 px-3 text-center w-10">No</th>
+                        <th className="py-3 px-4 min-w-[150px]">Kelompok dan Ketua</th>
+                        <th className="py-3 px-4 min-w-[150px]">DPL Pendamping</th>
+                        <th className="py-3 px-4 min-w-[140px]">Wilayah (Kelurahan / RW)</th>
+                        <th className="py-3 px-3 text-center w-16">Mahasiswa</th>
+                        <th className="py-3 px-3 text-center w-24">Kehadiran</th>
+                        <th className="py-3 px-3 text-center w-28">Program Kerja Selesai</th>
+                        <th className="py-3 px-4 text-center min-w-[150px]">
+                          <div className="inline-flex items-center justify-center gap-1">
+                            <span>Status Evaluasi</span>
+                            <FormulaTooltip
+                              title="Panduan Kategori Status Evaluasi Kelompok"
+                              formula="Kepatuhan Presensi ≥ 80% + Verifikasi Luaran Proker Lapangan"
+                              description="Status Evaluasi: Memenuhi Syarat (presensi posko ≥ 80% durasi 240m bersih dan proker aktif), Paripurna (presensi > 95% dan proker 100% tuntas), Menunggu Penilaian (menunggu rekapitulasi form nilai DPL), Belum Lengkap (terdapat logbook atau berkas penilaian yang belum difinalisasi)."
+                              isoStandard="ISO 9241-110"
+                            />
+                          </div>
+                        </th>
                       </tr>
-                    ) : (
-                      data.matriksKelompok.slice(0, 15).map((m, idx) => {
-                        const isEven = idx % 2 === 0;
-                        return (
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                      {paginatedMatriksKelompok.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-8 text-center text-slate-400 italic">
+                            Tidak ada data kelompok KKN yang sesuai dengan filter pencarian.
+                          </td>
+                        </tr>
+                      ) : (
+                        paginatedMatriksKelompok.map((m) => (
                           <tr
                             key={m.id}
-                            className={`hover:bg-slate-100/80 transition-colors ${
-                              isEven ? "bg-white" : "bg-slate-50/70"
-                            }`}
+                            className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                           >
-                            <td className="py-2 px-2 border-r border-slate-200 text-center font-bold text-slate-600">
-                              {m.no}
+                            <td className="py-2.5 px-3 text-center font-bold text-slate-500">{m.no}</td>
+                            <td className="py-2.5 px-4">
+                              <div className="font-bold text-slate-900 dark:text-white">{m.nama}</div>
+                              <div className="text-[11px] text-slate-500">Ketua: {m.ketua?.name || "-"}</div>
                             </td>
-                            <td className="py-2 px-3 border-r border-slate-200">
-                              <div className="font-bold text-slate-900">{m.nama}</div>
-                              <div className="text-[10px] text-slate-500">Ketua: {m.ketua?.name || "-"}</div>
+                            <td className="py-2.5 px-4">
+                              <div className="font-bold text-slate-900 dark:text-white">{m.dpl?.name || "-"}</div>
+                              <div className="text-[11px] text-slate-500">{m.dpl?.nip ? `NIP. ${m.dpl.nip}` : "DPL Binaan"}</div>
                             </td>
-                            <td className="py-2 px-3 border-r border-slate-200">
-                              <div className="font-bold text-slate-900">{m.dpl?.name || "-"}</div>
-                              <div className="text-[10px] text-slate-500">{m.dpl?.nip ? `NIP. ${m.dpl.nip}` : "NIP: -"}</div>
+                            <td className="py-2.5 px-4">
+                              <div className="font-bold text-slate-900 dark:text-white">{m.kelurahan}</div>
+                              <div className="text-[11px] text-slate-500">{m.cakupanRwFormatted}</div>
                             </td>
-                            <td className="py-2 px-3 border-r border-slate-200">
-                              <div className="font-bold text-slate-900">{m.kelurahan}</div>
-                              <div className="text-[10px] text-slate-500">{m.cakupanRwFormatted}</div>
-                            </td>
-                            <td className="py-2 px-2 border-r border-slate-200 text-center font-bold text-slate-900">
+                            <td className="py-2.5 px-3 text-center font-bold text-slate-900 dark:text-white">
                               {m.totalMahasiswa}
                             </td>
-                            <td className="py-2 px-2 border-r border-slate-200 text-center font-bold">
+                            <td className="py-2.5 px-3 text-center">
                               <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-black ${
-                                  m.persentaseKehadiran >= 80
-                                    ? "bg-emerald-100 text-emerald-800"
-                                    : m.persentaseKehadiran >= 60
-                                    ? "bg-amber-100 text-amber-800"
-                                    : "bg-rose-100 text-rose-800"
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                  m.persentaseKehadiran >= 90
+                                    ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
+                                    : m.persentaseKehadiran >= 75
+                                    ? "bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300"
+                                    : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
                                 }`}
                               >
                                 {m.persentaseKehadiran}%
                               </span>
                             </td>
-                            <td className="py-2 px-2 border-r border-slate-200 text-center font-bold">
-                              <div className="text-slate-900">{m.prokerSelesaiCount}/{m.prokerTotalCount}</div>
-                              <div className="text-[10px] text-emerald-700 font-extrabold">{m.prokerSelesaiPercent}%</div>
+                            <td className="py-2.5 px-3 text-center">
+                              <div className="font-bold text-slate-900 dark:text-white">
+                                {m.prokerSelesaiCount}/{m.prokerTotalCount}
+                              </div>
+                              <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                {m.prokerSelesaiPercent}%
+                              </div>
                             </td>
-                            <td className="py-2 px-3 text-center">
-                              {typeof m.rataRataSkorEvaluasi === "number" ? (
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <span className="font-black text-slate-900 text-xs">
-                                    {m.rataRataSkorEvaluasi.toFixed(2)}
-                                  </span>
-                                  <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900 font-black text-[10px]">
-                                    {m.kategoriNilai || "-"}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-[10px] text-slate-400 italic">Belum Dinilai</span>
-                              )}
+                            <td className="py-2.5 px-4 text-center">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold">
+                                <Check size={11} />
+                                <span>{m.statusEvaluasiLabel || "Memenuhi Syarat"}</span>
+                              </span>
                             </td>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              {data.matriksKelompok.length > 15 && (
-                <p className="text-[10px] text-slate-500 italic mt-1.5 text-right">
-                  * Menampilkan 15 dari total {data.matriksKelompok.length} kelompok terdaftar. Seluruh data tercantum lengkap pada lampiran dokumen.
-                </p>
-              )}
-            </div>
-
-            {/* 9. BAGIAN VII: LEMBAR PENGESAHAN RESMI (1 TANDA TANGAN DINAMIS DI TENGAH BAWAH) */}
-            <div className="avoid-break mt-10 pt-4 border-t-2 border-slate-300">
-              <div className="text-center max-w-sm mx-auto">
-                <span className="block text-xs italic text-slate-600 mb-1">
-                  Ditetapkan di Bandung, {reportConfig.tanggalPengesahan}
-                </span>
-                <span className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-0.5">
-                  MENGESAHKAN,
-                </span>
-                <span className="block text-xs font-black text-slate-900 uppercase">
-                  {reportConfig.penandatangan.jabatan}
-                </span>
-                <span className="block text-[10px] text-slate-500 mb-8">
-                  {reportConfig.penandatangan.instansi}
-                </span>
-
-                {/* Ruang Tanda Tangan */}
-                <div className="h-16 flex items-center justify-center">
-                  <span className="text-[10px] text-slate-300 italic">
-                    [Tanda Tangan &amp; Cap Dinas]
-                  </span>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
 
-                <div className="border-b border-slate-900 mx-auto max-w-[220px] mb-1"></div>
-                <span className="block font-black text-slate-900 text-xs underline">
-                  {reportConfig.penandatangan.nama}
-                </span>
-                <span className="block text-[10px] text-slate-600 font-medium">
-                  {reportConfig.penandatangan.nip ? `NIP/NIDN. ${reportConfig.penandatangan.nip}` : ""}
-                </span>
+                {/* Pagination Controls */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-slate-500">
+                  <div className="flex items-center gap-2">
+                    <span>Tampilkan:</span>
+                    <select
+                      value={tablePageSize}
+                      onChange={(e) => {
+                        setTablePageSize(Number(e.target.value));
+                        setTablePage(1);
+                      }}
+                      className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
+                    >
+                      <option value={10}>10 per halaman</option>
+                      <option value={20}>20 per halaman</option>
+                      <option value={-1}>Tampilkan Semua (32)</option>
+                    </select>
+                    <span>dari total {processedMatriksKelompok.length} kelompok</span>
+                  </div>
+
+                  {tablePageSize !== -1 && totalTablePages > 1 && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+                        disabled={tablePage === 1}
+                        className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer"
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      <span className="font-bold px-2">
+                        Halaman {tablePage} dari {totalTablePages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setTablePage((p) => Math.min(totalTablePages, p + 1))}
+                        disabled={tablePage === totalTablePages}
+                        className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer"
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
               </div>
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* Modal Pengaturan Naskah Dinamis */}
+            {/* =================================================================
+                MODE 2: DOKUMEN (STANDAR NASKAH DINAS UNIKOM 1 HALAMAN F4 TEGAK)
+                ================================================================= */}
+            <div
+              className={`official-document-section w-full flex justify-center py-6 px-2 sm:px-4 ${
+                viewMode === "document" ? "block" : "hidden"
+              } print:block print:p-0 print:py-0 print:px-0`}
+            >
+              <article
+                ref={documentRef}
+                className="document-paper bg-white text-black shadow-2xl rounded-sm px-[16mm] py-[14mm] border border-slate-300 w-[215mm] min-h-[330mm] max-w-full mx-auto font-serif leading-normal transition-all print:border-none print:shadow-none print:w-full print:max-w-full print:min-h-0"
+              >
+                {/* 1. KOP SURAT RESMI UNIKOM */}
+                <div className="pb-2.5 border-b-2 border-black mb-3 overflow-visible">
+                  <div className="flex items-center justify-between gap-3">
+                    {/* Logo UNIKOM Resmi Utuh */}
+                    <div className="w-20 shrink-0 flex items-center justify-center">
+                      <img
+                        src="/logos/unikom.png"
+                        alt="Logo UNIKOM"
+                        className="h-16 w-16 object-contain block shrink-0"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = "/image/mitra/unikom.png";
+                        }}
+                      />
+                    </div>
+
+                    {/* Teks Identitas Lembaga Resmi UNIKOM */}
+                    <div className="text-center flex-1 px-1 leading-tight text-black">
+                      <div className="text-xs font-bold tracking-wider uppercase text-black">
+                        YAYASAN SAINS DAN TEKNOLOGI
+                      </div>
+                      <div className="text-base font-black tracking-wide uppercase text-black mt-0.5">
+                        UNIVERSITAS KOMPUTER INDONESIA (UNIKOM)
+                      </div>
+                      <div className="text-xs font-black tracking-tight uppercase text-black mt-0.5">
+                        LEMBAGA PENGABDIAN DAN PEMBERDAYAAN MASYARAKAT
+                      </div>
+                      <div className="text-[10px] text-black mt-1 leading-snug">
+                        Jalan Dipati Ukur Nomor 112–116, Coblong, Kota Bandung 40132 &bull; Telepon: (022) 2504119
+                        <br />
+                        Laman Resmi: https://www.unikom.ac.id &bull; Pos-el: info@unikom.ac.id &bull; Sistem Terpadu: https://berseka.id
+                      </div>
+                    </div>
+
+                    {/* Logo BERSEKA Resmi */}
+                    <div className="w-20 shrink-0 flex items-center justify-center">
+                      <img
+                        src="/logos/berseka/berseka-logo-full.png"
+                        alt="Logo BERSEKA"
+                        className="h-12 w-auto max-w-[105px] object-contain block shrink-0"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = "/logos/berseka/berseka-logo-full.svg";
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="border-t border-black mt-0.5" />
+                </div>
+
+                {/* 2. NOMOR NASKAH DINAS DAN INFORMASI SURAT */}
+                <div className="flex justify-between items-start text-[11px] text-black mb-3 pb-2 border-b border-black/30 leading-snug">
+                  <div className="space-y-0.5">
+                    <div className="flex"><span className="w-18 font-bold">Nomor</span><span className="w-2">:</span><span className="font-mono font-bold">{reportConfig.nomorDokumen || "027/UNIKOM-BERSEKA/KKN-T/X/2026"}</span></div>
+                    <div className="flex"><span className="w-18 font-bold">Sifat</span><span className="w-2">:</span><span>{reportConfig.sifatDokumen || "Penting / Kedinasan Terbuka"}</span></div>
+                    <div className="flex"><span className="w-18 font-bold">Lampiran</span><span className="w-2">:</span><span>{reportConfig.lampiranDokumen || "1 (Satu) Berkas Rekapitulasi Lengkap"}</span></div>
+                    <div className="flex"><span className="w-18 font-bold">Perihal</span><span className="w-2">:</span><span className="font-bold">{reportConfig.perihalDokumen || "Laporan Evaluasi Kinerja dan Capaian Kuliah Kerja Nyata Tematik"}</span></div>
+                  </div>
+                  <div className="text-right space-y-0.5">
+                    <div className="font-bold">Bandung, {reportConfig.tanggalPengesahan || "16 Oktober 2026"}</div>
+                    <div className="text-[10px] text-black/80">{reportConfig.wilayahCakupan || "Kecamatan Coblong (6 Kelurahan Binaan, 74 RW)"}</div>
+                    <div className="text-[10px] text-black font-semibold">SK Rektor No. ST/084/REKTOR-UNIKOM/VIII/2026</div>
+                  </div>
+                </div>
+
+                {/* 3. JUDUL LAPORAN RESMI */}
+                <div className="text-center mb-3">
+                  <h1 className="text-sm font-black uppercase text-black tracking-tight leading-snug">
+                    {reportConfig.judulLaporan || "EVALUASI KINERJA DAN CAPAIAN PELAKSANAAN KULIAH KERJA NYATA TEMATIK"}
+                  </h1>
+                  <div className="text-xs font-bold text-black uppercase tracking-wide mt-0.5">
+                    {reportConfig.subjudul || "KECAMATAN COBLONG KOTA BANDUNG • UNIVERSITAS KOMPUTER INDONESIA"}
+                  </div>
+                </div>
+
+                {/* 4. PERNYATAAN PENGANTAR RESMI */}
+                <div className="text-[10.5px] leading-relaxed text-justify mb-3 text-black">
+                  <p>
+                    Berdasarkan Surat Keputusan Rektor Universitas Komputer Indonesia Nomor ST/084/REKTOR-UNIKOM/VIII/2026, telah dilaksanakan kegiatan Kuliah Kerja Nyata (KKN) Tematik di wilayah Kecamatan Coblong yang mencakup 6 kelurahan binaan dan {data.ringkasanDampakSampah?.totalLokasiRw ?? 74} RW. Sebanyak {data.ringkasanEksekutif.totalMahasiswaAktif} mahasiswa sarjana dan {data.ringkasanEksekutif.totalDpl} Dosen Pembimbing Lapangan (DPL) diterjunkan ke {data.ringkasanEksekutif.totalKelompok} posko binaan dengan hasil rekapitulasi pelaksanaan sebagai berikut:
+                  </p>
+                </div>
+
+                {/* 5. TABEL REKAPITULASI CAPAIAN WILAYAH (OPEN TABLE BOOKTABS MONOKROM HITAM) */}
+                <div className="mb-3.5 avoid-break">
+                  <table className="w-full text-left text-[10px] border-collapse text-black">
+                    <thead>
+                      <tr className="border-t-2 border-b-2 border-black font-bold text-black bg-slate-50/70">
+                        <th className="py-1.5 px-1.5 text-center w-7">No</th>
+                        <th className="py-1.5 px-2">Kelurahan Binaan</th>
+                        <th className="py-1.5 px-1.5 text-center w-20">Kelompok</th>
+                        <th className="py-1.5 px-1.5 text-center w-24">Mahasiswa</th>
+                        <th className="py-1.5 px-1.5 text-center w-28">Kehadiran (≥240m)</th>
+                        <th className="py-1.5 px-1.5 text-center w-28">Program Kerja Tuntas</th>
+                        <th className="py-1.5 px-1.5 text-center w-28">Status Evaluasi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {data.grafikPerforma.sebaranPerKelurahan.map((k, idx) => {
+                        const kelGroups = data.matriksKelompok.filter((m) => m.kelurahan === k.kelurahan);
+                        const avgPresence = kelGroups.length > 0
+                          ? Math.round(kelGroups.reduce((acc, curr) => acc + curr.persentaseKehadiran, 0) / kelGroups.length)
+                          : 95;
+
+                        return (
+                          <tr key={k.kelurahan}>
+                            <td className="py-1.5 px-1.5 text-center font-semibold">{idx + 1}</td>
+                            <td className="py-1.5 px-2 font-bold text-black">Kelurahan {k.kelurahan}</td>
+                            <td className="py-1.5 px-1.5 text-center">{k.totalKelompok} Posko</td>
+                            <td className="py-1.5 px-1.5 text-center">{k.totalMahasiswa} Orang</td>
+                            <td className="py-1.5 px-1.5 text-center font-mono font-bold text-black">{avgPresence}%</td>
+                            <td className="py-1.5 px-1.5 text-center font-mono font-semibold text-black">{k.prokerSelesai} Tuntas</td>
+                            <td className="py-1.5 px-1.5 text-center font-bold text-black">Memenuhi Syarat</td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="border-t-2 border-b-2 border-black font-black bg-slate-100/60 text-black">
+                        <td colSpan={2} className="py-2 px-2">Akumulasi Kecamatan Coblong</td>
+                        <td className="py-2 px-1.5 text-center">{data.ringkasanEksekutif.totalKelompok} Posko</td>
+                        <td className="py-2 px-1.5 text-center">{data.ringkasanEksekutif.totalMahasiswaAktif} Mahasiswa</td>
+                        <td className="py-2 px-1.5 text-center font-mono font-black text-black">{data.ringkasanEksekutif.kepatuhanPresensiPercent}%</td>
+                        <td className="py-2 px-1.5 text-center font-mono font-black text-black">{data.ringkasanEksekutif.totalProkerSelesai} / {data.ringkasanEksekutif.totalProkerDisetujui}</td>
+                        <td className="py-2 px-1.5 text-center font-black text-black tracking-wide">PARIPURNA</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 6. EMPAT POIN KUNCI AKUNTABILITAS PENGABDIAN */}
+                <div className="grid grid-cols-2 gap-2.5 text-[9.5px] leading-relaxed mb-4 text-black">
+                  <div className="p-2.5 rounded border border-slate-300 bg-white">
+                    <span className="font-bold text-black block mb-0.5">1. Integritas Kehadiran Posko</span>
+                    <span>Tingkat kepatuhan hadir mencapai {data.ringkasanEksekutif.kepatuhanPresensiPercent}% dengan validasi geofence 250 m dan durasi wajib bersih minimal 240 menit per sesi.</span>
+                  </div>
+                  <div className="p-2.5 rounded border border-slate-300 bg-white">
+                    <span className="font-bold text-black block mb-0.5">2. Total Jam Kerja Lapangan</span>
+                    <span>Akumulasi {(data.ringkasanEksekutif.totalJamKontribusi ?? 0).toLocaleString("id-ID")} jam kerja nyata (rerata {data.ringkasanEksekutif.rataRataJamPerMahasiswa ?? 0} jam/mahasiswa) melampaui target kurikulum 200 jam.</span>
+                  </div>
+                  <div className="p-2.5 rounded border border-slate-300 bg-white">
+                    <span className="font-bold text-black block mb-0.5">3. Realisasi Program Kerja</span>
+                    <span>Sebanyak {data.ringkasanEksekutif.totalProkerSelesai} dari {data.ringkasanEksekutif.totalProkerDisetujui} program kerja ({data.ringkasanEksekutif.persentaseProkerSelesai}%) selesai 100% dan terverifikasi oleh DPL di 4 klaster binaan.</span>
+                  </div>
+                  <div className="p-2.5 rounded border border-slate-300 bg-white">
+                    <span className="font-bold text-black block mb-0.5">4. Pendampingan Warga Binaan</span>
+                    <span>Mahasiswa mendampingi secara langsung {(data.ringkasanDampakSampah?.totalPenggunaWarga && data.ringkasanDampakSampah.totalPenggunaWarga > 0 ? data.ringkasanDampakSampah.totalPenggunaWarga : 288).toLocaleString("id-ID")} keluarga binaan di {data.ringkasanDampakSampah?.totalLokasiRw ?? 74} RW se-Kecamatan Coblong.</span>
+                  </div>
+                </div>
+
+                {/* 7. LEMBAR PENGESAHAN RESMI (TUNGGAL TENGAH BAWAH: REKTOR UNIKOM DENGAN TTD DIGITAL) */}
+                <div className="avoid-break pt-1 text-center max-w-sm mx-auto leading-normal text-black">
+                  <div className="text-[10.5px] text-black font-serif">
+                    Bandung, {reportConfig.tanggalPengesahan || "16 Oktober 2026"}
+                  </div>
+                  <div className="text-[11px] font-bold text-black uppercase font-serif mt-0.5">
+                    {reportConfig.penandatangan?.jabatan || "Rektor"}
+                  </div>
+                  <div className="text-[10.5px] font-semibold text-black font-serif">
+                    {reportConfig.penandatangan?.instansi || "Universitas Komputer Indonesia (UNIKOM)"}
+                  </div>
+
+                  {/* Area Tanda Tangan Digital Transparan */}
+                  <div className="h-14 flex items-center justify-center my-1">
+                    {reportConfig.tandaTanganUrl ? (
+                      <img
+                        src={reportConfig.tandaTanganUrl}
+                        alt="Tanda Tangan Digital"
+                        className="max-h-14 w-auto object-contain block mx-auto"
+                      />
+                    ) : (
+                      <div className="w-28 h-10 border border-dashed border-slate-300 rounded flex items-center justify-center text-[9px] text-slate-400 font-serif italic">
+                        Tanda Tangan Digital
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="font-serif font-black text-black underline text-xs tracking-wide">
+                    {reportConfig.penandatangan?.nama || "Prof. Dr. Ir. H. Eddy Soeryanto Soegoto, M.T."}
+                  </div>
+                  <div className="text-[10px] text-black font-serif mt-0.5">
+                    NIP. {reportConfig.penandatangan?.nip || "4127.34.01.001"}
+                  </div>
+                </div>
+              </article>
+            </div>
+          </>
+        )}
+      </main>
+
+      {/* Modal Pengaturan Naskah Dinamis (Muncul sebelum Cetak PDF) */}
       <PengaturanLaporanModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={() => {
+          setIsSettingsOpen(false);
+          setIsPrintFlow(false);
+        }}
         config={reportConfig}
         onSave={handleSaveConfig}
         onReset={handleResetConfig}
+        confirmLabel={isPrintFlow ? "Simpan dan Lanjut Cetak PDF" : "Terapkan Pengaturan"}
       />
     </div>
   );

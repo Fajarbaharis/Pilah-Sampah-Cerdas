@@ -327,7 +327,7 @@ export const dashboardController = {
 
   getKknExecutiveDashboard: async (req: Request, res: Response) => {
     try {
-      const { kelurahan, rw, periode, kelompok } = req.query;
+      const { kelurahan, rw, periode, kelompok, refresh, noCache } = req.query;
       const user = req.user;
       const isDevOnly = user?.role === "DEVELOPER";
       const includeTestAccounts = req.query.includeTestAccounts === "true" && isDevOnly;
@@ -338,6 +338,8 @@ export const dashboardController = {
         periode: periode as string,
         kelompok: kelompok as string,
         includeTestAccounts,
+        refresh: refresh === "true" || noCache === "true",
+        noCache: noCache === "true",
       });
       res.status(200).json({
         success: true,
@@ -381,7 +383,7 @@ export const dashboardController = {
 
   getWasteExecutiveReport: async (req: Request, res: Response) => {
     try {
-      const { wilayah, periode, startDate, endDate, hari, jamMulai, jamSelesai } = req.query;
+      const { wilayah, periode, startDate, endDate, hari, jamMulai, jamSelesai, sourceType } = req.query;
       const user = req.user;
       const isDevOnly = user?.role === "DEVELOPER";
       const includeTestAccounts = req.query.includeTestAccounts === "true" && isDevOnly;
@@ -395,6 +397,7 @@ export const dashboardController = {
         jamMulai: jamMulai as string,
         jamSelesai: jamSelesai as string,
         includeTestAccounts,
+        sourceType: sourceType as any,
       });
 
       res.status(200).json({

@@ -251,6 +251,7 @@ const ManajemenMahasiswa: React.FC = () => {
       area_tugas: "",
       is_ketua: false,
       status_aktif: "Aktif",
+      sks: 0,
     });
     setIsModalOpen(true);
   };
@@ -273,6 +274,7 @@ const ManajemenMahasiswa: React.FC = () => {
       area_tugas: existingRwId,
       is_ketua: !!mhs.studentProfile?.isKetua,
       status_aktif: mhs.status || "Aktif",
+      sks: mhs.studentProfile?.sks ? Number(mhs.studentProfile.sks) : 0,
     });
     setIsModalOpen(true);
   };
@@ -290,7 +292,7 @@ const ManajemenMahasiswa: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const payload = {
+      const payload: any = {
         nama_lengkap: formData.nama_lengkap.trim(),
         nim: formData.nim.trim(),
         no_telepon: phone,
@@ -302,6 +304,7 @@ const ManajemenMahasiswa: React.FC = () => {
         area_tugas: formData.area_tugas ? Number(formData.area_tugas) : undefined,
         is_ketua: formData.is_ketua,
         status_aktif: formData.status_aktif,
+        sks: Number(formData.sks) || 0,
       };
 
       if (modalType === "add") {
@@ -876,6 +879,14 @@ const ManajemenMahasiswa: React.FC = () => {
                         "-"}
                     </span>
                   </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                    <span className="text-slate-400 font-bold block mb-0.5">Beban SKS</span>
+                    <span className="font-bold text-sky-600">
+                      {selectedStudentDetail.studentProfile?.sks && selectedStudentDetail.studentProfile.sks > 0
+                        ? `${selectedStudentDetail.studentProfile.sks} SKS`
+                        : "Reguler (0 SKS)"}
+                    </span>
+                  </div>
                   <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-100 dark:border-slate-800 col-span-2">
                     <span className="text-slate-400 font-bold block mb-0.5">Wilayah Tugas RT/RW</span>
                     <span className="font-bold text-slate-800 dark:text-slate-200">
@@ -1087,6 +1098,31 @@ const ManajemenMahasiswa: React.FC = () => {
                       * Daftar RW di atas otomatis disaring khusus untuk <strong>Kel. {selectedKelompok.kelurahan}</strong>.
                     </p>
                   )}
+                </div>
+
+                {/* Beban SKS */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Beban SKS
+                  </label>
+                  <select
+                    value={formData.sks || 0}
+                    onChange={(e) => setFormData({ ...formData, sks: Number(e.target.value) })}
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+                  >
+                    <option value={0}>0 SKS (Reguler)</option>
+                    <option value={6}>6 SKS</option>
+                    <option value={10}>10 SKS</option>
+                    <option value={11}>11 SKS</option>
+                    <option value={12}>12 SKS</option>
+                    <option value={13}>13 SKS</option>
+                    <option value={14}>14 SKS</option>
+                    <option value={16}>16 SKS</option>
+                    <option value={17}>17 SKS</option>
+                    <option value={18}>18 SKS</option>
+                    <option value={19}>19 SKS</option>
+                    <option value={20}>20 SKS</option>
+                  </select>
                 </div>
 
                 {/* Toggle Ketua Kelompok */}

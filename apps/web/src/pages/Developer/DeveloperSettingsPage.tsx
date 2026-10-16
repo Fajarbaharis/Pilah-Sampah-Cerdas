@@ -26,6 +26,8 @@ import {
   Sliders,
   Check,
   Zap,
+  BarChart3,
+  FileSpreadsheet,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../utils/api";
@@ -35,6 +37,9 @@ import {
   shouldHideTestAccounts,
   setHideTestAccountsSetting,
   HIDE_TEST_ACCOUNTS_KEY,
+  shouldShowLaporanPimpinan,
+  setShowLaporanPimpinanSetting,
+  DEV_SHOW_LAPORAN_PIMPINAN_KEY,
   isActuallyTestUser,
   isActuallyTestStudent,
 } from "../../utils/filterTestingUtils";
@@ -45,6 +50,7 @@ export const DeveloperSettingsPage: React.FC = () => {
 
   // State
   const [hideTestAccounts, setHideTestAccounts] = useState<boolean>(() => shouldHideTestAccounts());
+  const [showLaporanPimpinan, setShowLaporanPimpinan] = useState<boolean>(() => shouldShowLaporanPimpinan());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [serverSynced, setServerSynced] = useState<boolean | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
@@ -70,9 +76,17 @@ export const DeveloperSettingsPage: React.FC = () => {
             const serverValue = cfg.value !== "false";
             setHideTestAccounts(serverValue);
             setHideTestAccountsSetting(serverValue);
-            setServerSynced(true);
-            setLastSyncTime(new Date().toLocaleTimeString("id-ID"));
           }
+
+          const cfgLaporan = res.data.data.find((c: any) => c.key === DEV_SHOW_LAPORAN_PIMPINAN_KEY);
+          if (cfgLaporan && cfgLaporan.value !== undefined) {
+            const serverValLaporan = cfgLaporan.value !== "false";
+            setShowLaporanPimpinan(serverValLaporan);
+            setShowLaporanPimpinanSetting(serverValLaporan);
+          }
+
+          setServerSynced(true);
+          setLastSyncTime(new Date().toLocaleTimeString("id-ID"));
         }
       } catch (err: any) {
         // Jika offline atau belum ada di database, gunakan local storage
@@ -125,6 +139,46 @@ export const DeveloperSettingsPage: React.FC = () => {
       setLastSyncTime(new Date().toLocaleTimeString("id-ID"));
     } catch (err: any) {
       console.warn("[DeveloperSettings] Gagal sinkronisasi ke server:", err.message);
+      setServerSynced(false);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Handle toggle visibilitas grup Laporan di sidebar Pimpinan
+  const handleToggleLaporan = async () => {
+    if (!isDev) {
+      toast.error("Akses ditolak: Hanya peran DEVELOPER yang diizinkan mengubah setelan ini.");
+      return;
+    }
+
+    const nextVal = !showLaporanPimpinan;
+    setShowLaporanPimpinan(nextVal);
+    setShowLaporanPimpinanSetting(nextVal);
+
+    if (nextVal) {
+      toast.success("Grup Laporan ditampilkan pada bilah samping akun Pimpinan.", {
+        icon: "📊",
+        duration: 4000,
+      });
+    } else {
+      toast("Grup Laporan disembunyikan dari bilah samping akun Pimpinan.", {
+        icon: "🔒",
+        duration: 4000,
+      });
+    }
+
+    // Persist to server config
+    try {
+      setIsSyncing(true);
+      await api.post("/configs", {
+        key: DEV_SHOW_LAPORAN_PIMPINAN_KEY,
+        value: nextVal ? "true" : "false",
+      });
+      setServerSynced(true);
+      setLastSyncTime(new Date().toLocaleTimeString("id-ID"));
+    } catch (err: any) {
+      console.warn("[DeveloperSettings] Gagal sinkronisasi dev_show_laporan_pimpinan ke server:", err.message);
       setServerSynced(false);
     } finally {
       setIsSyncing(false);
@@ -335,6 +389,94 @@ export const DeveloperSettingsPage: React.FC = () => {
 
             <div className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
               key: {HIDE_TEST_ACCOUNTS_KEY}
+            </div>
+          </div>
+
+          {/* TOGGLE KEDUA: VISIBILITAS MENU LAPORAN DI SIDEBAR PIMPINAN */}
+          <div className="pt-6 border-t border-slate-200/80 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                    showLaporanPimpinan
+                      ? "bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                  }`}
+                >
+                  <BarChart3 size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                    Visibilitas Menu Laporan di Sidebar Pimpinan
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Menampilkan atau menyembunyikan grup menu Laporan (KKN dan Tata Kelola Sampah) pada bilah samping akun peran PIMPINAN
+                  </p>
+                </div>
+              </div>
+
+              {/* Toggle Switch */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showLaporanPimpinan}
+                onClick={handleToggleLaporan}
+                className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                  showLaporanPimpinan
+                    ? "bg-indigo-600 hover:bg-indigo-700"
+                    : "bg-slate-300 dark:bg-slate-700 hover:bg-slate-400"
+                }`}
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform flex items-center justify-center ${
+                    showLaporanPimpinan ? "translate-x-9 text-indigo-600" : "translate-x-1 text-slate-400"
+                  }`}
+                >
+                  {showLaporanPimpinan ? <Check size={14} strokeWidth={3} /> : null}
+                </span>
+              </button>
+            </div>
+
+            {/* Status Card */}
+            <div
+              className={`p-4 rounded-xl border transition-all ${
+                showLaporanPimpinan
+                  ? "bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/40 text-indigo-900 dark:text-indigo-300"
+                  : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5">
+                  <CheckCircle2 size={20} className={showLaporanPimpinan ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"} />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider">
+                      {showLaporanPimpinan
+                        ? "AKTIF: GRUP LAPORAN TAMPIL DI SIDEBAR PIMPINAN"
+                        : "NONAKTIF: GRUP LAPORAN DISEMBUNYIKAN DARI PIMPINAN"}
+                    </span>
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                        showLaporanPimpinan
+                          ? "bg-indigo-200/80 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200"
+                          : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                      }`}
+                    >
+                      {showLaporanPimpinan ? "Tampil (Visible)" : "Tersembunyi (Hidden)"}
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed opacity-90">
+                    {showLaporanPimpinan
+                      ? "Akun dengan peran PIMPINAN dapat melihat dan mengakses grup menu 'Laporan' (Kuliah Kerja Nyata dan Tata Kelola Sampah) di bilah navigasi samping."
+                      : "Grup menu 'Laporan' ditiadakan secara dinamis dari bilah navigasi samping akun peran PIMPINAN. Akun peran DEVELOPER dan SUPER_USER tetap memiliki akses penuh."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-[11px] font-mono text-slate-400 dark:text-slate-500 pt-1">
+              key: {DEV_SHOW_LAPORAN_PIMPINAN_KEY}
             </div>
           </div>
         </div>

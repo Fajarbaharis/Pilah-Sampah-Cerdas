@@ -9,6 +9,8 @@ export interface KknExecutiveFilters {
   periode?: string;
   kelompok?: string;
   includeTestAccounts?: boolean;
+  refresh?: boolean;
+  noCache?: boolean;
 }
 
 // Fast in-memory cache for Executive Dashboard (30s TTL)
@@ -26,8 +28,17 @@ export const kknExecutiveService = {
    */
   async getExecutiveDashboard(filters: KknExecutiveFilters = {}) {
     const isTestEnv = process.env.NODE_ENV === "test";
-    const cacheKey = JSON.stringify(filters);
-    if (!isTestEnv) {
+    const cacheKey = JSON.stringify({
+      kelurahan: filters.kelurahan,
+      rw: filters.rw,
+      periode: filters.periode,
+      kelompok: filters.kelompok,
+      includeTestAccounts: filters.includeTestAccounts,
+    });
+    if (filters.refresh || filters.noCache) {
+      executiveDashboardCache.delete(cacheKey);
+    }
+    if (!isTestEnv && !filters.refresh && !filters.noCache) {
       const cached = executiveDashboardCache.get(cacheKey);
       if (cached && cached.expiry > Date.now()) {
         return cached.data;
@@ -120,10 +131,12 @@ export const kknExecutiveService = {
 
     // 4. Mahasiswa KKN Aktual
     const studentWhere: any = {};
-    if (kelompokIds.length > 0) {
-      studentWhere.kelompokId = { in: kelompokIds };
-    } else if (isFilteredKel || isFilteredRw) {
-      studentWhere.kelompokId = "__none__";
+    if (isFilteredKel || isFilteredRw || isFilteredKelompok) {
+      if (kelompokIds.length > 0) {
+        studentWhere.kelompokId = { in: kelompokIds };
+      } else {
+        studentWhere.kelompokId = "__none__";
+      }
     }
 
     const studentsRaw = await prisma.studentKkn.findMany({
@@ -352,15 +365,27 @@ export const kknExecutiveService = {
 
     const COLOR_PALETTE: Record<number, string> = {
       6: "#f59e0b",  // Amber
+      10: "#14b8a6", // Teal
       11: "#0ea5e9", // Sky Blue
       12: "#3b82f6", // Blue
       13: "#6366f1", // Indigo
       14: "#8b5cf6", // Violet
+      16: "#d946ef", // Fuchsia / Purple (16 SKS)
       17: "#ec4899", // Pink
       18: "#f43f5e", // Rose
       19: "#10b981", // Emerald
       20: "#059669", // Dark Emerald / MBKM Penuh
     };
+
+    // Pastikan seluruh paket beban SKS akademik standar (termasuk 16 SKS) terdaftar di sistem
+    const STANDARD_SKS_PACKAGES = [6, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20];
+    STANDARD_SKS_PACKAGES.forEach((sksNum) => {
+      sksCounts[String(sksNum)] = {
+        sks: sksNum,
+        count: 0,
+        label: `${sksNum} SKS`,
+      };
+    });
 
     let totalMahasiswaDenganSks = 0;
     let belumTerdataCount = 0;
@@ -385,7 +410,10 @@ export const kknExecutiveService = {
     });
 
     const breakdown = Object.values(sksCounts)
-      .sort((a, b) => b.count - a.count)
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.sks - b.sks;
+      })
       .map((item) => ({
         sks: item.sks,
         label: item.label,
@@ -654,7 +682,7 @@ export const kknExecutiveService = {
     const rasioPercentage = Math.round((currentAvgHours / targetHours) * 100);
     const remainingHours = Math.max(0, targetHours - currentAvgHours);
 
-    // Weekly Trends: 8-week KKN period (August - October 2026)
+    // Weekly Trends: 10-week KKN period (August - October 2026, M1 - M10)
     const weeklyDefs = [
       { week: "M1", start: new Date("2026-08-12T00:00:00Z"), end: new Date("2026-08-18T23:59:59Z") },
       { week: "M2", start: new Date("2026-08-19T00:00:00Z"), end: new Date("2026-08-25T23:59:59Z") },
@@ -664,19 +692,30 @@ export const kknExecutiveService = {
       { week: "M6", start: new Date("2026-09-16T00:00:00Z"), end: new Date("2026-09-22T23:59:59Z") },
       { week: "M7", start: new Date("2026-09-23T00:00:00Z"), end: new Date("2026-09-29T23:59:59Z") },
       { week: "M8", start: new Date("2026-09-30T00:00:00Z"), end: new Date("2026-10-06T23:59:59Z") },
+      { week: "M9", start: new Date("2026-10-07T00:00:00Z"), end: new Date("2026-10-13T23:59:59Z") },
+      { week: "M10", start: new Date("2026-10-14T00:00:00Z"), end: new Date("2026-10-20T23:59:59Z") },
     ];
 
-    const weeklyAttendances = await prisma.activityAttendance.findMany({
-      where: attendanceWhere,
-      select: { attendedAt: true, actualInZoneMinutes: true },
-    });
+    const [weeklyAttendances, weeklyMandiri] = await Promise.all([
+      prisma.activityAttendance.findMany({
+        where: attendanceWhere,
+        select: { attendedAt: true, actualInZoneMinutes: true },
+      }),
+      prisma.presensiMandiri.findMany({
+        where: mandiriWhere,
+        select: { checkInAt: true, durasiMenit: true },
+      }),
+    ]);
 
     let runningMinutes = 0;
     const weeklyTrends = weeklyDefs.map((w) => {
-      const weekMins = weeklyAttendances
+      const poskoMins = weeklyAttendances
         .filter((a) => a.attendedAt >= w.start && a.attendedAt <= w.end)
         .reduce((sum, curr) => sum + (curr.actualInZoneMinutes || 0), 0);
-      runningMinutes += weekMins;
+      const mandiriMins = weeklyMandiri
+        .filter((m) => m.checkInAt >= w.start && m.checkInAt <= w.end)
+        .reduce((sum, curr) => sum + (curr.durasiMenit || 0), 0);
+      runningMinutes += poskoMins + mandiriMins;
       const avgH = totalMahasiswa > 0 ? Math.round(runningMinutes / totalMahasiswa / 60) : 0;
       return {
         week: w.week,

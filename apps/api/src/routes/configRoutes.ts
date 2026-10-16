@@ -35,7 +35,7 @@ router.post(
 router.get(
   "/",
   authMiddleware,
-  roleMiddleware(["SUPER_USER", "ADMIN_DLH", "DEVELOPER"]),
+  roleMiddleware(["SUPER_USER", "ADMIN_DLH", "DEVELOPER", "PIMPINAN", "PEMIMPIN"]),
   configController.getAll
 );
 router.post(

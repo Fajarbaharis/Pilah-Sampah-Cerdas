@@ -104,8 +104,6 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
       case "/": {
         const params = new URLSearchParams(search);
         const tab = params.get("tab");
-        const role = String(user?.peran || (user as any)?.role || "").toUpperCase();
-        const isPimpinan = ["PEMIMPIN", "PIMPINAN"].includes(role);
 
         if (tab === "tata-kelola-sampah" || tab === "sampah") {
           return ["Dasbor", "Tata Kelola Sampah"];
@@ -317,10 +315,10 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
       case "/laporan-kkn":
       case "/dasbor-kkn-eksekutif":
       case "/dashboard-eksekutif-kkn":
-        return ["Laporan", "KKN"];
+        return ["Kuliah Kerja Nyata"];
       case "/laporan/tata-kelola-sampah":
       case "/laporan-tata-kelola-sampah":
-        return ["Laporan", "Tata Kelola Sampah"];
+        return ["Tata Kelola Sampah"];
       case "/log-aktivitas/mahasiswa":
       case "/logbook-kkn":
       case "/dpl/logbook":
