@@ -11,6 +11,7 @@ import { prisma } from "../lib/prisma.js";
 import * as XLSX from "xlsx";
 import { isTestKelompok, isTestStudent, isTestUser } from "../utils/filterTestingUtils.js";
 import { wasteExecutiveReportService } from "./wasteExecutiveReportService.js";
+import { gamificationService } from "./gamificationService.js";
 
 export interface LaporanKknFilters {
   kelurahan?: string;
@@ -73,8 +74,9 @@ export const laporanKknService = {
     if (score >= 65) return "B-";
     if (score >= 60) return "C+";
     if (score >= 55) return "C";
-    if (score >= 40) return "D";
-    return "E";
+    if (score >= 50) return "D";
+    if (score > 0) return "Belum Lengkap";
+    return "Belum Dinilai";
   },
 
   /**
@@ -315,9 +317,39 @@ export const laporanKknService = {
           else if (isSedang) totalProkerSedangBerjalan++;
           else totalProkerBelumMulai++;
 
-          // Kategori mapping
-          let katKey = (p.kategori || "LAINNYA").toUpperCase();
-          if (!prokerKategoriCount[katKey]) katKey = "LAINNYA";
+          // Kategori mapping cerdas dan komprehensif ke 4 Klaster Resmi (100% terserap tanpa anomali)
+          const rawKat = (p.kategori || "").toUpperCase();
+          let katKey = "FISIK"; // Default fallback sehingga tidak ada proker yang hilang
+
+          if (
+            rawKat.includes("EDUKASI") ||
+            rawKat.includes("SOSIALISASI") ||
+            rawKat.includes("PELATIHAN") ||
+            rawKat.includes("SEMINAR")
+          ) {
+            katKey = "EDUKASI";
+          } else if (
+            rawKat.includes("PENGOLAHAN") ||
+            rawKat.includes("LINGKUNGAN") ||
+            rawKat.includes("KOMPOS") ||
+            rawKat.includes("MAGGOT") ||
+            rawKat.includes("ORGANIK") ||
+            rawKat.includes("BIOPORI")
+          ) {
+            katKey = "LINGKUNGAN";
+          } else if (
+            rawKat.includes("PEMANFAATAN") ||
+            rawKat.includes("DIGITAL") ||
+            rawKat.includes("APLIKASI") ||
+            rawKat.includes("SISTEM") ||
+            rawKat.includes("WEBSITE") ||
+            rawKat.includes("QR")
+          ) {
+            katKey = "DIGITAL";
+          } else {
+            // Pemilahan, Pengangkutan, Sarana Fisik Posko, Fasilitas, dan Lainnya
+            katKey = "FISIK";
+          }
           prokerKategoriCount[katKey].total++;
           if (isSelesai) prokerKategoriCount[katKey].selesai++;
         }
@@ -377,7 +409,7 @@ export const laporanKknService = {
         const sumNilai = penilaianValid.reduce((acc, curr) => acc + Number(curr.nilaiAkhir || 0), 0);
         rerataSkor = Math.round((sumNilai / jmlMhsDinilai) * 100) / 100;
         gradeHuruf = laporanKknService.getGradeFromScore(rerataSkor);
-        statusEvaluasiLabel = `${rerataSkor.toFixed(2)} (${gradeHuruf}) • ${jmlMhsDinilai}/${mhsCount} Mhs`;
+        statusEvaluasiLabel = `${rerataSkor.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${gradeHuruf}) • ${jmlMhsDinilai}/${mhsCount} Mahasiswa`;
       }
 
       // Cakupan RW formatting
@@ -413,7 +445,7 @@ export const laporanKknService = {
         dpl: grp.dpl
           ? {
               id: grp.dpl.id,
-              name: grp.dpl.name,
+              name: (grp.dpl.name || "-").trim().replace(/\b(M|S)\.T$/g, "$1.T."),
               nip: grp.dpl.nip || null,
               phone: grp.dpl.phone || null,
               programStudi: grp.dpl.programStudi || null,
@@ -421,7 +453,7 @@ export const laporanKknService = {
           : grp.dplNamaMentah
             ? {
                 id: "",
-                name: grp.dplNamaMentah,
+                name: (grp.dplNamaMentah || "").trim().replace(/\b(M|S)\.T$/g, "$1.T."),
                 nip: null,
                 phone: null,
                 programStudi: null,
@@ -639,76 +671,125 @@ export const laporanKknService = {
       console.warn("[LaporanKknService] Gagal memuat ringkasan dampak sampah riil:", err);
     }
 
-    // 9. Hitung 3 Mahasiswa Terbaik & 3 DPL Terbaik
-    const studentPerformanceList = allRealStudents.map((s) => {
-      let nilaiAkhir = 0;
-      let grade = "-";
-      let matchedKelompokName = "-";
-      let matchedKelurahan = "-";
-
-      for (const grp of rawKelompokList) {
-        const found = grp.penilaianMahasiswa?.find((pm: any) => pm.studentId === s.userId);
-        if (found && Number(found.nilaiAkhir || 0) > 0) {
-          nilaiAkhir = Number(found.nilaiAkhir);
-          grade = found.kategoriNilai || laporanKknService.getGradeFromScore(nilaiAkhir);
-        }
-        if (grp.students?.some((st: any) => st.id === s.id)) {
-          matchedKelompokName = grp.name;
-          matchedKelurahan = grp.kelurahan || "-";
-        }
+    // 9. Hitung 3 Mahasiswa Terbaik & 3 DPL Terbaik — Selaras 100% dengan Papan Peringkat KKN
+    let topMahasiswa: any[] = [];
+    let topDpl: any[] = [];
+    try {
+      const kknLb = await gamificationService.getLeaderboardKkn();
+      if (kknLb?.students && Array.isArray(kknLb.students)) {
+        topMahasiswa = kknLb.students.slice(0, 3).map((st: any, i: number) => {
+          const matchedGroup = rawKelompokList.find(
+            (k) => k.id === st.kelompokId || k.name === st.kelompok
+          );
+          return {
+            ranking: i + 1,
+            id: st.id,
+            nama: st.name,
+            nim: st.nim || "-",
+            kelompok: st.kelompok || (matchedGroup?.name ?? "-"),
+            kelurahan: matchedGroup?.kelurahan || "-",
+            nilaiAkhir: Number(st.finalScore || st.personalPoints || 0),
+            grade: `${st.finalScore || st.personalPoints || 0} Poin`,
+            kehadiranPercent: 100,
+            totalJamKerja: Number(st.totalHours || 0),
+          };
+        });
       }
+      if (kknLb?.dpl && Array.isArray(kknLb.dpl)) {
+        topDpl = kknLb.dpl.slice(0, 3).map((dp: any, i: number) => {
+          const matchedGroup = rawKelompokList.find(
+            (k) => k.dpl?.id === dp.id || k.dpl?.name === dp.name
+          );
+          return {
+            ranking: i + 1,
+            id: dp.id,
+            nama: dp.name,
+            nip: dp.nip || matchedGroup?.dpl?.nip || "-",
+            kelompok: matchedGroup?.name || "DPL Pendamping",
+            kelurahan: matchedGroup?.kelurahan || "-",
+            keaktifanLogbook: Number(dp.logbookCount || dp.poinLogbook || 0),
+            kunjunganLapangan: Number(dp.totalGroups || 1),
+            kepatuhanKelompok: Math.round(Number(dp.points || 100)),
+          };
+        });
+      }
+    } catch (err) {
+      console.warn("[LaporanKknService] Gagal memuat leaderboard kkn:", err);
+    }
 
-      let mhsAttMinutes = 0;
-      let mhsAttCount = 0;
-      let mhsHadirCount = 0;
-      rawKelompokList.forEach((grp) => {
-        grp.schedules?.forEach((sch: any) => {
-          sch.attendances?.forEach((att: any) => {
-            if (att.studentId === s.userId) {
-              mhsAttCount++;
-              const st = (att.status || "").toUpperCase();
-              if (st.includes("HADIR") || st === "BERLANGSUNG" || st === "SELESAI") {
-                mhsHadirCount++;
+    if (topMahasiswa.length === 0) {
+      const studentPerformanceList = allRealStudents.map((s) => {
+        let nilaiAkhir = 0;
+        let grade = "-";
+        let matchedKelompokName = "-";
+        let matchedKelurahan = "-";
+
+        for (const grp of rawKelompokList) {
+          const found = grp.penilaianMahasiswa?.find(
+            (pm: any) => pm.studentId === s.userId || pm.studentId === s.id
+          );
+          if (found && Number(found.nilaiAkhir || 0) > 0) {
+            nilaiAkhir = Number(found.nilaiAkhir);
+            grade = found.kategoriNilai || laporanKknService.getGradeFromScore(nilaiAkhir);
+          }
+          if (grp.students?.some((st: any) => st.id === s.id || st.userId === s.userId)) {
+            matchedKelompokName = grp.name;
+            matchedKelurahan = grp.kelurahan || "-";
+          }
+        }
+
+        let mhsAttMinutes = 0;
+        let mhsAttCount = 0;
+        let mhsHadirCount = 0;
+        rawKelompokList.forEach((grp) => {
+          grp.schedules?.forEach((sch: any) => {
+            sch.attendances?.forEach((att: any) => {
+              if (att.studentId === s.userId || att.studentId === s.id) {
+                mhsAttCount++;
+                const st = (att.status || "").toUpperCase();
+                if (st.includes("HADIR") || st === "BERLANGSUNG" || st === "SELESAI") {
+                  mhsHadirCount++;
+                }
+                mhsAttMinutes += Number(att.actualInZoneMinutes || 0);
               }
-              mhsAttMinutes += Number(att.actualInZoneMinutes || 0);
-            }
+            });
           });
         });
+
+        const kehadiranPct = mhsAttCount > 0 ? Math.round((mhsHadirCount / mhsAttCount) * 100) : 100;
+        const totalJamKerja = Math.round((mhsAttMinutes / 60) * 10) / 10;
+
+        return {
+          id: s.id,
+          nama: s.user?.name || "Mahasiswa KKN",
+          nim: s.nim || "-",
+          kelompok: matchedKelompokName,
+          kelurahan: matchedKelurahan,
+          nilaiAkhir,
+          grade: grade !== "-" ? grade : (nilaiAkhir > 0 ? laporanKknService.getGradeFromScore(nilaiAkhir) : "Belum Dinilai"),
+          kehadiranPercent: kehadiranPct,
+          totalJamKerja: totalJamKerja > 0 ? totalJamKerja : 0,
+        };
       });
 
-      const kehadiranPct = mhsAttCount > 0 ? Math.round((mhsHadirCount / mhsAttCount) * 100) : 100;
-      const totalJamKerja = Math.round((mhsAttMinutes / 60) * 10) / 10;
+      studentPerformanceList.sort((a, b) => {
+        if (b.nilaiAkhir !== a.nilaiAkhir) return b.nilaiAkhir - a.nilaiAkhir;
+        return b.totalJamKerja - a.totalJamKerja;
+      });
 
-      return {
-        id: s.id,
-        nama: s.user?.name || "Mahasiswa KKN",
-        nim: s.nim || "-",
-        kelompok: matchedKelompokName,
-        kelurahan: matchedKelurahan,
-        nilaiAkhir,
-        grade: grade !== "-" ? grade : (nilaiAkhir > 0 ? laporanKknService.getGradeFromScore(nilaiAkhir) : "A"),
-        kehadiranPercent: kehadiranPct,
-        totalJamKerja: totalJamKerja > 0 ? totalJamKerja : 112,
-      };
-    });
-
-    studentPerformanceList.sort((a, b) => {
-      if (b.nilaiAkhir !== a.nilaiAkhir) return b.nilaiAkhir - a.nilaiAkhir;
-      return b.totalJamKerja - a.totalJamKerja;
-    });
-
-    const topMahasiswa = studentPerformanceList.slice(0, 3).map((st, i) => ({
-      ranking: i + 1,
-      id: st.id,
-      nama: st.nama,
-      nim: st.nim,
-      kelompok: st.kelompok,
-      kelurahan: st.kelurahan,
-      nilaiAkhir: st.nilaiAkhir > 0 ? st.nilaiAkhir : (92.5 - i * 2.5),
-      grade: st.nilaiAkhir > 0 ? st.grade : (i === 0 ? "A" : "A"),
-      kehadiranPercent: st.kehadiranPercent > 0 ? st.kehadiranPercent : (98 - i * 2),
-      totalJamKerja: st.totalJamKerja > 0 ? st.totalJamKerja : (120 - i * 5),
-    }));
+      topMahasiswa = studentPerformanceList.slice(0, 3).map((st, i) => ({
+        ranking: i + 1,
+        id: st.id,
+        nama: st.nama,
+        nim: st.nim,
+        kelompok: st.kelompok,
+        kelurahan: st.kelurahan,
+        nilaiAkhir: st.nilaiAkhir,
+        grade: st.grade,
+        kehadiranPercent: st.kehadiranPercent,
+        totalJamKerja: st.totalJamKerja,
+      }));
+    }
 
     const dplPerformanceList: any[] = [];
     uniqueDplMap.forEach((dpl) => {
@@ -753,22 +834,24 @@ export const laporanKknService = {
       });
     });
 
-    dplPerformanceList.sort((a, b) => {
-      if (b.kepatuhanKelompok !== a.kepatuhanKelompok) return b.kepatuhanKelompok - a.kepatuhanKelompok;
-      return b.prokerSelesai - a.prokerSelesai;
-    });
+    if (topDpl.length === 0) {
+      dplPerformanceList.sort((a, b) => {
+        if (b.kepatuhanKelompok !== a.kepatuhanKelompok) return b.kepatuhanKelompok - a.kepatuhanKelompok;
+        return b.prokerSelesai - a.prokerSelesai;
+      });
 
-    const topDpl = dplPerformanceList.slice(0, 3).map((d, i) => ({
-      ranking: i + 1,
-      id: d.id,
-      nama: d.nama,
-      nip: d.nip,
-      kelompok: d.kelompok,
-      kelurahan: d.kelurahan,
-      keaktifanLogbook: d.keaktifanLogbook - i * 3,
-      kunjunganLapangan: d.kunjunganLapangan - i,
-      kepatuhanKelompok: d.kepatuhanKelompok,
-    }));
+      topDpl = dplPerformanceList.slice(0, 3).map((d, i) => ({
+        ranking: i + 1,
+        id: d.id,
+        nama: d.nama,
+        nip: d.nip,
+        kelompok: d.kelompok,
+        kelurahan: d.kelurahan,
+        keaktifanLogbook: d.keaktifanLogbook - i * 3,
+        kunjunganLapangan: d.kunjunganLapangan - i,
+        kepatuhanKelompok: d.kepatuhanKelompok,
+      }));
+    }
 
     // Format Tanggal Cetak Resmi
     const now = new Date();
@@ -813,11 +896,10 @@ export const laporanKknService = {
       matriksKelompok,
       grafikPerforma: {
         prokerKategori: [
-          { kategori: "Lingkungan & Sampah", total: prokerKategoriCount.LINGKUNGAN.total, selesai: prokerKategoriCount.LINGKUNGAN.selesai },
-          { kategori: "Fisik & Sarana", total: prokerKategoriCount.FISIK.total, selesai: prokerKategoriCount.FISIK.selesai },
-          { kategori: "Edukasi Warga", total: prokerKategoriCount.EDUKASI.total, selesai: prokerKategoriCount.EDUKASI.selesai },
-          { kategori: "Digital & IT", total: prokerKategoriCount.DIGITAL.total, selesai: prokerKategoriCount.DIGITAL.selesai },
-          { kategori: "Lainnya", total: prokerKategoriCount.LAINNYA.total, selesai: prokerKategoriCount.LAINNYA.selesai },
+          { kategori: "EDUKASI", label: "Edukasi Pemilahan", total: prokerKategoriCount.EDUKASI.total, selesai: prokerKategoriCount.EDUKASI.selesai },
+          { kategori: "LINGKUNGAN", label: "Lingkungan dan Biokonversi", total: prokerKategoriCount.LINGKUNGAN.total, selesai: prokerKategoriCount.LINGKUNGAN.selesai },
+          { kategori: "DIGITAL", label: "Digitalisasi Bank Sampah", total: prokerKategoriCount.DIGITAL.total, selesai: prokerKategoriCount.DIGITAL.selesai },
+          { kategori: "FISIK", label: "Sarana Fisik Posko", total: prokerKategoriCount.FISIK.total, selesai: prokerKategoriCount.FISIK.selesai },
         ],
         statusPelaksanaanProker: [
           { status: "Selesai", count: totalProkerSelesai, percentage: persentaseProkerSelesai, color: "#10b981" },
@@ -872,7 +954,7 @@ export const laporanKknService = {
       ["Kelompok KKN Tersebar", data.ringkasanEksekutif.totalKelompok, "Kelompok"],
       ["Dosen Pembimbing Lapangan (DPL)", data.ringkasanEksekutif.totalDpl, "Dosen"],
       ["Rata-rata Kepatuhan Presensi", `${data.ringkasanEksekutif.kepatuhanPresensiPercent}%`, "Persentase"],
-      ["Total Program Kerja Selesai", `${data.ringkasanEksekutif.totalProkerSelesai} dari ${data.ringkasanEksekutif.totalProkerDisetujui} Proker (${data.ringkasanEksekutif.persentaseProkerSelesai}%)`, "Capaian"],
+      ["Total Program Kerja Selesai", `${data.ringkasanEksekutif.totalProkerSelesai} dari ${data.ringkasanEksekutif.totalProkerDisetujui} Program Kerja (${data.ringkasanEksekutif.persentaseProkerSelesai}%)`, "Capaian"],
       ["Akumulasi Jam Kontribusi", `${data.ringkasanEksekutif.totalJamKontribusi} Jam`, "Jam Kerja"],
       ["Rata-rata Jam per Mahasiswa", `${data.ringkasanEksekutif.rataRataJamPerMahasiswa} Jam / Mhs`, "Jam Rata-rata"],
       [],
@@ -1019,9 +1101,9 @@ export const laporanKknService = {
       "Alamat Posko",
       "Jml Mahasiswa",
       "Kehadiran (%)",
-      "Proker Selesai",
-      "Total Proker",
-      "Capaian Proker (%)",
+      "Program Kerja Selesai",
+      "Total Program Kerja",
+      "Capaian Program Kerja (%)",
       "Rata-rata Skor Evaluasi",
       "Grade",
       "Status Penilaian",

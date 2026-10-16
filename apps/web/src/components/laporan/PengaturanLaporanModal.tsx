@@ -7,17 +7,19 @@
  * Mengatur Judul Dinamis, Nomor Dokumen, Sifat, Lampiran, dan Penandatangan Eksekutif (Pak Rektor / Bu Umi / Ketua Pelaksana)
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   FileText,
   Sliders,
   RotateCcw,
   CheckCircle2,
-  Building,
   UserCheck,
   Calendar,
   Hash,
+  Upload,
+  Trash2,
+  Image as ImageIcon,
 } from "lucide-react";
 
 export interface ReportCustomConfig {
@@ -29,6 +31,7 @@ export interface ReportCustomConfig {
   perihalDokumen: string;
   wilayahCakupan: string;
   tanggalPengesahan: string;
+  tandaTanganUrl?: string; // Berkas PNG transparan hasil auto-hapus background
   penandatangan: {
     preset: "KETUA_PELAKSANA" | "PAK_REKTOR" | "BU_UMI" | "CUSTOM";
     jabatan: string;
@@ -39,38 +42,38 @@ export interface ReportCustomConfig {
 }
 
 export const DEFAULT_REPORT_CONFIG: ReportCustomConfig = {
-  judulLaporan: "LAPORAN EKSEKUTIF PELAKSANAAN KULIAH KERJA NYATA (KKN) & TATA KELOLA LINGKUNGAN",
-  subjudul: "PENGELOLAAN SAMPAH MANDIRI DAN EKOSISTEM BERSIH (BERSEKA)",
-  nomorDokumen: "027/UNIKOM-BERSEKA/KKN-T/2026",
+  judulLaporan: "EVALUASI KINERJA DAN CAPAIAN PELAKSANAAN KULIAH KERJA NYATA TEMATIK",
+  subjudul: "KECAMATAN COBLONG KOTA BANDUNG • UNIVERSITAS KOMPUTER INDONESIA",
+  nomorDokumen: "027/UNIKOM-BERSEKA/KKN-T/X/2026",
   sifatDokumen: "Penting / Kedinasan Terbuka",
   lampiranDokumen: "1 (Satu) Berkas Rekapitulasi Lengkap",
-  perihalDokumen: "Laporan Eksekutif Pelaksanaan KKN dan Tata Kelola Lingkungan",
-  wilayahCakupan: "Kecamatan Coblong, Kota Bandung (6 Kelurahan, 86 RW)",
-  tanggalPengesahan: "29 September 2026",
+  perihalDokumen: "Laporan Evaluasi Kinerja dan Capaian Kuliah Kerja Nyata Tematik",
+  wilayahCakupan: "Kecamatan Coblong (6 Kelurahan Binaan, 74 RW)",
+  tanggalPengesahan: "16 Oktober 2026",
   penandatangan: {
-    preset: "KETUA_PELAKSANA",
-    jabatan: "Ketua Tim Pelaksana Task Force KKN BERSEKA",
-    instansi: "Universitas Komputer Indonesia x BERSEKA",
-    nama: "Ketua Pelaksana KKN",
-    nip: "19800512 200501 1 004",
+    preset: "PAK_REKTOR",
+    jabatan: "Rektor",
+    instansi: "Universitas Komputer Indonesia (UNIKOM)",
+    nama: "Prof. Dr. Ir. H. Eddy Soeryanto Soegoto, M.T.",
+    nip: "4127.34.01.001",
   },
 };
 
 export const DEFAULT_WASTE_REPORT_CONFIG: ReportCustomConfig = {
-  judulLaporan: "LAPORAN EVALUASI & AKUNTABILITAS TATA KELOLA PERSAMPAHAN",
-  subjudul: "PENGELOLAAN PERSAMPAHAN KECAMATAN COBLONG BERBASIS PLATFORM CERDAS BERSEKA",
-  nomorDokumen: "005/BERSEKA-DLH/EVAL/IX/2026",
+  judulLaporan: "LAPORAN EVALUASI DAN AKUNTABILITAS TATA KELOLA PERSAMPAHAN BERKELANJUTAN",
+  subjudul: "KECAMATAN COBLONG KOTA BANDUNG • PLATFORM CERDAS BERSEKA",
+  nomorDokumen: "005/BERSEKA-DLH/EVAL/X/2026",
   sifatDokumen: "Penting / Kedinasan Terbuka",
   lampiranDokumen: "1 (Satu) Berkas Rekapitulasi Lengkap",
   perihalDokumen: "Laporan Akuntabilitas dan Evaluasi Kinerja Tata Kelola Persampahan Berbasis Ekonomi Sirkular",
-  wilayahCakupan: "Kecamatan Coblong (6 Kelurahan, 86 RW)",
-  tanggalPengesahan: "29 September 2026",
+  wilayahCakupan: "Kecamatan Coblong (6 Kelurahan Binaan, 74 RW)",
+  tanggalPengesahan: "16 Oktober 2026",
   penandatangan: {
-    preset: "KETUA_PELAKSANA",
-    jabatan: "Ketua Tim Pelaksana Task Force BERSEKA",
-    instansi: "Universitas Komputer Indonesia x BERSEKA",
-    nama: "Ketua Tim Pelaksana",
-    nip: "19800512 200501 1 004",
+    preset: "PAK_REKTOR",
+    jabatan: "Rektor",
+    instansi: "Universitas Komputer Indonesia (UNIKOM)",
+    nama: "Prof. Dr. Ir. H. Eddy Soeryanto Soegoto, M.T.",
+    nip: "4127.34.01.001",
   },
 };
 
@@ -101,6 +104,7 @@ interface PengaturanLaporanModalProps {
   config: ReportCustomConfig;
   onSave: (newConfig: ReportCustomConfig) => void;
   onReset: () => void;
+  confirmLabel?: string;
 }
 
 export const PengaturanLaporanModal: React.FC<PengaturanLaporanModalProps> = ({
@@ -109,8 +113,10 @@ export const PengaturanLaporanModal: React.FC<PengaturanLaporanModalProps> = ({
   config,
   onSave,
   onReset,
+  confirmLabel,
 }) => {
   const [formData, setFormData] = useState<ReportCustomConfig>(config);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setFormData(config);
@@ -138,6 +144,77 @@ export const PengaturanLaporanModal: React.FC<PengaturanLaporanModalProps> = ({
         [field]: value,
       },
     }));
+  };
+
+  // Upload berkas tanda tangan dengan filter auto-hapus background putih
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const maxDim = 500;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const imgData = ctx.getImageData(0, 0, width, height);
+        const d = imgData.data;
+
+        // Auto hapus background terang (putih/kertas) menjadi transparan murni
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i];
+          const g = d[i + 1];
+          const b = d[i + 2];
+          const brightness = (r + g + b) / 3;
+
+          if (brightness > 215) {
+            d[i + 3] = 0; // Transparan penuh
+          } else if (brightness > 175) {
+            const factor = (215 - brightness) / 40;
+            d[i + 3] = Math.round(d[i + 3] * factor);
+          }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+        const transparentDataUrl = canvas.toDataURL("image/png");
+        setFormData((prev) => ({
+          ...prev,
+          tandaTanganUrl: transparentDataUrl,
+        }));
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveSignature = () => {
+    setFormData((prev) => {
+      const next = { ...prev };
+      delete next.tandaTanganUrl;
+      return next;
+    });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -173,13 +250,16 @@ export const PengaturanLaporanModal: React.FC<PengaturanLaporanModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 text-xs font-medium">
+        {/* Form Body (Scrollbar Tersembunyi Rapi) */}
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto p-6 space-y-6 text-xs font-medium scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
           {/* 1. Bagian Judul Dokumen */}
           <div className="space-y-3">
             <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white text-sm border-b border-slate-100 dark:border-slate-800 pb-1.5">
               <FileText className="w-4 h-4 text-emerald-600" />
-              <span>Judul &amp; Identitas Dokumen</span>
+              <span>Judul dan Identitas Dokumen</span>
             </div>
 
             <div>
@@ -215,7 +295,7 @@ export const PengaturanLaporanModal: React.FC<PengaturanLaporanModalProps> = ({
           <div className="space-y-3">
             <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white text-sm border-b border-slate-100 dark:border-slate-800 pb-1.5">
               <Hash className="w-4 h-4 text-emerald-600" />
-              <span>Detail Nomor &amp; Administrasi Surat (CRUD Manual)</span>
+              <span>Detail Nomor dan Administrasi Surat (CRUD Manual)</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -319,22 +399,6 @@ export const PengaturanLaporanModal: React.FC<PengaturanLaporanModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => handlePresetSelect("KETUA_PELAKSANA")}
-                  className={`p-2.5 rounded-xl border text-left transition-all ${
-                    formData.penandatangan.preset === "KETUA_PELAKSANA"
-                      ? "border-emerald-600 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 ring-2 ring-emerald-500/20"
-                      : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
-                  }`}
-                >
-                  <div className="font-bold text-xs flex items-center justify-between">
-                    <span>Ketua Pelaksana</span>
-                    {formData.penandatangan.preset === "KETUA_PELAKSANA" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                  </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Task Force KKN Berseka</div>
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => handlePresetSelect("PAK_REKTOR")}
                   className={`p-2.5 rounded-xl border text-left transition-all ${
                     formData.penandatangan.preset === "PAK_REKTOR"
@@ -343,10 +407,10 @@ export const PengaturanLaporanModal: React.FC<PengaturanLaporanModalProps> = ({
                   }`}
                 >
                   <div className="font-bold text-xs flex items-center justify-between">
-                    <span>Pak Rektor</span>
+                    <span>Rektor UNIKOM</span>
                     {formData.penandatangan.preset === "PAK_REKTOR" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
                   </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Prof. Dr. Ir. H. Eddy Soeryanto</div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Prof. Dr. Ir. H. Eddy Soeryanto Soegoto, M.T.</div>
                 </button>
 
                 <button
@@ -359,10 +423,26 @@ export const PengaturanLaporanModal: React.FC<PengaturanLaporanModalProps> = ({
                   }`}
                 >
                   <div className="font-bold text-xs flex items-center justify-between">
-                    <span>Bu Umi</span>
+                    <span>Wakil Rektor</span>
                     {formData.penandatangan.preset === "BU_UMI" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
                   </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Dr. Hj. Umi Narimawati</div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Dr. Hj. Umi Narimawati, Dra., S.E., M.Si.</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePresetSelect("KETUA_PELAKSANA")}
+                  className={`p-2.5 rounded-xl border text-left transition-all ${
+                    formData.penandatangan.preset === "KETUA_PELAKSANA"
+                      ? "border-emerald-600 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 ring-2 ring-emerald-500/20"
+                      : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="font-bold text-xs flex items-center justify-between">
+                    <span>Ketua Pelaksana</span>
+                    {formData.penandatangan.preset === "KETUA_PELAKSANA" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Task Force KKN BERSEKA</div>
                 </button>
               </div>
             </div>
@@ -419,6 +499,67 @@ export const PengaturanLaporanModal: React.FC<PengaturanLaporanModalProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Unggah Berkas Tanda Tangan Digital (Auto Hapus Background) */}
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5 text-[#009966]" />
+                  <span>Lampiran Tanda Tangan Digital (Auto Hapus Background Putih)</span>
+                </span>
+                {formData.tandaTanganUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveSignature}
+                    className="inline-flex items-center gap-1 text-[10.5px] font-bold text-rose-600 hover:text-rose-700 cursor-pointer"
+                  >
+                    <Trash2 size={12} />
+                    <span>Hapus TTD</span>
+                  </button>
+                )}
+              </div>
+
+              {formData.tandaTanganUrl ? (
+                <div className="flex items-center gap-3 p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <div className="w-24 h-12 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:8px_8px] rounded border border-slate-200 dark:border-slate-700 flex items-center justify-center p-1 overflow-hidden">
+                    <img
+                      src={formData.tandaTanganUrl}
+                      alt="Pratinjau Tanda Tangan Transparan"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                  <div className="text-[10.5px] text-slate-500 space-y-0.5">
+                    <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                      ✓ Background Terhapus Otomatis (Transparan)
+                    </div>
+                    <div>Siap diterapkan pada lembar pengesahan naskah dinas resmi.</div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleSignatureUpload}
+                    className="hidden"
+                    id="signature-upload-input"
+                  />
+                  <label
+                    htmlFor="signature-upload-input"
+                    className="flex flex-col items-center justify-center p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer transition-colors text-center"
+                  >
+                    <Upload className="w-5 h-5 text-slate-400 mb-1" />
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      Pilih Foto / Scan Tanda Tangan (.png, .jpg)
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5">
+                      Sistem otomatis mendeteksi dan menghapus latar kertas putih secara instan
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Footer Actions */}
@@ -447,7 +588,7 @@ export const PengaturanLaporanModal: React.FC<PengaturanLaporanModalProps> = ({
                 type="submit"
                 className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all"
               >
-                Terapkan Pengaturan
+                {confirmLabel || "Terapkan Pengaturan"}
               </button>
             </div>
           </div>
