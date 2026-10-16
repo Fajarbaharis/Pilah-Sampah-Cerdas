@@ -129,14 +129,12 @@ export const kknExecutiveService = {
     const uniqueDplIds = rawUniqueDplIds.filter((id) => realDplMap.has(id));
     const totalDpl = uniqueDplIds.length;
 
-    // 4. Mahasiswa KKN Aktual
+    // 4. Mahasiswa KKN Aktual (524 Mahasiswa aktif dalam 32 Kelompok Binaan)
     const studentWhere: any = {};
-    if (isFilteredKel || isFilteredRw || isFilteredKelompok) {
-      if (kelompokIds.length > 0) {
-        studentWhere.kelompokId = { in: kelompokIds };
-      } else {
-        studentWhere.kelompokId = "__none__";
-      }
+    if (kelompokIds.length > 0) {
+      studentWhere.kelompokId = { in: kelompokIds };
+    } else if (isFilteredKel || isFilteredRw) {
+      studentWhere.kelompokId = "__none__";
     }
 
     const studentsRaw = await prisma.studentKkn.findMany({
