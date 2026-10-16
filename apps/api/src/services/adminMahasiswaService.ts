@@ -90,6 +90,7 @@ export const adminMahasiswaService = {
     area_tugas?: number;
     is_ketua?: boolean;
     status_aktif?: string;
+    sks?: number;
   }) => {
     const role = await prisma.role.findUnique({ where: { name: "MAHASISWA_KKN" } });
     if (!role) throw new Error("Role MAHASISWA_KKN not found");
@@ -166,6 +167,7 @@ export const adminMahasiswaService = {
           assignedRwId: effectiveRwId,
           kelompokId: data.kelompokId || null,
           isKetua: !!data.is_ketua,
+          sks: data.sks !== undefined && data.sks !== null ? Number(data.sks) : 0,
         },
         include: {
           assignedRw: {
@@ -195,6 +197,7 @@ export const adminMahasiswaService = {
       area_tugas?: number | null;
       is_ketua?: boolean;
       status_aktif?: string;
+      sks?: number;
     }
   ) => {
     const cleanNim =
@@ -281,6 +284,7 @@ export const adminMahasiswaService = {
         if (data.kelompokId !== undefined) studentUpdateData.kelompokId = data.kelompokId;
         if (effectiveRwId !== undefined) studentUpdateData.assignedRwId = effectiveRwId;
         if (data.is_ketua !== undefined) studentUpdateData.isKetua = !!data.is_ketua;
+        if (data.sks !== undefined && data.sks !== null) studentUpdateData.sks = Number(data.sks);
 
         updatedStudent = await tx.studentKkn.update({
           where: { userId: id },
