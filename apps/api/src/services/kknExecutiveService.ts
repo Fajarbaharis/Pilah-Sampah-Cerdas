@@ -352,15 +352,27 @@ export const kknExecutiveService = {
 
     const COLOR_PALETTE: Record<number, string> = {
       6: "#f59e0b",  // Amber
+      10: "#14b8a6", // Teal
       11: "#0ea5e9", // Sky Blue
       12: "#3b82f6", // Blue
       13: "#6366f1", // Indigo
       14: "#8b5cf6", // Violet
+      16: "#d946ef", // Fuchsia / Purple (16 SKS)
       17: "#ec4899", // Pink
       18: "#f43f5e", // Rose
       19: "#10b981", // Emerald
       20: "#059669", // Dark Emerald / MBKM Penuh
     };
+
+    // Pastikan seluruh paket beban SKS akademik standar (termasuk 16 SKS) terdaftar di sistem
+    const STANDARD_SKS_PACKAGES = [6, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20];
+    STANDARD_SKS_PACKAGES.forEach((sksNum) => {
+      sksCounts[String(sksNum)] = {
+        sks: sksNum,
+        count: 0,
+        label: `${sksNum} SKS`,
+      };
+    });
 
     let totalMahasiswaDenganSks = 0;
     let belumTerdataCount = 0;
@@ -385,7 +397,10 @@ export const kknExecutiveService = {
     });
 
     const breakdown = Object.values(sksCounts)
-      .sort((a, b) => b.count - a.count)
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.sks - b.sks;
+      })
       .map((item) => ({
         sks: item.sks,
         label: item.label,
