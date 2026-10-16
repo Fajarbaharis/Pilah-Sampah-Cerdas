@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import { getScopingFilters } from "../utils/rbacScoping.js";
 import bcrypt from "bcryptjs";
 import { formatPhoneNumber } from "../utils/phoneUtils.js";
+import { invalidateExecutiveDashboardCache } from "./kknExecutiveService.js";
 
 export const adminMahasiswaService = {
   getAllMahasiswa: async (page = 1, limit = 10, search = "", user?: any) => {
@@ -179,6 +180,7 @@ export const adminMahasiswaService = {
         },
       });
 
+      invalidateExecutiveDashboardCache();
       return { user, studentProfile };
     });
   },
@@ -300,14 +302,17 @@ export const adminMahasiswaService = {
         });
       }
 
+      invalidateExecutiveDashboardCache();
       return { user, studentProfile: updatedStudent };
     });
   },
 
   deleteMahasiswa: async (id: string) => {
-    return prisma.user.update({
+    const res = await prisma.user.update({
       where: { id },
       data: { status: "Nonaktif" },
     });
+    invalidateExecutiveDashboardCache();
+    return res;
   },
 };
