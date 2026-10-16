@@ -615,6 +615,10 @@ export class UserService {
         jumlahAnggotaKeluarga: u.jumlahAnggotaKeluarga || null,
         fotoProfil: u.fotoProfil || null,
         nim: u.studentProfile?.nim || null,
+        sks:
+          u.studentProfile?.sks !== undefined && u.studentProfile?.sks !== null
+            ? Number(u.studentProfile.sks)
+            : 0,
         role: u.role.name,
         status: u.status,
         isTestAccount: Boolean(u.isTestAccount),
