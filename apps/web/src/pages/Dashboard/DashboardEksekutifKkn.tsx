@@ -710,7 +710,7 @@ export const DashboardEksekutifKkn: React.FC = () => {
       if (!isSilent) setLoading(true);
       else setRefreshing(true);
 
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = { refresh: "true" };
       if (selectedPeriode && selectedPeriode !== "ALL") params.periode = selectedPeriode;
       if (selectedKelurahan && selectedKelurahan !== "Semua Kelurahan" && selectedKelurahan !== "ALL") {
         params.kelurahan = selectedKelurahan;

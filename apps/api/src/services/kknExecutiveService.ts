@@ -9,6 +9,8 @@ export interface KknExecutiveFilters {
   periode?: string;
   kelompok?: string;
   includeTestAccounts?: boolean;
+  refresh?: boolean;
+  noCache?: boolean;
 }
 
 // Fast in-memory cache for Executive Dashboard (30s TTL)
@@ -26,8 +28,17 @@ export const kknExecutiveService = {
    */
   async getExecutiveDashboard(filters: KknExecutiveFilters = {}) {
     const isTestEnv = process.env.NODE_ENV === "test";
-    const cacheKey = JSON.stringify(filters);
-    if (!isTestEnv) {
+    const cacheKey = JSON.stringify({
+      kelurahan: filters.kelurahan,
+      rw: filters.rw,
+      periode: filters.periode,
+      kelompok: filters.kelompok,
+      includeTestAccounts: filters.includeTestAccounts,
+    });
+    if (filters.refresh || filters.noCache) {
+      executiveDashboardCache.delete(cacheKey);
+    }
+    if (!isTestEnv && !filters.refresh && !filters.noCache) {
       const cached = executiveDashboardCache.get(cacheKey);
       if (cached && cached.expiry > Date.now()) {
         return cached.data;
@@ -120,10 +131,12 @@ export const kknExecutiveService = {
 
     // 4. Mahasiswa KKN Aktual
     const studentWhere: any = {};
-    if (kelompokIds.length > 0) {
-      studentWhere.kelompokId = { in: kelompokIds };
-    } else if (isFilteredKel || isFilteredRw) {
-      studentWhere.kelompokId = "__none__";
+    if (isFilteredKel || isFilteredRw || isFilteredKelompok) {
+      if (kelompokIds.length > 0) {
+        studentWhere.kelompokId = { in: kelompokIds };
+      } else {
+        studentWhere.kelompokId = "__none__";
+      }
     }
 
     const studentsRaw = await prisma.studentKkn.findMany({

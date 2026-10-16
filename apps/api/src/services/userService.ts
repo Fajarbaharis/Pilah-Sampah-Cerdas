@@ -10,6 +10,7 @@ import { userRepository } from "../repositories/userRepository.js";
 import { hashPassword } from "../utils/hashUtils.js";
 import { formatPhoneNumber } from "../utils/phoneUtils.js";
 import { getRandomDefaultAvatar } from "../utils/avatarUtils.js";
+import { invalidateExecutiveDashboardCache } from "./kknExecutiveService.js";
 
 function formatTitleCaseName(name?: string): string {
   if (!name) return "";
@@ -1153,6 +1154,8 @@ export class UserService {
       return u;
     });
 
+    invalidateExecutiveDashboardCache();
+
     return {
       id: newUser.id,
       name: newUser.name,
@@ -1556,6 +1559,8 @@ export class UserService {
       return u;
     });
 
+    invalidateExecutiveDashboardCache();
+
     return {
       id: updatedUser.id,
       name: updatedUser.name,
@@ -1586,6 +1591,7 @@ export class UserService {
     }
 
     await userRepository.delete(id);
+    invalidateExecutiveDashboardCache();
   }
 
   async getOnboardingStatus(userId: string) {
