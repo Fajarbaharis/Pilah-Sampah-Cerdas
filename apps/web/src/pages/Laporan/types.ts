@@ -27,6 +27,8 @@ export interface WasteReportData {
       totalKapasitasKg: number;
       wadahSampahTotal: number;
       wadahSampahAktif: number;
+      wadahSampahBelumGps?: number;
+      persentaseSpasialGps?: number;
       kapasitasWadahLiter: number;
       volumeTerisiLiter: number;
       wadahKritis: number;
@@ -74,6 +76,7 @@ export interface WasteReportData {
   kelurahanAudit: Array<{
     kelurahan: string;
     baselineRate: number;
+    baselineKg?: number;
     currentComplianceRate: number;
     deltaPercent: number;
     totalTerpilahKg: number;
@@ -86,6 +89,13 @@ export interface WasteReportData {
     activeBinsCount: number;
     complianceLevel: "TINGGI" | "SEDANG" | "RENDAH";
     statusVerifikasi: string;
+    aktualKg?: number;
+    penurunanKg?: number;
+    penurunanPersen?: number;
+    kepatuhanBaseline?: number;
+    kepatuhanAktual?: number;
+    partisipasiWarga?: number;
+    perubahanKepatuhanPp?: number;
   }>;
   trenBerkala: Array<{
     pekan: string;
