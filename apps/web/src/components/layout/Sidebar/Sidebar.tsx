@@ -39,6 +39,7 @@ import {
 
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../../store/useAuthStore";
+import { useAppBrandingStore } from "../../../store/useAppBrandingStore";
 import type { UserRole } from "../../../store/useAuthStore";
 import type { LucideIcon } from "lucide-react";
 import { isStagingEnv } from "../../../utils/envUtils";
@@ -934,6 +935,7 @@ const SectionHeader: React.FC<{ label: string }> = ({ label }) => (
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false }) => {
   const { user, can } = useAuthStore();
+  const { branding } = useAppBrandingStore();
   const isStaging = isStagingEnv();
   const rawRole = ((user?.peran || (user as any)?.role || "") as string).toUpperCase();
   let normalizedRoleStr = rawRole;
@@ -2166,6 +2168,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
       header: "SISTEM & HAK AKSES",
       items: [
         {
+          to: "/pengaturan-aplikasi",
+          icon: Sliders,
+          label: "Pengaturan Aplikasi",
+          badge: "Dinamis",
+          allowed: ["DEVELOPER", "SUPER_USER"] as UserRole[],
+        },
+        {
           to: "/hak-akses",
           icon: Shield,
           label: "Hak Akses & Role",
@@ -2264,11 +2273,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
             {/* Top Brand Logo */}
             <div className="flex flex-col items-center w-full border-b border-slate-100 dark:border-slate-800 pb-3 shrink-0">
               <div
-                title="BERSEKA"
+                title={branding.appName || "BERSEKA"}
                 className="w-12 h-12 rounded-2xl bg-[#f2f8f4] dark:bg-emerald-950/60 border border-[#035941]/20 dark:border-emerald-700/30 flex items-center justify-center p-1.5 shadow-sm hover:scale-105 transition-all cursor-pointer"
               >
                 <img
-                  src="/logos/berseka/berseka-logo-bg-transparent.png?v=20261022_v2"
+                  src={branding.logoEmblemUrl || "/logos/berseka/berseka-logo-bg-transparent.png?v=20261022_v2"}
                   alt="BERSEKA Logo"
                   className="w-full h-full object-contain"
                 />
@@ -2329,7 +2338,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
                 className="flex items-center justify-center group cursor-pointer relative z-10 w-full text-center"
               >
                 <img
-                  src="/app-logo.png?v=20261022_v2"
+                  src={branding.logoHorizontalUrl || "/app-logo.png?v=20261022_v2"}
                   alt="BERSEKA Logo"
                   className="h-10 sm:h-11 w-auto object-contain transition-all duration-300 group-hover:scale-105"
                 />

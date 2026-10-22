@@ -25,6 +25,7 @@ import {
   Cpu,
   HardDrive,
   Terminal,
+  Sliders,
 } from "lucide-react";
 import { authService } from "../../services/authService";
 import { useAuthStore } from "../../store/useAuthStore";
@@ -32,6 +33,7 @@ import api from "../../services/api";
 import { getProfilePhotoUrl, handleAvatarError } from "../../utils/photoUtils";
 import RolePermissionPage from "../SuperUser/RolePermissionPage";
 import DeveloperSettingsPage from "../Developer/DeveloperSettingsPage";
+import AppBrandingSettings from "../Developer/components/AppBrandingSettings";
 
 // Interface yang lebih ketat
 interface VpsHealthData {
@@ -43,7 +45,7 @@ interface VpsHealthData {
   activeUsersOnline: number;
 }
 
-type TabType = "profil" | "telemetri" | "rbac" | "developer";
+type TabType = "profil" | "telemetri" | "rbac" | "developer" | "aplikasi";
 
 const Pengaturan: React.FC = () => {
   // PENGELOLAAN STATE & URL
@@ -68,19 +70,19 @@ const Pengaturan: React.FC = () => {
   // Mengambil state tab langsung dari URL (Single Source of Truth)
   const rawTab = (searchParams.get("tab")?.toLowerCase() || "profil") as string;
   const normalizedTab: TabType = (rawTab === "database" ? "telemetri" : rawTab) as TabType;
-  const validTabs: TabType[] = ["profil", "telemetri", "rbac", "developer"];
+  const validTabs: TabType[] = ["profil", "telemetri", "rbac", "developer", "aplikasi"];
 
   // Validasi tab yang aktif berdasarkan hak akses
   const activeTab: TabType = (
     validTabs.includes(normalizedTab) &&
-    (!["telemetri", "rbac"].includes(normalizedTab) || isDeveloper) &&
+    (!["telemetri", "rbac", "aplikasi"].includes(normalizedTab) || isDeveloper) &&
     (normalizedTab !== "developer" || isStrictDeveloper)
   )
     ? normalizedTab
     : "profil";
 
   const handleTabChange = (tab: TabType) => {
-    if (["telemetri", "rbac"].includes(tab) && !isDeveloper) return;
+    if (["telemetri", "rbac", "aplikasi"].includes(tab) && !isDeveloper) return;
     if (tab === "developer" && !isStrictDeveloper) return;
     setSearchParams({ tab }); // Hanya perbarui URL, React akan otomatis me-render ulang
   };
@@ -290,11 +292,13 @@ const Pengaturan: React.FC = () => {
   const menuItems = [
     { id: "profil" as TabType, label: "Pengaturan Profil", icon: User },
     ...(isDeveloper ? [
+      { id: "aplikasi" as TabType, label: "Pengaturan Aplikasi", icon: Sliders },
       { id: "telemetri" as TabType, label: "Telemetri & Basis Data", icon: Server },
       { id: "rbac" as TabType, label: "Hak Akses (RBAC)", icon: ShieldCheck },
     ] : []),
     ...(isStrictDeveloper ? [
       { id: "developer" as TabType, label: "Developer & Pengujian", icon: Terminal },
+      { id: "aplikasi" as TabType, label: "Pengaturan Aplikasi", icon: Sliders },
     ] : []),
   ];
 
@@ -607,6 +611,13 @@ const Pengaturan: React.FC = () => {
           {activeTab === "developer" && isStrictDeveloper && (
             <div className="animate-fade-in space-y-4">
               <DeveloperSettingsPage />
+            </div>
+          )}
+
+          {/* TAB 5: PENGATURAN APLIKASI (STRICTLY DEVELOPER) */}
+          {activeTab === "aplikasi" && isDeveloper && (
+            <div className="animate-fade-in space-y-4">
+              <AppBrandingSettings />
             </div>
           )}
         </div>
