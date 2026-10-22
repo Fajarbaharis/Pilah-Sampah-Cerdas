@@ -284,6 +284,29 @@ export const DeveloperSettingsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* QUICK JUMP: PENGATURAN IDENTITAS & BRANDING APLIKASI */}
+      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Sliders size={20} />
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">
+              Pengaturan Identitas &amp; Branding Aplikasi (Dinamis)
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Ubah nama aplikasi, slogan, logo, hak cipta, dan kontak bantuan dengan live preview &amp; verifikasi 2-tahap.
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/pengaturan?tab=aplikasi"
+          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer"
+        >
+          Buka Pengaturan Aplikasi <ExternalLink size={13} />
+        </Link>
+      </div>
+
       {/* PRIMARY CONTROLS: TOGGLE SEMBUNYIKAN AKUN PENGUJIAN */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">

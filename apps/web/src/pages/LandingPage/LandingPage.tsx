@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { BERSEKA_LOGOS } from "../../constants/branding";
+import { useAppBrandingStore } from "../../store/useAppBrandingStore";
 import {
   ArrowRight,
   ChevronDown,
@@ -88,6 +89,7 @@ import showToast from "../../utils/showToast";
 import "./LandingPage.css";
 
 export const LandingPage: React.FC = () => {
+  const { branding } = useAppBrandingStore();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
 
@@ -494,19 +496,16 @@ export const LandingPage: React.FC = () => {
       >
         <div className="landing-container landing-header-inner">
           <div className="flex items-center gap-3">
-            <a href="#" className="landing-brand" aria-label="BERSEKA.ID — Beranda">
-              <picture>
-                <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
-                <img
-                  src={BERSEKA_LOGOS.fullPng}
-                  alt="BERSEKA.ID"
-                  className="landing-brand-logo"
-                  width={160}
-                  height={42}
-                  loading="eager"
-                  decoding="async"
-                />
-              </picture>
+            <a href="#" className="landing-brand" aria-label={`${branding.appName || "BERSEKA.ID"} — Beranda`}>
+              <img
+                src={branding.logoHorizontalUrl || BERSEKA_LOGOS.fullPng}
+                alt={branding.appName || "BERSEKA.ID"}
+                className="landing-brand-logo"
+                width={160}
+                height={42}
+                loading="eager"
+                decoding="async"
+              />
             </a>
           </div>
 
@@ -1373,7 +1372,7 @@ export const LandingPage: React.FC = () => {
                 </div>
               </div>
               <a
-                href="https://wa.me/6285715516065"
+                href={branding.helpdeskUrl || "https://wa.me/6285715516065"}
                 className="landing-btn landing-btn-primary"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -1393,19 +1392,16 @@ export const LandingPage: React.FC = () => {
         <div className="landing-container">
           <div className="landing-footer-grid">
             <div className="landing-footer-about">
-              <a href="#" className="landing-brand" aria-label="BERSEKA.ID">
-                <picture>
-                  <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
-                  <img
-                    src={BERSEKA_LOGOS.fullPng}
-                    alt="BERSEKA.ID"
-                    className="landing-brand-logo"
-                    width={160}
-                    height={42}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </picture>
+              <a href="#" className="landing-brand" aria-label={branding.appName || "BERSEKA.ID"}>
+                <img
+                  src={branding.logoHorizontalUrl || BERSEKA_LOGOS.fullPng}
+                  alt={branding.appName || "BERSEKA.ID"}
+                  className="landing-brand-logo"
+                  width={160}
+                  height={42}
+                  loading="lazy"
+                  decoding="async"
+                />
               </a>
               <p>
                 Platform pengelolaan sampah terpadu berbasis teknologi dan kolaborasi multipihak
@@ -1490,7 +1486,7 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="landing-footer-bottom">
-            © 2026 Universitas Komputer Indonesia. Hak cipta dilindungi.
+            {branding.copyrightText || '© 2026 Universitas Komputer Indonesia. Hak cipta dilindungi.'}
           </div>
         </div>
       </footer>

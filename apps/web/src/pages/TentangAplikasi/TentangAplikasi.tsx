@@ -34,6 +34,7 @@ import {
   Leaf,
 } from "lucide-react";
 import { APP_CONFIG } from "../../config/appConfig";
+import { useAppBrandingStore } from "../../store/useAppBrandingStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import PageHeader from "../../components/common/PageHeader";
 
@@ -125,7 +126,7 @@ const Informasi: React.FC = () => {
       {/* ---------------- 1. CLEAN ENTERPRISE PAGE HEADER ---------------- */}
       <PageHeader
         icon={Info}
-        category={isTechnicalRole ? `Sistem BERSEKA v${APP_CONFIG.version}` : "Pusat Panduan & SOP"}
+        category={isTechnicalRole ? `Sistem ${branding.appName || "BERSEKA"} v${branding.appVersion || APP_CONFIG.version}` : "Pusat Panduan & SOP"}
         scope={user?.wilayah || "Wilayah Operasional"}
         title={isTechnicalRole ? "Informasi Sistem BERSEKA" : "Pusat Panduan & Informasi Operasional"}
         description={
@@ -841,9 +842,9 @@ const Informasi: React.FC = () => {
               <div>
                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Informasi Versi Aplikasi</span>
                 <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">
-                  BERSEKA v{APP_CONFIG.version}
+                  {branding.appName || "BERSEKA"} v{branding.appVersion || APP_CONFIG.version}
                 </h3>
-                <p className="text-[11px] text-slate-400 font-semibold">{APP_CONFIG.tagline} &bull; Build 2026</p>
+                <p className="text-[11px] text-slate-400 font-semibold">{branding.appTagline || APP_CONFIG.tagline} &bull; Build 2026</p>
               </div>
             </div>
 

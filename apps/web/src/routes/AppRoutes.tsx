@@ -42,6 +42,7 @@ const PoinWarga = React.lazy(() => import("../pages/PoinWarga/PoinWarga"));
 const MasterDatasetKlasifikasi = React.lazy(() => import("../pages/MasterDatasetKlasifikasi/MasterDatasetKlasifikasi"));
 const Notifikasi = React.lazy(() => import("../pages/Notifikasi/Notifikasi"));
 const Pengaturan = React.lazy(() => import("../pages/Pengaturan/Pengaturan"));
+const PengaturanAplikasi = React.lazy(() => import("../pages/PengaturanAplikasi/PengaturanAplikasi"));
 const SimulasiModelAI = React.lazy(() => import("../pages/SimulasiModelAI/SimulasiModelAI"));
 const BersekaVisionAIPage = React.lazy(() => import("../pages/BersekaVisionAI/BersekaVisionAIPage"));
 const PenggunaOnline = React.lazy(() => import("../pages/PenggunaOnline/PenggunaOnline"));
@@ -1356,7 +1357,33 @@ const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
-        <Route path="/pengaturan" element={<Navigate to="/profil" replace />} />
+        <Route
+          path="/pengaturan"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "SUPER_USER",
+                "DEVELOPER",
+                "ADMIN_DLH",
+                "CAMAT",
+                "LURAH",
+                "RW",
+                "PETUGAS_RESIDU",
+                "MAHASISWA_KKN",
+                "PIMPINAN",
+                "PEMIMPIN",
+                "PANITIA_TASKFORCE",
+                "DPL",
+                "DOSEN_PEMBIMBING",
+                "DOSEN_PENDAMPING",
+                "MPL",
+                "WARGA",
+              ] as UserRole[]}
+            >
+              <Pengaturan />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/peta" element={<Navigate to="/monitoring" replace />} />
         <Route path="/evaluasi-ai" element={<Navigate to="/superUser/discrepancies" replace />} />
         <Route path="/lainnya" element={<PlaceholderPage title="Menu Lainnya" />} />
@@ -1406,6 +1433,17 @@ const AppRoutes: React.FC = () => {
         />
         <Route path="/superUser/hak-akses" element={<Navigate to="/hak-akses" replace />} />
         <Route path="/role-permission" element={<Navigate to="/hak-akses" replace />} />
+
+        <Route
+          path="/pengaturan-aplikasi"
+          element={
+            <ProtectedRoute allowedRoles={["SUPER_USER", "DEVELOPER"]}>
+              <PengaturanAplikasi />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/pengaturan/aplikasi" element={<Navigate to="/pengaturan-aplikasi" replace />} />
+        <Route path="/branding" element={<Navigate to="/pengaturan-aplikasi" replace />} />
 
         <Route
           path="/konfigurasi-sistem"

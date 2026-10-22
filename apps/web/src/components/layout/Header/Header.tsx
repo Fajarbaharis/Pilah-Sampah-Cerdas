@@ -20,6 +20,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { useAuthStore } from "../../../store/useAuthStore";
+import { useAppBrandingStore } from "../../../store/useAppBrandingStore";
 import { getProfilePhotoUrl, handleAvatarError } from "../../../utils/photoUtils";
 import api from "../../../services/api";
 import RoleSwitcher from "../../RoleSwitcher";
@@ -49,6 +50,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const { branding } = useAppBrandingStore();
 
   // Dropdown visibility states
   const [showNotifications, setShowNotifications] = useState(false);
@@ -385,6 +387,8 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
         return ["Tata Kelola Sampah", "Internet of Things", "Data Sensor"];
       case "/iot/perangkat":
         return ["Tata Kelola Sampah", "Internet of Things", "Perangkat"];
+      case "/pengaturan-aplikasi":
+        return ["Sistem & Hak Akses", "Pengaturan Aplikasi"];
       case "/iot/konfigurasi":
         return ["Tata Kelola Sampah", "Internet of Things", "Konfigurasi"];
       default:
@@ -717,7 +721,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
               <div className="text-center space-y-1.5">
                 <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Konfirmasi Keluar</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Apakah Anda yakin ingin mengakhiri sesi dan keluar dari sistem BERSEKA?
+                  Apakah Anda yakin ingin mengakhiri sesi dan keluar dari sistem {branding.appName || "BERSEKA"}?
                 </p>
               </div>
               <div className="flex gap-2.5 pt-2">
