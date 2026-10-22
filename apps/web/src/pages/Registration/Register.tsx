@@ -11,15 +11,19 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { User, Phone, Lock, Eye, EyeOff, MapPin, GraduationCap, Truck, ArrowRight, ShieldCheck, RefreshCcw, CheckCircle2, Smartphone } from "lucide-react";
 import { useThemeStore } from "../../store/useThemeStore";
+import { BERSEKA_LOGOS } from "../../constants/branding";
 import api from "../../utils/api";
 
 // Official High-Resolution BERSEKA Full Logo Asset
 const BersekaLogoIcon: React.FC<{ className?: string }> = ({ className = "h-9 w-auto" }) => (
-  <img
-    src="/logos/berseka/berseka-logo-full.png"
-    alt="BERSEKA"
-    className={`${className} object-contain shrink-0`}
-  />
+  <picture>
+    <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
+    <img
+      src={BERSEKA_LOGOS.fullPng}
+      alt="BERSEKA.ID"
+      className={`${className} object-contain shrink-0`}
+    />
+  </picture>
 );
 
 export const Register: React.FC = () => {

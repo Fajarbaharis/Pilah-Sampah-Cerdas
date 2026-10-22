@@ -27,14 +27,18 @@ import {
 import ImageTigaRoleMobile from "../../assets/images/image_tiga_role_mobile.webp";
 import { useThemeStore } from "../../store/useThemeStore";
 import api from "../../services/api";
+import { BERSEKA_LOGOS } from "../../constants/branding";
 
 // Official High-Resolution BERSEKA Full Logo Asset
 const BersekaLogoIcon: React.FC<{ className?: string }> = ({ className = "h-10 sm:h-11 w-auto" }) => (
-  <img
-    src="/logos/berseka/berseka-logo-full.png"
-    alt="BERSEKA"
-    className={`${className} object-contain shrink-0`}
-  />
+  <picture>
+    <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
+    <img
+      src={BERSEKA_LOGOS.fullPng}
+      alt="BERSEKA.ID"
+      className={`${className} object-contain shrink-0`}
+    />
+  </picture>
 );
 
 interface ReleaseInfo {

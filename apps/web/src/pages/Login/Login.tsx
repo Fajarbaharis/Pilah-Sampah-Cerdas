@@ -12,6 +12,7 @@ import { useThemeStore } from "../../store/useThemeStore";
 import showToast from "../../utils/showToast";
 import LoginKknHero from "./components/LoginKknHero";
 import ForgotPasswordModal from "./components/ForgotPasswordModal";
+import { BERSEKA_LOGOS } from "../../constants/branding";
 
 // Format nomor telepon Indonesia: 08xxx, 628xxx, +628xxx, 8xxx atau NIM / NIP DPL
 const PHONE_REGEX = /^\+628[0-9]\d{6,11}$/;
@@ -211,9 +212,9 @@ const Login: React.FC = () => {
           <div className="flex items-center justify-between gap-4">
             <Link to="/" aria-label="BERSEKA.ID beranda" className="inline-flex items-center text-[#0f2142] no-underline group">
               <picture>
-                <source srcSet="/logos/berseka/berseka-logo-full.webp" type="image/webp" />
+                <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
                 <img
-                  src="/logos/berseka/berseka-logo-full.png"
+                  src={BERSEKA_LOGOS.fullPng}
                   alt="BERSEKA.ID"
                   className="h-10 sm:h-11 w-auto max-w-[175px] object-contain transition-transform group-hover:scale-105"
                   width={160}
