@@ -495,9 +495,9 @@ export const LandingPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <a href="#" className="landing-brand" aria-label="BERSEKA.ID — Beranda">
               <picture>
-                <source srcSet="/logos/berseka/berseka-logo-full.webp" type="image/webp" />
+                <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
                 <img
-                  src="/logos/berseka/berseka-logo-full.png"
+                  src={BERSEKA_LOGOS.fullPng}
                   alt="BERSEKA.ID"
                   className="landing-brand-logo"
                   width={160}
@@ -1394,9 +1394,9 @@ export const LandingPage: React.FC = () => {
             <div className="landing-footer-about">
               <a href="#" className="landing-brand" aria-label="BERSEKA.ID">
                 <picture>
-                  <source srcSet="/logos/berseka/berseka-logo-full.webp" type="image/webp" />
+                  <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
                   <img
-                    src="/logos/berseka/berseka-logo-full.png"
+                    src={BERSEKA_LOGOS.fullPng}
                     alt="BERSEKA.ID"
                     className="landing-brand-logo"
                     width={160}
