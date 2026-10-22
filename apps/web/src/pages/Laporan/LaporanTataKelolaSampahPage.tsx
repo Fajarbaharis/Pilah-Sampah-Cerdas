@@ -1493,11 +1493,11 @@ export const LaporanTataKelolaSampahPage: React.FC = () => {
                     {/* Logo BERSEKA Resmi */}
                     <div className="w-20 shrink-0 flex items-center justify-center">
                       <img
-                        src="/logos/berseka/berseka-logo-full.png"
+                        src="/logos/berseka/berseka-logo-full.png?v=20261022_v2"
                         alt="Logo BERSEKA"
                         className="h-12 w-auto max-w-[105px] object-contain block shrink-0"
                         onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src = "/logos/berseka/berseka-logo-full.svg";
+                          (e.currentTarget as HTMLImageElement).src = "/logos/berseka/berseka-logo-full.svg?v=20261022_v2";
                         }}
                       />
                     </div>

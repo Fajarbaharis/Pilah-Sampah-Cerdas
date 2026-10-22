@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { BERSEKA_LOGOS } from "../../constants/branding";
 import {
   ArrowRight,
   ChevronDown,
@@ -495,9 +496,9 @@ export const LandingPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <a href="#" className="landing-brand" aria-label="BERSEKA.ID — Beranda">
               <picture>
-                <source srcSet="/logos/berseka/berseka-logo-full.webp" type="image/webp" />
+                <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
                 <img
-                  src="/logos/berseka/berseka-logo-full.png"
+                  src={BERSEKA_LOGOS.fullPng}
                   alt="BERSEKA.ID"
                   className="landing-brand-logo"
                   width={160}
@@ -1394,9 +1395,9 @@ export const LandingPage: React.FC = () => {
             <div className="landing-footer-about">
               <a href="#" className="landing-brand" aria-label="BERSEKA.ID">
                 <picture>
-                  <source srcSet="/logos/berseka/berseka-logo-full.webp" type="image/webp" />
+                  <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
                   <img
-                    src="/logos/berseka/berseka-logo-full.png"
+                    src={BERSEKA_LOGOS.fullPng}
                     alt="BERSEKA.ID"
                     className="landing-brand-logo"
                     width={160}

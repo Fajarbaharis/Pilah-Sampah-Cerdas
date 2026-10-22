@@ -103,7 +103,7 @@ export const OfficialDocumentA4View: React.FC<OfficialDocumentA4ViewProps> = ({
           {/* Logo Platform BERSEKA di Kanan Sesuai Mandat Pengguna */}
           <div className="w-16 sm:w-20 md:w-24 shrink-0 flex items-center justify-center">
             <img
-              src="/image/berseka-logo-full.png"
+              src="/logos/berseka/berseka-logo-full.png?v=20261022_v2"
               alt="Logo Resmi BERSEKA"
               className="h-12 sm:h-14 md:h-16 w-auto object-contain"
             />
