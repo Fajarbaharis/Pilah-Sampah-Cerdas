@@ -13,6 +13,7 @@ import showToast from "../../utils/showToast";
 import LoginKknHero from "./components/LoginKknHero";
 import ForgotPasswordModal from "./components/ForgotPasswordModal";
 import { BERSEKA_LOGOS } from "../../constants/branding";
+import api from "../../services/api";
 
 // Format nomor telepon Indonesia: 08xxx, 628xxx, +628xxx, 8xxx atau NIM / NIP DPL
 const PHONE_REGEX = /^\+628[0-9]\d{6,11}$/;
@@ -60,6 +61,53 @@ const Login: React.FC = () => {
   const [passwordError, setPasswordError] = useState("");
 
   const passwordInputRef = useRef<HTMLInputElement>(null);
+
+  // Dynamic Mobile & Web App Release Version State (Syncs real-time with /system/latest-release)
+  const [appVersion, setAppVersion] = useState<string>(() => {
+    try {
+      return localStorage.getItem("berseka_app_version") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [buildNumber, setBuildNumber] = useState<number | string>(() => {
+    try {
+      return localStorage.getItem("berseka_app_build") || "";
+    } catch {
+      return "";
+    }
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchLatestRelease() {
+      try {
+        const res = await api.get("/system/latest-release");
+        const data = res.data?.data || res.data;
+        const ver = data?.latestVersion || data?.version;
+        const bld = data?.buildNumber;
+        if (isMounted && ver) {
+          setAppVersion(ver);
+          try {
+            localStorage.setItem("berseka_app_version", ver);
+          } catch {}
+        }
+        if (isMounted && bld) {
+          setBuildNumber(bld);
+          try {
+            localStorage.setItem("berseka_app_build", String(bld));
+          } catch {}
+        }
+      } catch (_err) {
+        // Fallback offline / network interruption
+      }
+    }
+    fetchLatestRelease();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
 
   // Force light mode on login page unconditionally
   useEffect(() => {
@@ -424,9 +472,14 @@ const Login: React.FC = () => {
 
       </main>
 
-      {/* Footer Page */}
-      <footer className="relative z-10 mt-5 text-center text-xs text-[#7d8ea6]">
-        <p className="m-0">© 2026 Universitas Komputer Indonesia</p>
+      {/* Footer Page: Hak Cipta & Sinkronisasi Versi Seluler / Web */}
+      <footer className="relative z-10 mt-5 text-center text-xs text-[#7d8ea6] space-y-1">
+        <p className="m-0 font-medium">© 2026 Universitas Komputer Indonesia</p>
+        {appVersion ? (
+          <p className="m-0 text-[11px] text-[#8fa0b5] font-semibold tracking-wide">
+            Versi {appVersion}{buildNumber ? ` • Build ${buildNumber}` : ""}
+          </p>
+        ) : null}
       </footer>
 
       {/* Floating Action Button: Download Aplikasi Seluler APK */}
