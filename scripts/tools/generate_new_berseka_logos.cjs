@@ -8,9 +8,10 @@ const WEB_PUBLIC = path.join(MAIN_DIR, 'apps/web/public');
 const WEB_IMAGE = path.join(WEB_PUBLIC, 'image');
 const WEB_LOGOS_BERSEKA = path.join(WEB_PUBLIC, 'logos/berseka');
 const TEXT_SRC = path.join(WEB_LOGOS_BERSEKA, 'berseka-text-bg-transparent.png');
+const BRAIN_TEXT_BACKUP = 'C:/Users/USER/.gemini/antigravity/brain/4a04772f-89a5-46a9-aee2-9f13c58d3efc/berseka-text.png';
 
 async function run() {
-  console.log('=== Generasi Aset Logo Baru BERSEKA ===');
+  console.log('=== Generasi Aset Logo Baru BERSEKA (Hitam & Hijau) ===');
   console.log('Source:', SOURCE_JPEG);
   
   if (!fs.existsSync(SOURCE_JPEG)) {
@@ -46,10 +47,55 @@ async function run() {
 
   console.log('✓ Emblem lingkaran transparan & white terisolasi');
 
-  // 3. Compose Full Logo (Emblem + Teks BERSEKA.ID)
+  // 3. Recolor Teks BERSEKA.ID:
+  // "BERSEKA" -> Hitam (0, 0, 0) kayak di mobile
+  // ".ID" -> Hijau (12, 173, 77) mengikuti warna emblem lingkaran logo
+  const textSourceFile = fs.existsSync(BRAIN_TEXT_BACKUP) ? BRAIN_TEXT_BACKUP : TEXT_SRC;
+
+  let recoloredTextTransparentBuffer;
+  let recoloredTextWhiteBuffer;
   let fullLogoTransparentBuffer;
   let fullLogoWhiteBuffer;
-  if (fs.existsSync(TEXT_SRC)) {
+
+  if (fs.existsSync(textSourceFile)) {
+    const { data: textRaw, info: textInfo } = await sharp(textSourceFile).raw().toBuffer({ resolveWithObject: true });
+    const { width: tW, height: tH, channels: tC } = textInfo;
+
+    const recoloredBuf = Buffer.alloc(tW * tH * 4);
+    const blackR = 0, blackG = 0, blackB = 0;
+    const greenR = 12, greenG = 173, greenB = 77;
+
+    for (let y = 0; y < tH; y++) {
+      for (let x = 0; x < tW; x++) {
+        const idx = (y * tW + x) * tC;
+        const outIdx = (y * tW + x) * 4;
+        const alpha = tC === 4 ? textRaw[idx + 3] : 255;
+
+        if (x < 804) {
+          recoloredBuf[outIdx] = blackR;
+          recoloredBuf[outIdx + 1] = blackG;
+          recoloredBuf[outIdx + 2] = blackB;
+          recoloredBuf[outIdx + 3] = alpha;
+        } else {
+          recoloredBuf[outIdx] = greenR;
+          recoloredBuf[outIdx + 1] = greenG;
+          recoloredBuf[outIdx + 2] = greenB;
+          recoloredBuf[outIdx + 3] = alpha;
+        }
+      }
+    }
+
+    recoloredTextTransparentBuffer = await sharp(recoloredBuf, { raw: { width: tW, height: tH, channels: 4 } })
+      .png()
+      .toBuffer();
+
+    recoloredTextWhiteBuffer = await sharp(recoloredBuf, { raw: { width: tW, height: tH, channels: 4 } })
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .png()
+      .toBuffer();
+
+    console.log('✓ Teks BERSEKA (Hitam) dan .ID (Hijau Logo) berhasil diwarnai');
+
     const emblemHeight = 450;
     const resizedEmblem = await sharp(emblemTransparentBuffer)
       .resize({ height: emblemHeight })
@@ -57,7 +103,7 @@ async function run() {
     const emblemMeta = await sharp(resizedEmblem).metadata();
 
     const textHeight = 220;
-    const resizedText = await sharp(TEXT_SRC)
+    const resizedText = await sharp(recoloredTextTransparentBuffer)
       .resize({ height: textHeight })
       .toBuffer();
     const textMeta = await sharp(resizedText).metadata();
@@ -99,7 +145,7 @@ async function run() {
     .png()
     .toBuffer();
 
-    console.log('✓ Full Logo (Emblem + BERSEKA.ID) berhasil dikomposisikan');
+    console.log('✓ Full Logo (Emblem Hijau + BERSEKA Hitam + .ID Hijau) berhasil dikomposisikan');
   } else {
     fullLogoTransparentBuffer = emblemTransparentBuffer;
     fullLogoWhiteBuffer = emblemWhiteBuffer;
@@ -139,6 +185,12 @@ async function run() {
   await writeWebp(path.join(WEB_LOGOS_BERSEKA, 'berseka-logo-full.webp'), fullLogoTransparentBuffer);
   await writeAsset(path.join(WEB_LOGOS_BERSEKA, 'berseka-logo-text-bg-transparent.png'), fullLogoTransparentBuffer);
   await writeAsset(path.join(WEB_LOGOS_BERSEKA, 'berseka-logo-text-bg-white.png'), fullLogoWhiteBuffer);
+  if (recoloredTextTransparentBuffer) {
+    await writeAsset(path.join(WEB_LOGOS_BERSEKA, 'berseka-text-bg-transparent.png'), recoloredTextTransparentBuffer);
+  }
+  if (recoloredTextWhiteBuffer) {
+    await writeAsset(path.join(WEB_LOGOS_BERSEKA, 'berseka-text-bg-white.png'), recoloredTextWhiteBuffer);
+  }
 
   // --- PUBLIC ROOT ---
   console.log('Menulis aset ke apps/web/public...');
