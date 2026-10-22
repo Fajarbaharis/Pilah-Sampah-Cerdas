@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { BERSEKA_LOGOS } from "../../constants/branding";
 import {
   ArrowRight,
   ChevronDown,
