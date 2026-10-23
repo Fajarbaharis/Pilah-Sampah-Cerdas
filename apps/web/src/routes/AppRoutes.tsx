@@ -293,6 +293,8 @@ const AppRoutes: React.FC = () => {
       <Suspense fallback={<PageLoadingFallback />}>
         <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/kalkulator" element={<LandingPage />} />
+      <Route path="/faq" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/download" element={<DownloadPage />} />
       <Route path="/register" element={<Register />} />
@@ -1404,7 +1406,6 @@ const AppRoutes: React.FC = () => {
           }
         />
         <Route path="/setor-sampah" element={<Navigate to="/monitoring-pemilahan/penyetoran-sampah" replace />} />
-        <Route path="/setor" element={<Navigate to="/monitoring-pemilahan/penyetoran-sampah" replace />} />
         <Route path="/pemilahan" element={<Navigate to="/monitoring-pemilahan/penyetoran-sampah" replace />} />
         <Route path="/monitoring-pemilahan" element={<Navigate to="/monitoring-pemilahan/penyetoran-sampah" replace />} />
         <Route
@@ -1480,8 +1481,6 @@ const AppRoutes: React.FC = () => {
         <Route path="/superUser/audit" element={<Navigate to="/histori-sistem" replace />} />
         <Route path="/audit-trail" element={<Navigate to="/histori-sistem" replace />} />
         <Route path="/audit-log" element={<Navigate to="/histori-sistem" replace />} />
-        <Route path="/pengguna-online" element={<Navigate to="/pengguna-daring" replace />} />
-        <Route path="/master-data/pengguna-online" element={<Navigate to="/pengguna-daring" replace />} />
         <Route path="/superUser/qr-master" element={<Navigate to="/monitoring-pengelolaan/tempat-sampah?tab=batch_qr" replace />} />
         <Route path="/superUser/master-qr" element={<Navigate to="/monitoring-pengelolaan/tempat-sampah?tab=batch_qr" replace />} />
         <Route path="/qr-master" element={<Navigate to="/monitoring-pengelolaan/tempat-sampah?tab=batch_qr" replace />} />
@@ -1642,7 +1641,6 @@ const AppRoutes: React.FC = () => {
         <Route path="/tentang" element={<Navigate to="/informasi" replace />} />
         <Route path="/tentang-aplikasi" element={<Navigate to="/informasi" replace />} />
         <Route path="/panduan-aplikasi" element={<Navigate to="/informasi" replace />} />
-        <Route path="/faq" element={<Navigate to="/informasi" replace />} />
         <Route path="/bantuan" element={<Navigate to="/informasi" replace />} />
         <Route path="/presensi" element={<Navigate to="/monitoring-absen" replace />} />
         <Route path="/presensi-mahasiswa" element={<Navigate to="/monitoring-absen" replace />} />

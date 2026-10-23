@@ -178,6 +178,14 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-float {
+  animation: float 7s ease-in-out infinite;
+}
+
 .animate-shake {
   animation: shake 250ms ease-in-out;
 }
@@ -388,3 +396,12 @@ input:-webkit-autofill:active {
 .z-popover { z-index: 700; }
 .z-toast { z-index: 1000; }
 .z-max { z-index: 99999; }
+
+/* Prevent leaky focus outline on inputs across the app */
+input, textarea, select {
+  outline: none;
+}
+input:focus, input:focus-visible, textarea:focus, textarea:focus-visible, select:focus, select:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+}

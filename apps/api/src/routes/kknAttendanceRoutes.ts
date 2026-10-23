@@ -396,9 +396,14 @@ router.get(
   ]),
   async (req, res) => {
     try {
+      const rawRw = req.query.rwId || req.query.rw || req.query.idRw || req.query.rw_id;
+      const rwId = rawRw ? parseInt(rawRw as string, 10) : undefined;
+      const search = req.query.search as string | undefined;
+
       const result = await kknAttendanceServiceInstance.getWargaDampingan(
         req.user!.userId,
-        req.user!.role
+        req.user!.role,
+        { rwId, search }
       );
       res.json(result);
     } catch (error: any) {

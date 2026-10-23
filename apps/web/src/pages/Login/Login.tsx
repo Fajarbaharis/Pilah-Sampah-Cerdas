@@ -1,70 +1,97 @@
 /**
- * Project: TrashCare Login Page (BERSEKA.ID Modern Clean 2-Column Responsive Design)
- * Acuan Desain: docs/login-berseka.html & Mockup Resmi BERSEKA.ID
- * Copyright (c) 2026 Universitas Komputer Indonesia & Kecamatan Coblong.
+ * Project: BERSEKA.ID
+ * Page: Halaman Masuk / Login
+ * Acuan Desain: apps/web/public/image/loginpage/berseka-login.html
+ * 
+ * Fitur:
+ * - Layout 1 Layar Penuh (100dvh / min-height 540px) Desktop
+ * - Brand Colors Resmi BERSEKA: Teal (#04999C / #0B7478) & Sun Yellow (#FFD166)
+ * - Auto-format spasi nomor ponsel (0812 3456 7890) untuk seluruh role (termasuk DPL)
+ * - Salam dinamis berdasarkan waktu pengguna (Pagi/Siang/Sore/Malam)
+ * - Deteksi pintar peramban Safari di perangkat Apple iPhone
+ * - Floating Action Button (FAB) unduh APK seluler untuk Petugas & Warga
+ * - Proteksi keamanan autentikasi & integrasi Zustand useAuthStore
  */
 
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Download } from "lucide-react";
+import {
+  Smartphone,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ArrowUpRight,
+  Download,
+  AlertCircle,
+} from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useThemeStore } from "../../store/useThemeStore";
+import { useAppBrandingStore } from "../../store/useAppBrandingStore";
 import showToast from "../../utils/showToast";
 import LoginKknHero from "./components/LoginKknHero";
-import ForgotPasswordModal from "./components/ForgotPasswordModal";
-import { BERSEKA_LOGOS } from "../../constants/branding";
-import { useAppBrandingStore } from "../../store/useAppBrandingStore";
 import api from "../../services/api";
 
-// Format nomor telepon Indonesia: 08xxx, 628xxx, +628xxx, 8xxx atau NIM / NIP DPL
-const PHONE_REGEX = /^\+628[0-9]\d{6,11}$/;
+const STORE_KEY = "berseka:lastPhone";
 
-function normalizePhone(val: string): string {
-  let t = val.trim();
-  if (t.includes(".")) return t; // Return DPL NIP as is
-  t = t.replace(/[\s\-().]/g, "");
-  if (t.startsWith("08")) return "+62" + t.slice(1);
-  if (t.startsWith("8")) return "+62" + t;
-  if (t.startsWith("628") && !t.startsWith("+")) return "+" + t;
-  return t;
+// Utility formatting dan normalisasi nomor ponsel serta NIP DPL & NIM
+function extractDigits(val: string): string {
+  return (val || "").replace(/\D/g, "");
 }
 
-function isPhoneValid(val: string): boolean {
-  const t = val.trim();
-  // If it's a DPL NIP (contains dot or starts with 4127)
-  if (t.startsWith("4127") || t.includes(".")) {
-    return true;
-  }
-  // Allow NIM
-  if (/^\d{6,12}$/.test(t)) {
-    return true;
-  }
-  return PHONE_REGEX.test(normalizePhone(val));
+// Deteksi apakah input merupakan NIP DPL (awalan 4127 atau mengandung titik) atau NIM / Username
+function isDplNipOrNim(val: string): boolean {
+  const t = (val || "").trim();
+  return t.startsWith("4127") || t.includes(".") || /[a-zA-Z@]/.test(t);
 }
 
-// ─── Main Login Component ─────────────────────────────────────────────────────
+function normalizeToIndoPhone(val: string): string {
+  let d = extractDigits(val);
+  if (d.startsWith("62")) d = "0" + d.slice(2);
+  else if (d.startsWith("8")) d = "0" + d;
+  return d;
+}
+
+function formatPhoneDisplay(val: string): string {
+  if (isDplNipOrNim(val)) {
+    return val;
+  }
+  const d = normalizeToIndoPhone(val).slice(0, 14);
+  return d.replace(/^(\d{4})(\d{0,4})(\d{0,6}).*/, (_, a, b, c) =>
+    [a, b, c].filter(Boolean).join(" ")
+  );
+}
+
+function toPayloadIdentifier(val: string): string {
+  const t = (val || "").trim();
+  if (isDplNipOrNim(t)) return t;
+  const norm = normalizeToIndoPhone(t);
+  if (norm.startsWith("08")) return "+62" + norm.slice(1);
+  return norm;
+}
+
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login, isLoading: isStoreLoading } = useAuthStore();
   const { branding } = useAppBrandingStore();
 
-  // Login State
-  const [identifier, setIdentifier] = useState("");
+  // Form State
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   // UX State
   const [isLocalLoading, setIsLocalLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-
-  // Validation States
-  const [identifierError, setIdentifierError] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [isShaking, setIsShaking] = useState(false);
 
-  const passwordInputRef = useRef<HTMLInputElement>(null);
+  // Deteksi Safari di Apple iPhone
+  const [safariStatus, setSafariStatus] = useState<"ok" | "warn" | "default">("default");
 
-  // Dynamic Mobile & Web App Release Version State (Syncs real-time with /system/latest-release)
+  // Dynamic Mobile & Web App Release Version State
   const [appVersion, setAppVersion] = useState<string>(() => {
     try {
       return localStorage.getItem("berseka_app_version") || "";
@@ -72,14 +99,53 @@ const Login: React.FC = () => {
       return "";
     }
   });
-  const [buildNumber, setBuildNumber] = useState<number | string>(() => {
-    try {
-      return localStorage.getItem("berseka_app_build") || "";
-    } catch {
-      return "";
-    }
-  });
 
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+
+  // Ambil nomor tersimpan di localStorage (jika sebelumnya centang Ingat Saya)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORE_KEY);
+      if (saved) {
+        setPhone(formatPhoneDisplay(saved));
+        setRememberMe(true);
+      }
+    } catch (_e) {}
+  }, []);
+
+  // Salam waktu dinamis (Pagi/Siang/Sore/Malam)
+  const [greeting, setGreeting] = useState("Selamat datang kembali.");
+  useEffect(() => {
+    const h = new Date().getHours();
+    const salam =
+      h < 11
+        ? "Selamat pagi"
+        : h < 15
+        ? "Selamat siang"
+        : h < 18
+        ? "Selamat sore"
+        : "Selamat malam";
+    setGreeting(`${salam}! Masuk untuk melanjutkan kegiatanmu.`);
+  }, []);
+
+  // Deteksi User-Agent Safari iPhone
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const isIPhone = /iPhone/.test(ua);
+    const isSafari =
+      /Safari/.test(ua) &&
+      !/CriOS|FxiOS|EdgiOS|OPiOS|GSA|Instagram|FBAN|FBAV|Line\//.test(ua);
+
+    if (isIPhone && isSafari) {
+      setSafariStatus("ok");
+    } else if (isIPhone) {
+      setSafariStatus("warn");
+    } else {
+      setSafariStatus("default");
+    }
+  }, []);
+
+  // Sinkronisasi rilis sistem
   useEffect(() => {
     let isMounted = true;
     async function fetchLatestRelease() {
@@ -87,22 +153,13 @@ const Login: React.FC = () => {
         const res = await api.get("/system/latest-release");
         const data = res.data?.data || res.data;
         const ver = data?.latestVersion || data?.version;
-        const bld = data?.buildNumber;
         if (isMounted && ver) {
           setAppVersion(ver);
           try {
             localStorage.setItem("berseka_app_version", ver);
           } catch {}
         }
-        if (isMounted && bld) {
-          setBuildNumber(bld);
-          try {
-            localStorage.setItem("berseka_app_build", String(bld));
-          } catch {}
-        }
-      } catch (_err) {
-        // Fallback offline / network interruption
-      }
+      } catch (_err) {}
     }
     fetchLatestRelease();
     return () => {
@@ -110,85 +167,81 @@ const Login: React.FC = () => {
     };
   }, []);
 
-
-  // Force light mode on login page unconditionally
+  // Force Light Theme di Halaman Login
   useEffect(() => {
     useThemeStore.getState().setInsideMainLayout(false);
     useThemeStore.getState().resetThemeToLight();
   }, []);
 
-  const handleIdentifierBlur = () => {
-    const raw = identifier.trim();
-    if (!raw) {
-      setIdentifierError("Nomor HP wajib diisi.");
-      return;
-    }
-    const normalized = normalizePhone(raw);
-    if (!isPhoneValid(normalized)) {
-      setIdentifierError("Masukkan nomor HP yang diawali 08, berisi 10–13 angka.");
-      return;
-    }
-    setIdentifierError("");
+  const triggerShake = () => {
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
   };
 
-  const handlePasswordBlur = () => {
-    const trimmed = password.trim();
-    if (!trimmed) {
-      setPasswordError("Kata sandi wajib diisi.");
-      return;
-    }
-    if (trimmed.length < 6) {
-      setPasswordError("Kata sandi salah. Silakan coba lagi.");
-      return;
-    }
-    setPasswordError("");
-  };
+  const validate = (): boolean => {
+    let isValid = true;
+    const clean = phone.trim();
 
-  const triggerToast = (message: string, type: "error" | "warning" | "server" | "network" = "error") => {
-    if (type === "warning") {
-      showToast.warning(message);
+    if (!clean) {
+      setPhoneError("Nomor ponsel, NIM, atau NIP DPL wajib diisi.");
+      isValid = false;
+    } else if (isDplNipOrNim(clean)) {
+      if (clean.length < 4) {
+        setPhoneError("NIP DPL / NIM terlalu pendek.");
+        isValid = false;
+      } else {
+        setPhoneError("");
+      }
     } else {
-      showToast.error(message);
+      const digits = extractDigits(phone);
+      const normalized = normalizeToIndoPhone(phone);
+      if (!/^08\d{6,12}$/.test(normalized) && !/^\d{6,14}$/.test(digits)) {
+        setPhoneError("Format belum sesuai, contoh: 0812 3456 7890 atau NIP DPL.");
+        isValid = false;
+      } else {
+        setPhoneError("");
+      }
     }
+
+    if (!password.trim()) {
+      setPasswordError("Kata sandi wajib diisi.");
+      isValid = false;
+    } else if (password.trim().length < 6) {
+      setPasswordError("Kata sandi minimal 6 karakter.");
+      isValid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    return isValid;
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (isStoreLoading || isLocalLoading) return;
 
-    const rawId = identifier.trim();
-    let hasError = false;
+    setErrorMessage("");
 
-    if (!rawId) {
-      setIdentifierError("Nomor HP wajib diisi.");
-      hasError = true;
-    } else {
-      const normalized = normalizePhone(rawId);
-      if (!isPhoneValid(normalized)) {
-        setIdentifierError("Masukkan nomor HP yang diawali 08, berisi 10–13 angka.");
-        hasError = true;
-      }
+    if (!validate()) {
+      triggerShake();
+      return;
     }
 
-    const passVal = password.trim();
-    if (!passVal) {
-      setPasswordError("Kata sandi wajib diisi.");
-      hasError = true;
-    } else if (passVal.length < 6) {
-      setPasswordError("Kata sandi salah. Silakan coba lagi.");
-      hasError = true;
-    }
-
-    if (hasError) return;
-
-    const idVal = normalizePhone(rawId);
-    if (idVal !== identifier) setIdentifier(idVal);
-
+    const payloadPhone = toPayloadIdentifier(phone);
     setIsLocalLoading(true);
-    const success = await login(idVal, passVal, rememberMe);
+
+    const success = await login(payloadPhone, password.trim(), rememberMe);
     setIsLocalLoading(false);
 
     if (success) {
+      try {
+        if (rememberMe) {
+          localStorage.setItem(STORE_KEY, payloadPhone);
+        } else {
+          localStorage.removeItem(STORE_KEY);
+        }
+      } catch (_e) {}
+
       const user = useAuthStore.getState().user;
       const roleLabelMap: Record<string, string> = {
         DEVELOPER: "Developer",
@@ -205,146 +258,148 @@ const Login: React.FC = () => {
         PANITIA_TASKFORCE: "Task Force",
         MAHASISWA_KKN: "Mahasiswa KKN",
       };
-      const displayRole = user?.peran ? (roleLabelMap[user.peran] || user.peran) : "Pengguna";
+      const displayRole = user?.peran ? roleLabelMap[user.peran] || user.peran : "Pengguna";
       const displayName = user?.name || displayRole;
 
       showToast.success(`Selamat datang kembali, ${displayName}!`);
       navigate("/dasbor");
     } else {
+      triggerShake();
       const storeErr = useAuthStore.getState().error;
+      let msg = "Gagal masuk ke sistem. Periksa nomor ponsel dan kata sandi Anda.";
+
       if (storeErr === "USER_NOT_FOUND") {
-        setIdentifierError("Nomor ponsel tidak terdaftar di sistem.");
+        msg = "Nomor ponsel tidak terdaftar di sistem BERSEKA.";
+        setPhoneError(msg);
       } else if (storeErr === "WRONG_PASSWORD") {
-        setPasswordError("Kata sandi salah. Silakan coba lagi.");
+        msg = "Kata sandi salah. Silakan coba lagi.";
+        setPasswordError(msg);
         setPassword("");
         setTimeout(() => passwordInputRef.current?.focus(), 50);
       } else if (storeErr === "MAHASISWA_MUST_USE_IOS_SAFARI") {
-        triggerToast("Mahasiswa KKN wajib menggunakan perangkat Apple iPhone dengan peramban Safari.", "error");
-        setIdentifierError("Khusus iPhone dengan Safari (Android dan desktop tidak didukung)");
+        msg = "Mahasiswa KKN wajib menggunakan peramban Safari di perangkat Apple iPhone.";
       } else if (storeErr === "ROLE_NOT_ALLOWED_ON_WEB") {
-        triggerToast("Akses web khusus Pengelola dan Dosen Pembimbing Lapangan (DPL). Warga dan Petugas Pemilah hanya dapat menggunakan aplikasi seluler.", "warning");
-        setIdentifierError("Akses web ditutup untuk peran ini (Gunakan aplikasi seluler)");
+        msg = "Akses web khusus DPL dan Pengelola. Warga & Petugas Pemilah silakan gunakan aplikasi seluler (APK).";
       } else if (storeErr === "USER_INACTIVE") {
-        triggerToast("Akun Anda belum aktif atau telah dinonaktifkan.", "warning");
+        msg = "Akun Anda belum aktif atau telah dinonaktifkan oleh administrator.";
       } else if (storeErr === "USER_PENDING_APPROVAL") {
-        triggerToast("Akun Anda belum disetujui oleh pengurus RW setempat.", "warning");
-        setIdentifierError("Akun belum disetujui pengurus RW setempat.");
+        msg = "Akun Anda masih menunggu verifikasi dan persetujuan pengurus RW.";
       } else if (storeErr === "SERVICE_UNAVAILABLE") {
-        triggerToast("Server sedang bermasalah, silakan coba lagi nanti.", "server");
+        msg = "Server sedang dalam pemeliharaan. Coba beberapa saat lagi.";
       } else if (storeErr === "TOO_MANY_ATTEMPTS") {
-        triggerToast("Terlalu banyak percobaan, silakan coba lagi dalam 1 menit.", "warning");
+        msg = "Terlalu banyak percobaan masuk gagal. Coba lagi dalam 1 menit.";
       } else if (storeErr === "NETWORK_ERROR") {
-        triggerToast("Tidak dapat terhubung ke server, periksa koneksi internet Anda.", "network");
-      } else {
-        triggerToast("Gagal masuk ke sistem. Silakan coba lagi.", "error");
+        msg = "Tidak dapat terhubung ke server. Periksa koneksi internet Anda.";
       }
+
+      setErrorMessage(msg);
     }
   };
 
   const isLoading = isStoreLoading || isLocalLoading;
+  const helpdeskUrl = branding.helpdeskUrl || "https://wa.me/6285715516065";
 
   return (
-    <div className="min-h-screen bg-[#f2f8fd] text-[#0f2142] flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 relative overflow-x-hidden font-sans">
-      {/* Background Soft Radial Blobs */}
-      <div className="fixed w-[60vw] h-[60vw] -left-[25vw] -bottom-[30vw] rounded-full bg-[radial-gradient(closest-side,#dcefff_0%,rgba(220,239,255,0)_100%)] pointer-events-none z-0" />
-      <div className="fixed w-[50vw] h-[50vw] -right-[20vw] -top-[25vw] rounded-full bg-[radial-gradient(closest-side,#dcefff_0%,rgba(220,239,255,0)_100%)] pointer-events-none z-0" />
-
-      {/* Main Container Card (53% Left Hero / 47% Right Auth) */}
-      <main className="relative z-10 w-full max-w-[1360px] bg-white rounded-[22px] overflow-hidden shadow-[0_30px_70px_-30px_rgba(31,73,125,0.25),0_2px_6px_rgba(31,73,125,0.05)] grid grid-cols-1 lg:grid-cols-[53fr_47fr] animate-fade-in-up items-stretch">
+    <div className="min-h-screen lg:h-screen lg:min-h-[540px] bg-[#F5F7F8] text-[#0E1B33] flex flex-col font-sans select-none overflow-x-hidden">
+      {/* Container Utama 2 Kolom (56fr Panel Kiri : 44fr Panel Kanan di Desktop) */}
+      <div className="w-full flex-1 flex flex-col lg:grid lg:grid-cols-[56fr_44fr]">
         
-        {/* ===== Panel Kiri: Hero Informasi KKN Tematik (Tampil di bawah form pada layar ponsel agar form langsung terlihat) ===== */}
-        <LoginKknHero className="order-2 lg:order-1 border-t lg:border-t-0 lg:border-r border-slate-100" />
+        {/* Panel Kiri: Hero Visual KKN Tematik BERSEKA */}
+        <LoginKknHero className="w-full order-1 lg:order-1 h-auto lg:h-full shrink-0" />
 
-        {/* ===== Panel Kanan: Form Login (Tampil di atas pada mobile untuk UX optimal) ===== */}
-        <section className="order-1 lg:order-2 flex flex-col p-6 sm:p-8 md:p-10 lg:p-12 bg-white text-left justify-between">
+        {/* Panel Kanan: Sisi Form Login */}
+        <main className="w-full order-2 lg:order-2 h-auto lg:h-full flex flex-col justify-between p-4 sm:p-6 lg:p-10 xl:p-14 overflow-y-auto relative bg-[#F5F7F8] -mt-8 sm:-mt-10 lg:mt-0 z-20">
           
-          {/* Header Bar: Logo & Link Beranda (Selaras dengan Identitas Brand) */}
-          <div className="flex items-center justify-between gap-4">
-            <Link to="/" aria-label={`${branding.appName || "BERSEKA"} beranda`} className="inline-flex items-center text-[#0f2142] no-underline group">
-              <picture>
-                <source srcSet={branding.logoHorizontalDarkUrl || branding.logoHorizontalUrl || BERSEKA_LOGOS.fullWebp} type="image/webp" />
-                <img
-                  src={branding.logoHorizontalUrl || BERSEKA_LOGOS.fullPng}
-                  alt={branding.appName || "BERSEKA"}
-                  className="h-10 sm:h-11 w-auto max-w-[175px] object-contain transition-transform group-hover:scale-105"
-                  width={160}
-                  height={42}
-                  loading="eager"
-                  decoding="async"
-                />
-              </picture>
-            </Link>
-
-            <Link to="/" className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#138861] hover:underline hover:underline-offset-4 transition-all">
-              <span><span className="hidden sm:inline">Kembali ke </span>Beranda</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
-                <path d="M7 17 17 7M8 7h9v9"/>
-              </svg>
+          {/* Header Bar Desktop: Link Kembali ke Beranda */}
+          <div className="hidden lg:flex justify-end items-center">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#0B7478] hover:text-[#075A5D] transition-colors group"
+            >
+              <span>Kembali ke beranda</span>
+              <ArrowUpRight size={17} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Link>
           </div>
 
-          {/* Body: Form Login */}
-          <div className="w-full max-w-[560px] mx-auto lg:mx-0 mt-6 sm:mt-8 md:mt-10">
-            <h1 className="text-2xl sm:text-3xl md:text-[2.25rem] font-extrabold tracking-[-0.03em] leading-tight text-[#0f2142] m-0">
+          {/* Card Form Login */}
+          <div
+            className={`w-full max-w-[460px] mx-auto my-auto bg-white p-6 sm:p-8 xl:p-10 rounded-[24px] shadow-[0_40px_80px_-40px_rgba(14,27,51,0.22),0_2px_8px_rgba(14,27,51,0.04)] transition-all ${
+              isShaking ? "animate-shake" : ""
+            }`}
+          >
+            <h1 className="text-2xl sm:text-3xl xl:text-[32px] font-extrabold tracking-tight text-[#0E1B33] leading-tight m-0">
               Selamat datang kembali
             </h1>
-            <p className="mt-2 text-sm sm:text-base text-[#7d8ea6]">
-              Masuk untuk mengakses layanan {branding.appName || "BERSEKA"}.
+            <p className="mt-1.5 text-xs sm:text-sm text-[#5D6B78] leading-relaxed">
+              {greeting}
             </p>
 
-            <form onSubmit={handleSubmit} noValidate className="mt-6 sm:mt-8 space-y-5">
+            {/* Alert Error Box */}
+            {errorMessage && (
+              <div
+                role="alert"
+                className="mt-4 p-3 rounded-xl bg-[#FDECEF] border border-[#F9CAD2] text-[#8E2235] text-xs sm:text-sm flex items-start gap-2.5 animate-fadeIn"
+              >
+                <AlertCircle size={18} className="shrink-0 mt-0.5 text-[#C8374B]" />
+                <span className="leading-snug">{errorMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} noValidate className="mt-5 sm:mt-6 space-y-4">
               
               {/* Field 1: Nomor Ponsel */}
               <div>
-                <label htmlFor="phone" className="block font-bold text-sm sm:text-[1.02rem] text-[#0f2142] mb-2">
-                  Nomor ponsel
+                <label htmlFor="phone" className="block text-xs sm:text-sm font-bold text-[#0E1B33] mb-1.5">
+                  Nomor ponsel / NIP DPL / NIM
                 </label>
-                <div className="relative flex items-center">
-                  <svg className="absolute left-4 sm:left-5 w-5 h-5 sm:w-6 sm:h-6 text-[#8796ab] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/>
-                  </svg>
+                <div
+                  className={`flex items-center h-12 sm:h-13 px-3.5 rounded-xl border bg-white transition-all ${
+                    phoneError
+                      ? "border-[#C8374B] ring-4 ring-[#C8374B]/10"
+                      : "border-[#DCE3E8] focus-within:border-[#0B7478] focus-within:ring-4 focus-within:ring-[#0B7478]/12"
+                  }`}
+                >
+                  <Smartphone size={19} className="text-[#7C8A96] shrink-0 pointer-events-none" />
                   <input
                     id="phone"
                     name="phone"
-                    type="tel"
-                    inputMode="numeric"
+                    type="text"
+                    inputMode={isDplNipOrNim(phone) ? "text" : "tel"}
                     autoComplete="tel"
-                    placeholder="Contoh: 081234567890"
-                    maxLength={15}
-                    value={identifier}
+                    placeholder="Contoh: 0812 3456 7890 atau NIP DPL"
+                    maxLength={32}
+                    value={phone}
                     onChange={(e) => {
-                      let val = e.target.value.replace(/[^\d+]/g, '');
-                      if (val.startsWith('+62')) val = '0' + val.slice(3);
-                      val = val.replace(/\D/g, '');
-                      setIdentifier(val);
-                      if (val.trim()) setIdentifierError("");
+                      const formatted = formatPhoneDisplay(e.target.value);
+                      setPhone(formatted);
+                      if (formatted.trim()) setPhoneError("");
+                      setErrorMessage("");
                     }}
-                    onBlur={handleIdentifierBlur}
                     disabled={isLoading}
-                    className={`w-full h-12 sm:h-14 pl-12 sm:pl-16 pr-4 sm:pr-6 bg-white text-[#0f2142] placeholder-[#8a99ae] text-base font-medium rounded-[11px] border-[1.5px] outline-none transition-all shadow-[0_1px_2px_rgba(15,33,66,0.04)] ${
-                      identifierError
-                        ? "border-[#c93a3a] focus:ring-4 focus:ring-[#c93a3a]/15"
-                        : "border-[#dfe6ee] focus:border-[#138861] focus:ring-4 focus:ring-[#138861]/15"
-                    }`}
+                    style={{ outline: "none", boxShadow: "none" }} className="w-full h-full pl-3 pr-2 text-sm sm:text-base font-medium text-[#0E1B33] placeholder-[#9AA6B2] bg-transparent outline-none border-0 !outline-none focus:!outline-none focus-visible:!outline-none focus:ring-0 focus-visible:ring-0"
                   />
                 </div>
-                {identifierError && (
-                  <p className="mt-2 text-xs sm:text-sm font-semibold text-[#c93a3a]">
-                    {identifierError}
+                {phoneError && (
+                  <p className="mt-1.5 text-xs font-semibold text-[#C8374B] flex items-center gap-1.5">
+                    <AlertCircle size={13} className="shrink-0" />
+                    <span>{phoneError}</span>
                   </p>
                 )}
               </div>
 
               {/* Field 2: Kata Sandi */}
               <div>
-                <label htmlFor="password" className="block font-bold text-sm sm:text-[1.02rem] text-[#0f2142] mb-2">
+                <label htmlFor="password" className="block text-xs sm:text-sm font-bold text-[#0E1B33] mb-1.5">
                   Kata sandi
                 </label>
-                <div className="relative flex items-center">
-                  <svg className="absolute left-4 sm:left-5 w-5 h-5 sm:w-6 sm:h-6 text-[#8796ab] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <rect x="4.5" y="10.5" width="15" height="11" rx="2.5"/>
-                    <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>
-                  </svg>
+                <div
+                  className={`flex items-center h-12 sm:h-13 px-3.5 rounded-xl border bg-white transition-all ${
+                    passwordError
+                      ? "border-[#C8374B] ring-4 ring-[#C8374B]/10"
+                      : "border-[#DCE3E8] focus-within:border-[#0B7478] focus-within:ring-4 focus-within:ring-[#0B7478]/12"
+                  }`}
+                >
+                  <Lock size={19} className="text-[#7C8A96] shrink-0 pointer-events-none" />
                   <input
                     id="password"
                     name="password"
@@ -356,163 +411,126 @@ const Login: React.FC = () => {
                     onChange={(e) => {
                       setPassword(e.target.value);
                       if (e.target.value.trim()) setPasswordError("");
+                      setErrorMessage("");
                     }}
-                    onBlur={handlePasswordBlur}
                     disabled={isLoading}
-                    className={`w-full h-12 sm:h-14 pl-12 sm:pl-16 pr-12 sm:pr-14 bg-white text-[#0f2142] placeholder-[#8a99ae] text-base font-medium rounded-[11px] border-[1.5px] outline-none transition-all shadow-[0_1px_2px_rgba(15,33,66,0.04)] ${
-                      passwordError
-                        ? "border-[#c93a3a] focus:ring-4 focus:ring-[#c93a3a]/15"
-                        : "border-[#dfe6ee] focus:border-[#138861] focus:ring-4 focus:ring-[#138861]/15"
-                    }`}
+                    style={{ outline: "none", boxShadow: "none" }} className="w-full h-full pl-3 pr-2 text-sm sm:text-base font-medium text-[#0E1B33] placeholder-[#9AA6B2] bg-transparent outline-none border-0 !outline-none focus:!outline-none focus-visible:!outline-none focus:ring-0 focus-visible:ring-0"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 sm:right-4 w-9 h-9 flex items-center justify-center text-[#5d6f88] hover:bg-[#f1f5f9] rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-[#6A7884] hover:text-[#0E1B33] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
                     aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-                    aria-pressed={showPassword}
                   >
-                    {showPassword ? (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 sm:w-6 sm:h-6">
-                        <path d="M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.6M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/>
-                        <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/>
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 sm:w-6 sm:h-6">
-                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                      </svg>
-                    )}
+                    {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                   </button>
                 </div>
                 {passwordError && (
-                  <p className="mt-2 text-xs sm:text-sm font-semibold text-[#c93a3a]">
-                    {passwordError}
+                  <p className="mt-1.5 text-xs font-semibold text-[#C8374B] flex items-center gap-1.5">
+                    <AlertCircle size={13} className="shrink-0" />
+                    <span>{passwordError}</span>
                   </p>
                 )}
               </div>
 
-              {/* Checkbox: Ingat Saya & Lupa Kata Sandi */}
-              <div className="pt-1 flex items-center justify-between">
-                <label className="group inline-flex items-center gap-3 cursor-pointer select-none font-semibold text-sm sm:text-base text-[#0f2142]">
+              {/* Row: Ingat Saya (Lupa Kata Sandi di-hide sementara sesuai arahan) */}
+              <div className="flex items-center justify-between pt-1">
+                <label className="inline-flex items-center gap-2.5 cursor-pointer select-none text-[14px] font-medium text-[#2A3A4A] py-1">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="sr-only peer"
+                    className="w-5 h-5 rounded-[6px] border-[1.5px] border-[#9AA6B2] text-[#0B7478] focus:ring-[#0B7478] focus:ring-offset-0 cursor-pointer accent-[#0B7478]"
                   />
-                  <span className={`w-6 h-6 rounded-md border-[1.5px] flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-[#138861] ${
-                    rememberMe ? "bg-[#138861] border-[#138861]" : "border-[#dfe6ee] bg-white group-hover:border-[#138861]"
-                  }`}>
-                    {rememberMe && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-white">
-                        <path d="m5 12.5 4.5 4.5L19 7.5"/>
-                      </svg>
-                    )}
-                  </span>
                   <span>Ingat saya</span>
                 </label>
-
-                <button
-                  type="button"
-                  onClick={() => setShowForgotPassword(true)}
-                  className="font-bold text-xs sm:text-sm text-[#138861] hover:text-[#0e6e4e] hover:underline cursor-pointer transition-colors"
-                >
-                  Lupa kata sandi?
-                </button>
               </div>
 
-              {/* Tombol Submit */}
+              {/* Tombol Masuk */}
               <button
                 type="submit"
                 id="submitBtn"
                 disabled={isLoading}
-                className="w-full h-12 sm:h-14 flex items-center justify-center gap-3 font-bold text-base sm:text-lg text-white bg-[#138861] hover:bg-[#0e6e4e] rounded-[11px] border-0 cursor-pointer shadow-[0_10px_22px_-12px_rgba(19,136,97,0.75)] active:translate-y-px transition-all disabled:opacity-75 disabled:cursor-wait"
+                className="w-full h-12 sm:h-13 flex items-center justify-center gap-2.5 bg-[#0B7478] hover:bg-[#075A5D] active:scale-[0.99] text-white font-bold text-sm sm:text-base rounded-xl shadow-[0_14px_28px_-14px_rgba(8,94,98,0.8)] transition-all cursor-pointer disabled:opacity-75 disabled:cursor-wait group"
               >
                 {isLoading ? (
                   <>
-                    <span className="w-5 h-5 rounded-full border-3 border-white/40 border-t-white animate-spin" aria-hidden="true" />
+                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" aria-hidden="true" />
                     <span>Memproses…</span>
                   </>
                 ) : (
                   <>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6" aria-hidden="true">
-                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                      <path d="M10 17l5-5-5-5"/>
-                      <path d="M15 12H3"/>
-                    </svg>
                     <span>Masuk</span>
+                    <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                   </>
                 )}
               </button>
             </form>
 
-            {/* Warning Notice Box: Khusus Mahasiswa KKN */}
-            <aside role="note" className="flex gap-3.5 mt-6 p-4 sm:p-4.5 bg-[#fef9ee] border border-[#f5dfa8] rounded-xl text-left">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 text-[#d97706] mt-0.5" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 11v6"/>
-                <circle cx="12" cy="7.5" r=".6" fill="currentColor"/>
-              </svg>
-              <div className="space-y-1">
-                <div className="flex items-center flex-wrap gap-2 sm:gap-3">
-                  <strong className="text-xs sm:text-sm font-bold text-[#0f2142]">Catatan Mahasiswa KKN</strong>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fde8b6] text-[#b45309] text-xs font-semibold">
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3" aria-hidden="true">
-                      <path d="M16.4 12.7c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1ZM13.9 5c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5Z"/>
-                    </svg>
-                    iPhone · Safari
-                  </span>
-                </div>
-                <p className="text-xs sm:text-[13px] text-[#334155] leading-relaxed m-0">
-                  Presensi dan <em>logbook</em> kegiatan hanya dapat diakses melalui peramban <strong>Safari</strong> pada perangkat <strong>Apple iPhone</strong>. Akses Android dan komputer desktop tidak didukung.
-                </p>
+            {/* Footer Card: Badge Deteksi Safari & Bantuan */}
+            <div className="mt-5 flex flex-col items-center gap-2.5 text-center">
+              <div
+                role="note"
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium leading-snug transition-colors ${
+                  safariStatus === "ok"
+                    ? "bg-[#E6F7EE] text-[#1B6B41]"
+                    : safariStatus === "warn"
+                    ? "bg-[#FFF4DC] text-[#6E4A00]"
+                    : "bg-[#EAF4FD] text-[#2C4A66]"
+                }`}
+              >
+                <Smartphone size={14} className="shrink-0" />
+                <span>
+                  {safariStatus === "ok"
+                    ? "Perangkatmu siap untuk presensi & logbook"
+                    : safariStatus === "warn"
+                    ? "Buka di Safari iPhone untuk presensi & logbook"
+                    : "Presensi & logbook via Safari di iPhone"}
+                </span>
               </div>
-            </aside>
+
+              <p className="text-xs text-[#5D6B78] m-0">
+                Butuh bantuan?{" "}
+                <a
+                  href={`${helpdeskUrl}?text=Halo%20tim%20BERSEKA%2C%20saya%20butuh%20bantuan%20login`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-[#0B7478] hover:text-[#075A5D] hover:underline"
+                >
+                  Hubungi tim BERSEKA
+                </a>
+              </p>
+            </div>
           </div>
-        </section>
 
-      </main>
+          {/* Footer Page: Hak Cipta & Info Versi */}
+          <footer className="text-center text-xs text-[#6A7884] py-3 mt-4">
+            <p className="m-0 font-medium">{branding.copyrightText || "© 2026 BERSEKA.ID"}</p>
+            {appVersion && (
+              <p className="m-0 text-[11px] text-[#9AA6B2] font-semibold mt-0.5">
+                Versi {appVersion}
+              </p>
+            )}
+          </footer>
+        </main>
+      </div>
 
-      {/* Footer Page: Hak Cipta & Sinkronisasi Versi Seluler / Web */}
-      <footer className="relative z-10 mt-5 text-center text-xs text-[#7d8ea6] space-y-1">
-        <p className="m-0 font-medium">{branding.copyrightText || "© 2026 Universitas Komputer Indonesia"}</p>
-        {appVersion ? (
-          <p className="m-0 text-[11px] text-[#8fa0b5] font-semibold tracking-wide">
-            Versi {branding.appVersion || appVersion || "1.0.0"}{buildNumber ? ` • Build ${buildNumber}` : ""}
-          </p>
-        ) : null}
-      </footer>
-
-      {/* Floating Action Button: Download Aplikasi Seluler APK */}
+      {/* Floating Action Button: Unduh Aplikasi Seluler APK (Tetap Dipertahankan) */}
       <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-8 z-50 group flex items-center justify-center pointer-events-auto">
         <div className="relative flex items-center justify-center">
-          <span className="absolute -inset-1.5 rounded-full bg-[#138861]/30 animate-ping opacity-75 pointer-events-none" />
+          <span className="absolute -inset-1.5 rounded-full bg-[#0B7478]/25 animate-ping opacity-75 pointer-events-none" />
           <Link
             to="/download"
-            className="relative w-12 h-12 sm:w-14 sm:h-14 bg-[#138861] hover:bg-[#0e6e4e] text-white rounded-full flex items-center justify-center shadow-2xl shadow-[#138861]/40 hover:scale-110 active:scale-95 transition-all duration-300 border-2 border-white/80 cursor-pointer shrink-0"
-            aria-label={`Unduh Aplikasi Seluler ${branding.appName || "BERSEKA"} (APK)`}
+            className="relative w-12 h-12 sm:w-14 sm:h-14 bg-[#0B7478] hover:bg-[#075A5D] text-white rounded-full flex items-center justify-center shadow-2xl shadow-[#0B7478]/40 hover:scale-110 active:scale-95 transition-all duration-300 border-2 border-white/90 cursor-pointer shrink-0"
+            aria-label="Unduh Aplikasi Seluler BERSEKA (APK)"
           >
             <Download size={20} className="sm:w-[22px] sm:h-[22px] text-white group-hover:rotate-12 transition-transform" />
             <span className="absolute right-16 top-1/2 -translate-y-1/2 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-black tracking-wide whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 translate-x-2 transition-all duration-300 shadow-xl border border-slate-800 hidden sm:block">
-              Unduh Aplikasi Seluler {branding.appName || "BERSEKA"} (APK)
+              Unduh Aplikasi Seluler BERSEKA (APK)
             </span>
           </Link>
         </div>
       </div>
-
-      {/* Modal Lupa Kata Sandi */}
-      <ForgotPasswordModal
-        isOpen={showForgotPassword}
-        onClose={() => setShowForgotPassword(false)}
-        onSuccessReset={(resetPhone) => {
-          setIdentifier(resetPhone.replace(/^\+62/, "0"));
-          setShowForgotPassword(false);
-          setTimeout(() => {
-            passwordInputRef.current?.focus();
-          }, 200);
-        }}
-      />
     </div>
   );
 };

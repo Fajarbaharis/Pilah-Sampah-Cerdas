@@ -1023,6 +1023,22 @@ export class BinService {
           },
         });
 
+        // 🔗 Sinkronkan relasi pendampingan kelompok KKN dan mahasiswa jika bin terikat pada kelompok/mahasiswa KKN
+        if (bin.kelompokId && !user.kelompokKknId) {
+          await tx.user.update({
+            where: { id: user.id },
+            data: { kelompokKknId: bin.kelompokId },
+          });
+          user.kelompokKknId = bin.kelompokId;
+        }
+        if (bin.registeredByStudentId && !user.pendampingStudentId) {
+          await tx.user.update({
+            where: { id: user.id },
+            data: { pendampingStudentId: bin.registeredByStudentId },
+          });
+          user.pendampingStudentId = bin.registeredByStudentId;
+        }
+
         await tx.binOwnership.create({
           data: {
             binId: bin.id,
