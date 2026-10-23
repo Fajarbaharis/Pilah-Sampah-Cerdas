@@ -596,6 +596,25 @@ button{font:inherit}
 .d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}.d4{transition-delay:.32s}.d5{transition-delay:.4s}
 .hero .rv{transition-duration:1.2s}
 
+/* Container-level Reveal & Fail-Safe Visibility Guard untuk Konten Dinamis */
+.grid3.rv,
+.news.rv {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
+}
+.grid3.rv.in,
+.news.rv.in {
+  opacity: 1;
+  transform: none;
+}
+.grid3.in .card,
+.news.in .card,
+#prods.in .card {
+  opacity: 1;
+  transform: none;
+}
+
 /* ---------- responsif ---------- */
 @media (max-width:1200px){
   .nav a,.dd-btn{padding:0 11px;font-size:14.5px}

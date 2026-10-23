@@ -1218,9 +1218,9 @@ export const LandingPage: React.FC = () => {
                 </span>
               </div>
             </div>
-            <div className="grid3">
+            <div className="grid3 rv">
               {programsList.map((prog, idx) => (
-                <article key={prog.id} className={`card rv ${idx > 0 ? `d${idx % 3}` : ""}`}>
+                <article key={prog.id} className={`card ${idx > 0 ? `d${idx % 3}` : ""}`}>
                   <div className="card__img">
                     <img src={prog.img} alt={prog.title} />
                   </div>
@@ -1534,11 +1534,11 @@ export const LandingPage: React.FC = () => {
                 </svg>
               </button>
             </div>
-            <div className="news">
+            <div className="news rv">
               {newsList.slice(0, 3).map((item, idx) => (
                 <article
                   key={item.id}
-                  className={`card rv ${idx > 0 ? `d${idx}` : ""}`}
+                  className={`card ${idx > 0 ? `d${idx}` : ""}`}
                   onClick={() => setSelectedNews(item)}
                   style={{ cursor: "pointer" }}
                 >
