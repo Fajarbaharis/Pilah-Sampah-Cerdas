@@ -9,6 +9,16 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../../store/useAuthStore";
 import toast from "react-hot-toast";
+import api from "../../services/api";
+import {
+  loadCmsContent,
+  saveCmsContent,
+  CMS_BROADCAST_CHANNEL_NAME,
+  type LandingContentPayload,
+  type MarketProductItem,
+  type NewsArticleItem,
+  type ActionCampaignItem,
+} from "../../utils/cmsStorage";
 import "./LandingPage.css";
 
 interface ProgramItem {
@@ -40,7 +50,151 @@ interface NewsItem {
   img: string;
   desc: string;
   author: string;
+  content?: string;
 }
+
+interface LandingStatsData {
+  totalPengguna?: number;
+  totalUsers?: number;
+  kelurahanCount?: number;
+  totalSampahKg?: number;
+  sampahOrganikKg?: number;
+  sampahAnorganikKg?: number;
+  totalPoin?: number;
+  kegiatanCount?: number;
+  totalBinsCount?: number;
+  assignedBinsCount?: number;
+  smartIotBinsCount?: number;
+  wasteTrendPercentage?: number;
+  wasteTrendDirection?: "UP" | "DOWN" | "STABLE";
+  poinRewardIde?: number;
+  aisahStats?: {
+    totalScans?: number;
+    accuracyPercent?: number;
+  };
+}
+
+// Konfigurasi koefisien kalkulator potensi reward sampah
+const CALC_COEFFICIENTS = {
+  organicPointsPerKg: 10,
+  plasticPointsPerKg: 25,
+  oilPointsPerLiter: 50,
+  rupiahPerPoint: 100,
+  co2ReductionFactors: {
+    organic: 0.5,
+    plastic: 1.5,
+    oil: 2.0,
+  },
+};
+
+const PRODUCT_IMAGE_FALLBACKS: Record<string, string> = {
+  "prod-01": "/image/landingpage/prod-telur-ayam.webp",
+  "prod-1": "/image/landingpage/prod-telur-ayam.webp",
+  "prod-02": "/image/landingpage/prod-sayuran-segar.webp",
+  "prod-2": "/image/landingpage/prod-sayuran-segar.webp",
+  "prod-03": "/image/landingpage/prod-poc-500ml.webp",
+  "prod-3": "/image/landingpage/prod-poc-500ml.webp",
+  "prod-04": "/image/landingpage/prod-ikan-bioflok.webp",
+  "prod-4": "/image/landingpage/prod-ikan-bioflok.webp",
+  "prod-05": "/image/landingpage/prod-tas-anyaman.webp",
+  "prod-5": "/image/landingpage/prod-tas-anyaman.webp",
+  "prod-06": "/image/landingpage/prod-maggot-kering.webp",
+  "prod-6": "/image/landingpage/prod-maggot-kering.webp",
+};
+
+const PROGRAM_IMAGE_FALLBACKS: Record<string, string> = {
+  "camp-01": "/image/landingpage/prog-kodifikasi-qr.webp",
+  "kodifikasi-qr": "/image/landingpage/prog-kodifikasi-qr.webp",
+  "camp-02": "/image/landingpage/prog-gas-metana.webp",
+  "gas-metana": "/image/landingpage/prog-gas-metana.webp",
+  "camp-03": "/image/landingpage/prog-buruan-sae.webp",
+  "buruan-sae": "/image/landingpage/prog-buruan-sae.webp",
+  "camp-04": "/image/landingpage/prog-komposter-poc.webp",
+  "komposter-poc": "/image/landingpage/prog-komposter-poc.webp",
+  "camp-05": "/image/landingpage/prog-timbangan-digital.webp",
+  "timbangan-digital": "/image/landingpage/prog-timbangan-digital.webp",
+  "camp-06": "/image/landingpage/prog-produk-kreatif.webp",
+  "produk-kreatif": "/image/landingpage/prog-produk-kreatif.webp",
+};
+
+const resolveProductImage = (item: MarketProductItem): string => {
+  if (PRODUCT_IMAGE_FALLBACKS[item.id]) return PRODUCT_IMAGE_FALLBACKS[item.id];
+  const titleLower = (item.title || "").toLowerCase();
+  if (titleLower.includes("telur")) return "/image/landingpage/prod-telur-ayam.webp";
+  if (titleLower.includes("sayur")) return "/image/landingpage/prod-sayuran-segar.webp";
+  if (titleLower.includes("poc") || titleLower.includes("pupuk organik")) return "/image/landingpage/prod-poc-500ml.webp";
+  if (titleLower.includes("bioflok") || titleLower.includes("ikan")) return "/image/landingpage/prod-ikan-bioflok.webp";
+  if (titleLower.includes("kerajinan") || titleLower.includes("anyaman") || titleLower.includes("tas")) return "/image/landingpage/prod-tas-anyaman.webp";
+  if (titleLower.includes("maggot")) return "/image/landingpage/prod-maggot-kering.webp";
+  return item.imageUrl || "/image/landingpage/prod-telur-ayam.webp";
+};
+
+const resolveProductCategory = (item: MarketProductItem): string => {
+  const cat = (item.category || "").toLowerCase();
+  const label = (item.categoryLabel || "").toLowerCase();
+  const title = (item.title || "").toLowerCase();
+
+  if (cat.includes("pupuk") || cat.includes("kompos") || label.includes("pupuk") || label.includes("kompos") || title.includes("poc")) {
+    return "Pupuk & Kompos";
+  }
+  if (cat.includes("eco") || cat.includes("enzyme") || label.includes("eco")) {
+    return "Eco-Enzyme";
+  }
+  if (cat.includes("bibit") || cat.includes("tanaman") || cat.includes("sayur") || cat.includes("buah") || cat.includes("buruan") || label.includes("buruan")) {
+    return "Bibit & Tanaman";
+  }
+  if (cat.includes("kerajinan") || cat.includes("daur") || cat.includes("kreatif") || label.includes("daur") || label.includes("kreatif")) {
+    return "Daur Ulang Kreatif";
+  }
+  if (cat.includes("pakan") || cat.includes("maggot") || cat.includes("ikan") || cat.includes("telur") || cat.includes("daging") || cat.includes("pangan")) {
+    return "Pakan Organik";
+  }
+  return item.categoryLabel || "Daur Ulang Kreatif";
+};
+
+const mapCmsProductToItem = (item: MarketProductItem): ProductItem => ({
+  id: item.id,
+  title: item.title,
+  category: resolveProductCategory(item),
+  meta: item.unit || `${item.stock || 0} Stok Tersedia`,
+  img: resolveProductImage(item),
+  desc: item.description || (item.benefits && item.benefits.length > 0 ? item.benefits.join(". ") : ""),
+  points: typeof item.pricePoints === "number" ? item.pricePoints : 0,
+});
+
+const resolveProgramImage = (c: ActionCampaignItem): string => {
+  if (PROGRAM_IMAGE_FALLBACKS[c.id]) return PROGRAM_IMAGE_FALLBACKS[c.id];
+  const titleLower = (c.title || "").toLowerCase();
+  if (titleLower.includes("qr") || titleLower.includes("kodifikasi")) return "/image/landingpage/prog-kodifikasi-qr.webp";
+  if (titleLower.includes("gas") || titleLower.includes("metana")) return "/image/landingpage/prog-gas-metana.webp";
+  if (titleLower.includes("buruan") || titleLower.includes("sae")) return "/image/landingpage/prog-buruan-sae.webp";
+  if (titleLower.includes("komposter") || titleLower.includes("poc")) return "/image/landingpage/prog-komposter-poc.webp";
+  if (titleLower.includes("timbangan") || titleLower.includes("digital")) return "/image/landingpage/prog-timbangan-digital.webp";
+  if (titleLower.includes("kreatif") || titleLower.includes("produk") || titleLower.includes("pemanfaatan")) return "/image/landingpage/prog-produk-kreatif.webp";
+  return c.imageUrl || "/image/landingpage/prog-kodifikasi-qr.webp";
+};
+
+const mapCmsCampaignToProgram = (c: ActionCampaignItem): ProgramItem => ({
+  id: c.id,
+  tag: c.categoryLabel || "Program KKN",
+  title: c.title,
+  desc: c.description,
+  img: resolveProgramImage(c),
+  details: c.impactHighlight || c.description,
+  rw: c.location || "Kecamatan Coblong",
+  team: c.initiator || "KKN UNIKOM 2026",
+});
+
+const mapCmsNewsToItem = (n: NewsArticleItem): NewsItem => ({
+  id: n.id,
+  title: n.title,
+  date: n.date || "Terbaru",
+  category: n.category || "Kabar Lingkungan",
+  img: n.imageUrl || "/image/landingpage/news-rw11-dago.webp",
+  desc: n.summary || (n.content ? n.content.slice(0, 140) + "..." : ""),
+  content: n.content,
+  author: n.author || "Tim BERSEKA",
+});
 
 const PROGRAMS: ProgramItem[] = [
   {
@@ -228,6 +382,43 @@ export const LandingPage: React.FC = () => {
   // Pasar filter state
   const [pasarFilter, setPasarFilter] = useState<string>("all");
 
+  // Real backend & CMS data states
+  const [landingStats, setLandingStats] = useState<LandingStatsData | null>(null);
+  const [loadingStats, setLoadingStats] = useState<boolean>(true);
+  const [aisahRealtimeStats, setAisahRealtimeStats] = useState<{
+    totalScans: number;
+    accuracyPercent: number;
+  }>({
+    totalScans: 7738,
+    accuracyPercent: 100.0,
+  });
+
+  // Dynamic content collections (with robust initial fallbacks)
+  const [programsList, setProgramsList] = useState<ProgramItem[]>(PROGRAMS);
+  const [productsList, setProductsList] = useState<ProductItem[]>(PRODUCTS);
+  const [newsList, setNewsList] = useState<NewsItem[]>(NEWS_LIST);
+
+  // Dynamic targets with graceful fallbacks
+  const targetHero = useMemo(() => {
+    const count = landingStats?.totalPengguna ?? landingStats?.totalUsers;
+    return typeof count === "number" && count > 0 ? count : 1266;
+  }, [landingStats]);
+
+  const targetAisah = useMemo(() => {
+    const count = landingStats?.aisahStats?.totalScans ?? aisahRealtimeStats.totalScans;
+    return typeof count === "number" && count > 0 ? count : 7738;
+  }, [landingStats, aisahRealtimeStats]);
+
+  const aisahAccuracyPercent = useMemo(() => {
+    const acc = landingStats?.aisahStats?.accuracyPercent ?? aisahRealtimeStats.accuracyPercent;
+    return typeof acc === "number" && acc > 0 ? acc : 100.0;
+  }, [landingStats, aisahRealtimeStats]);
+
+  const kelurahanCount = useMemo(() => {
+    const k = landingStats?.kelurahanCount;
+    return typeof k === "number" && k > 0 ? k : 6;
+  }, [landingStats]);
+
   // Animated counters
   const [heroCount, setHeroCount] = useState(0);
   const [aisahCount, setAisahCount] = useState(0);
@@ -309,12 +500,142 @@ export const LandingPage: React.FC = () => {
     };
   }, []);
 
-  // Counter animation
+  // ── Load Dynamic Data (Backend Stats, AISAh AI Telemetry, CMS Content) ──
+  useEffect(() => {
+    let isMounted = true;
+    let broadcastChannel: BroadcastChannel | null = null;
+
+    const applyCmsContent = (content: LandingContentPayload) => {
+      if (Array.isArray(content.marketProducts) && content.marketProducts.length > 0) {
+        const published = content.marketProducts.filter((p) => p.isPublished !== false);
+        if (published.length > 0) {
+          setProductsList(published.map(mapCmsProductToItem));
+        }
+      }
+      if (Array.isArray(content.newsItems) && content.newsItems.length > 0) {
+        const published = content.newsItems.filter((n) => n.isPublished !== false);
+        if (published.length > 0) {
+          setNewsList(published.map(mapCmsNewsToItem));
+        }
+      }
+      if (Array.isArray(content.actionCampaigns) && content.actionCampaigns.length > 0) {
+        const published = content.actionCampaigns.filter((c) => c.isPublished !== false);
+        if (published.length > 0) {
+          setProgramsList(published.map(mapCmsCampaignToProgram));
+        }
+      }
+    };
+
+    // 1. Fetch live telemetry from microservice AISAh Vision AI
+    const fetchAisahLive = async () => {
+      try {
+        const [scansRes, feedbackRes] = await Promise.allSettled([
+          fetch("https://aisah.berseka.id/api/stats", { signal: AbortSignal.timeout(4000) }).then((r) => r.json()),
+          fetch("https://aisah.berseka.id/api/stats/feedback", { signal: AbortSignal.timeout(4000) }).then((r) => r.json()),
+        ]);
+
+        let scans = 0;
+        let accuracy = 0;
+
+        if (scansRes.status === "fulfilled" && typeof scansRes.value?.total_scans === "number") {
+          scans = scansRes.value.total_scans;
+        }
+        if (feedbackRes.status === "fulfilled" && typeof feedbackRes.value?.accuracy_percent === "number") {
+          accuracy = feedbackRes.value.accuracy_percent;
+        }
+
+        if (isMounted && (scans > 0 || accuracy > 0)) {
+          setAisahRealtimeStats((prev) => ({
+            totalScans: scans > 0 ? scans : prev.totalScans,
+            accuracyPercent: accuracy > 0 ? accuracy : prev.accuracyPercent,
+          }));
+        }
+      } catch (err) {
+        console.warn("[LandingPage] Live AISAh telemetry unavailable, fallback active:", err);
+      }
+    };
+
+    // 2. Fetch aggregated statistics from Backend API
+    const fetchStats = async () => {
+      try {
+        const res = await api.get("/system/landing-stats");
+        if (isMounted && res.data?.success && res.data?.data) {
+          const statsData = res.data.data;
+          setLandingStats(statsData);
+          if (statsData.aisahStats) {
+            setAisahRealtimeStats((prev) => ({
+              totalScans: statsData.aisahStats.totalScans || prev.totalScans,
+              accuracyPercent: statsData.aisahStats.accuracyPercent ?? prev.accuracyPercent,
+            }));
+          }
+        }
+      } catch (err) {
+        console.warn("[LandingPage] Backend landing stats API error, fallback active:", err);
+      } finally {
+        if (isMounted) setLoadingStats(false);
+      }
+    };
+
+    // 3. Load CMS content (IndexedDB first, then backend /system/landing-content)
+    const fetchContent = async () => {
+      let localTimestamp = 0;
+      try {
+        const localStored = await loadCmsContent();
+        if (isMounted && localStored?.data) {
+          applyCmsContent(localStored.data);
+          localTimestamp = localStored.lastModified || 0;
+        }
+      } catch (err) {
+        console.warn("[LandingPage] Local CMS storage read error:", err);
+      }
+
+      try {
+        const res = await api.get("/system/landing-content");
+        if (isMounted && res.data?.success && res.data?.data) {
+          const serverData = res.data.data;
+          const serverTimestamp = serverData.lastModified || 0;
+          if (serverTimestamp >= localTimestamp) {
+            applyCmsContent(serverData);
+            await saveCmsContent(serverData);
+          }
+        }
+      } catch {
+        // Offline / cached CMS is fine
+      }
+    };
+
+    fetchStats();
+    fetchAisahLive();
+    fetchContent();
+
+    // 4. Listen to real-time BroadcastChannel from SuperUser Kurasi tab
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        broadcastChannel = new BroadcastChannel(CMS_BROADCAST_CHANNEL_NAME);
+        broadcastChannel.onmessage = (event) => {
+          const detail = event?.data?.data || event?.data;
+          if (isMounted && detail && typeof detail === "object") {
+            applyCmsContent(detail);
+          }
+        };
+      }
+    } catch (e) {
+      console.warn("[LandingPage] BroadcastChannel init error:", e);
+    }
+
+    return () => {
+      isMounted = false;
+      if (broadcastChannel) {
+        broadcastChannel.close();
+      }
+    };
+  }, []);
+
+  // Counter animation smoothly interpolating to targetHero and targetAisah
   useEffect(() => {
     let startTimestamp: number | null = null;
+    let animId: number;
     const duration = 1500;
-    const targetHero = 1266;
-    const targetAisah = 7738;
 
     const step = (timestamp: number) => {
       if (!startTimestamp) startTimestamp = timestamp;
@@ -323,12 +644,15 @@ export const LandingPage: React.FC = () => {
       setHeroCount(Math.round(targetHero * easeProgress));
       setAisahCount(Math.round(targetAisah * easeProgress));
       if (progress < 1) {
-        window.requestAnimationFrame(step);
+        animId = window.requestAnimationFrame(step);
       }
     };
 
-    window.requestAnimationFrame(step);
-  }, []);
+    animId = window.requestAnimationFrame(step);
+    return () => {
+      if (animId) window.cancelAnimationFrame(animId);
+    };
+  }, [targetHero, targetAisah]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -409,17 +733,24 @@ export const LandingPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Calculator calculations
+  // Calculator calculations (menggunakan koefisien sentral)
   const calcTotalPoints = useMemo(() => {
-    return calcOrganicKg * 10 + calcPlasticKg * 25 + calcOilLiters * 50;
+    return (
+      calcOrganicKg * CALC_COEFFICIENTS.organicPointsPerKg +
+      calcPlasticKg * CALC_COEFFICIENTS.plasticPointsPerKg +
+      calcOilLiters * CALC_COEFFICIENTS.oilPointsPerLiter
+    );
   }, [calcOrganicKg, calcPlasticKg, calcOilLiters]);
 
   const calcEstimatedRupiah = useMemo(() => {
-    return calcTotalPoints * 100;
+    return calcTotalPoints * CALC_COEFFICIENTS.rupiahPerPoint;
   }, [calcTotalPoints]);
 
   const calcCarbonReductionKg = useMemo(() => {
-    const co2 = calcOrganicKg * 0.5 + calcPlasticKg * 1.5 + calcOilLiters * 2.0;
+    const co2 =
+      calcOrganicKg * CALC_COEFFICIENTS.co2ReductionFactors.organic +
+      calcPlasticKg * CALC_COEFFICIENTS.co2ReductionFactors.plastic +
+      calcOilLiters * CALC_COEFFICIENTS.co2ReductionFactors.oil;
     return co2.toFixed(1);
   }, [calcOrganicKg, calcPlasticKg, calcOilLiters]);
 
@@ -669,9 +1000,9 @@ export const LandingPage: React.FC = () => {
                     <img src="/image/landingpage/mitra-unikom.webp" alt="" />
                   </div>
                   <p>
-                    Bergabung bersama <b><span data-count="1266">{heroCount.toLocaleString("id-ID")}</span>+ pengguna</b>
+                    Bergabung bersama <b><span data-count={targetHero}>{heroCount.toLocaleString("id-ID")}</span>+ pengguna</b>
                     <br />
-                    dari 6 kelurahan di Coblong
+                    dari {kelurahanCount} kelurahan di Coblong
                   </p>
                 </div>
               </div>
@@ -697,7 +1028,7 @@ export const LandingPage: React.FC = () => {
                     href="#program"
                     onClick={(e) => {
                       e.preventDefault();
-                      setSelectedProgram(PROGRAMS[0]);
+                      setSelectedProgram(programsList[0] || PROGRAMS[0]);
                     }}
                   >
                     <img src="/image/landingpage/hero-qr-badge.webp" alt="" />
@@ -711,7 +1042,8 @@ export const LandingPage: React.FC = () => {
                     href="#program"
                     onClick={(e) => {
                       e.preventDefault();
-                      setSelectedProgram(PROGRAMS[3]);
+                      const kompost = programsList.find((p) => p.id.includes("kompost") || p.id.includes("camp-04")) || programsList[3] || PROGRAMS[3];
+                      setSelectedProgram(kompost);
                     }}
                   >
                     <img src="/image/landingpage/hero-compost-badge.webp" alt="" />
@@ -733,16 +1065,28 @@ export const LandingPage: React.FC = () => {
 
             <div className="stats rv d4" aria-label="BERSEKA dalam angka">
               <div className="stat">
-                <b><span data-count="1266">{heroCount.toLocaleString("id-ID")}</span>+</b>
+                <b><span data-count={targetHero}>{heroCount.toLocaleString("id-ID")}</span>+</b>
                 <span>Pengguna</span>
               </div>
               <div className="stat">
-                <b data-count="6">6</b>
+                <b data-count={kelurahanCount}>{kelurahanCount}</b>
                 <span>Kelurahan</span>
               </div>
               <div className="stat">
-                <b>Data</b>
-                <span>Tercatat</span>
+                <b>
+                  {landingStats?.totalSampahKg
+                    ? `${landingStats.totalSampahKg.toLocaleString("id-ID")} kg`
+                    : landingStats?.kegiatanCount
+                    ? `${landingStats.kegiatanCount} Kegiatan`
+                    : "Data"}
+                </b>
+                <span>
+                  {landingStats?.totalSampahKg
+                    ? "Sampah Terkelola"
+                    : landingStats?.kegiatanCount
+                    ? "Aksi Terlaksana"
+                    : "Tercatat"}
+                </span>
               </div>
               <div className="stat hl">
                 <b>Kolaborasi</b>
@@ -854,7 +1198,7 @@ export const LandingPage: React.FC = () => {
                   Program unggulan
                 </span>
                 <h2 className="h2 rv d1">
-                  6 Program <span>KKN BERSEKA</span>
+                  {programsList.length} Program <span>KKN BERSEKA</span>
                 </h2>
                 <p className="sub rv d2">
                   Inovasi mahasiswa dan warga untuk memperkuat tata kelola sampah berbasis teknologi, lingkungan, dan ekonomi sirkular di Kecamatan Coblong.
@@ -869,7 +1213,7 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
             <div className="grid3">
-              {PROGRAMS.map((prog, idx) => (
+              {programsList.map((prog, idx) => (
                 <article key={prog.id} className={`card rv ${idx > 0 ? `d${idx % 3}` : ""}`}>
                   <div className="card__img">
                     <img src={prog.img} alt={prog.title} />
@@ -946,7 +1290,7 @@ export const LandingPage: React.FC = () => {
               </button>
             </div>
             <div className="grid3" id="prods">
-              {PRODUCTS.map((prod, idx) => (
+              {productsList.map((prod, idx) => (
                 <article
                   key={prod.id}
                   className={`card prod rv ${idx > 0 ? `d${idx % 3}` : ""} ${pasarFilter !== "all" && prod.category !== pasarFilter ? "hide" : ""}`}
@@ -1047,7 +1391,7 @@ export const LandingPage: React.FC = () => {
               <div className="scan" aria-label="Pratinjau AISAh Vision">
                 <div className="scan__t">
                   <span className="live">AISAh Vision AI Online</span>
-                  <span className="acc">AKURASI 100.0%</span>
+                  <span className="acc">AKURASI {aisahAccuracyPercent.toFixed(1)}%</span>
                 </div>
                 <div className="scan__box">
                   <div className="cam">
@@ -1056,7 +1400,7 @@ export const LandingPage: React.FC = () => {
                       <circle cx="12" cy="13" r="3.5" />
                     </svg>
                   </div>
-                  <b><span data-count="7738">{aisahCount.toLocaleString("id-ID")}</span> Sampah Terpindai</b>
+                  <b><span data-count={targetAisah}>{aisahCount.toLocaleString("id-ID")}</span> Sampah Terpindai</b>
                   <p>Deteksi instan jenis material &amp; wadah tempat sampah yang sesuai secara real-time</p>
                 </div>
                 <div className="bins">
@@ -1171,14 +1515,14 @@ export const LandingPage: React.FC = () => {
                 className="btn btn-line rv d2"
                 onClick={() => setShowAllNewsModal(true)}
               >
-                Lihat Semua Berita (68){" "}
+                Lihat Semua Berita ({newsList.length}){" "}
                 <svg className="go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
               </button>
             </div>
             <div className="news">
-              {NEWS_LIST.map((item, idx) => (
+              {newsList.slice(0, 3).map((item, idx) => (
                 <article
                   key={item.id}
                   className={`card rv ${idx > 0 ? `d${idx}` : ""}`}
@@ -1648,10 +1992,12 @@ export const LandingPage: React.FC = () => {
               <img src={selectedNews.img} alt={selectedNews.title} style={{ width: "100%", maxHeight: "360px", objectFit: "cover" }} />
             </div>
             <div style={{ fontSize: "15.5px", color: "var(--ink-2)", lineHeight: "1.7" }}>
-              <p>{selectedNews.desc}</p>
-              <p style={{ marginTop: "12px" }}>
-                Kegiatan ini melibatkan partisipasi aktif seluruh warga serta pendampingan teknis dari mahasiswa KKN UNIKOM 2026. Melalui pendekatan kolaboratif ini, volume sampah yang dibuang ke TPA Sarimukti berhasil ditekan hingga lebih dari 40% di tingkat RW percontohan.
-              </p>
+              <p>{selectedNews.content || selectedNews.desc}</p>
+              {!selectedNews.content && (
+                <p style={{ marginTop: "12px" }}>
+                  Kegiatan ini melibatkan partisipasi aktif seluruh warga serta pendampingan teknis dari mahasiswa KKN UNIKOM 2026. Melalui pendekatan kolaboratif ini, volume sampah yang dibuang ke TPA Sarimukti berhasil ditekan hingga lebih dari 40% di tingkat RW percontohan.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -1685,7 +2031,7 @@ export const LandingPage: React.FC = () => {
               />
             </div>
             <div style={{ display: "grid", gap: "16px", maxHeight: "400px", overflowY: "auto" }}>
-              {NEWS_LIST.filter(
+              {newsList.filter(
                 (n) =>
                   n.title.toLowerCase().includes(newsSearchTerm.toLowerCase()) ||
                   n.category.toLowerCase().includes(newsSearchTerm.toLowerCase())
