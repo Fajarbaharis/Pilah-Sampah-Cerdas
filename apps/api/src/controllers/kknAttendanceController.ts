@@ -137,22 +137,12 @@ export const kknAttendanceController = {
         // Fallback save attempt failed, will respond with error
       }
 
-      // Return 200 with partial success to keep mobile tracking active
-      res.status(200).json({
-        success: true,
-        data: {
-          scheduleId: null,
-          activeScheduleId: null,
-          status: "ERROR_SAVING_FULL_DATA",
-          attendanceStatus: "TIDAK_ADA_KEGIATAN",
-          inZoneMinutes: 0,
-          actualInZoneSeconds: 0,
-          actualInZoneMinutes: 0,
-          autoAttendanceTriggered: [],
-          locations: [],
-          message: error.message || "Location recorded but attendance calc failed. Will retry.",
-          warning: "Partial data saved due to backend error",
-        },
+      // [FIX ANTI-RESET-0] Jika kalkulasi gagal akibat error backend, kembalikan HTTP 500
+      // Jangan pernah mengirim HTTP 200 dengan actualInZoneMinutes: 0 atau status TIDAK_ADA_KEGIATAN!
+      res.status(500).json({
+        success: false,
+        error: "LOCATION_UPDATE_ERROR",
+        message: error.message || "Pembaruan lokasi gagal diproses oleh server. Silakan coba lagi.",
       });
     }
   },
