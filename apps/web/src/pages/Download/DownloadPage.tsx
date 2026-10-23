@@ -28,18 +28,19 @@ import ImageTigaRoleMobile from "../../assets/images/image_tiga_role_mobile.webp
 import { useThemeStore } from "../../store/useThemeStore";
 import api from "../../services/api";
 import { BERSEKA_LOGOS } from "../../constants/branding";
+import { useAppBrandingStore } from "../../store/useAppBrandingStore";
 
-// Official High-Resolution BERSEKA Full Logo Asset
-const BersekaLogoIcon: React.FC<{ className?: string }> = ({ className = "h-10 sm:h-11 w-auto" }) => (
-  <picture>
-    <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
+// High-Resolution Dynamic Application Full Logo Asset
+const BersekaLogoIcon: React.FC<{ className?: string }> = ({ className = "h-10 sm:h-11 w-auto" }) => {
+  const { branding } = useAppBrandingStore();
+  return (
     <img
-      src={BERSEKA_LOGOS.fullPng}
-      alt="BERSEKA.ID"
+      src={branding.logoHorizontalUrl || BERSEKA_LOGOS.fullPng}
+      alt={branding.appName || "BERSEKA.ID"}
       className={`${className} object-contain shrink-0`}
     />
-  </picture>
-);
+  );
+};
 
 interface ReleaseInfo {
   version: string;

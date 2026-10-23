@@ -13,6 +13,7 @@ import showToast from "../../utils/showToast";
 import LoginKknHero from "./components/LoginKknHero";
 import ForgotPasswordModal from "./components/ForgotPasswordModal";
 import { BERSEKA_LOGOS } from "../../constants/branding";
+import { useAppBrandingStore } from "../../store/useAppBrandingStore";
 import api from "../../services/api";
 
 // Format nomor telepon Indonesia: 08xxx, 628xxx, +628xxx, 8xxx atau NIM / NIP DPL
@@ -45,6 +46,7 @@ function isPhoneValid(val: string): boolean {
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login, isLoading: isStoreLoading } = useAuthStore();
+  const { branding } = useAppBrandingStore();
 
   // Login State
   const [identifier, setIdentifier] = useState("");
@@ -258,12 +260,12 @@ const Login: React.FC = () => {
           
           {/* Header Bar: Logo & Link Beranda (Selaras dengan Identitas Brand) */}
           <div className="flex items-center justify-between gap-4">
-            <Link to="/" aria-label="BERSEKA.ID beranda" className="inline-flex items-center text-[#0f2142] no-underline group">
+            <Link to="/" aria-label={`${branding.appName || "BERSEKA"} beranda`} className="inline-flex items-center text-[#0f2142] no-underline group">
               <picture>
-                <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
+                <source srcSet={branding.logoHorizontalDarkUrl || branding.logoHorizontalUrl || BERSEKA_LOGOS.fullWebp} type="image/webp" />
                 <img
-                  src={BERSEKA_LOGOS.fullPng}
-                  alt="BERSEKA.ID"
+                  src={branding.logoHorizontalUrl || BERSEKA_LOGOS.fullPng}
+                  alt={branding.appName || "BERSEKA"}
                   className="h-10 sm:h-11 w-auto max-w-[175px] object-contain transition-transform group-hover:scale-105"
                   width={160}
                   height={42}
@@ -287,7 +289,7 @@ const Login: React.FC = () => {
               Selamat datang kembali
             </h1>
             <p className="mt-2 text-sm sm:text-base text-[#7d8ea6]">
-              Masuk untuk mengakses layanan BERSEKA.
+              Masuk untuk mengakses layanan {branding.appName || "BERSEKA"}.
             </p>
 
             <form onSubmit={handleSubmit} noValidate className="mt-6 sm:mt-8 space-y-5">
@@ -474,10 +476,10 @@ const Login: React.FC = () => {
 
       {/* Footer Page: Hak Cipta & Sinkronisasi Versi Seluler / Web */}
       <footer className="relative z-10 mt-5 text-center text-xs text-[#7d8ea6] space-y-1">
-        <p className="m-0 font-medium">© 2026 Universitas Komputer Indonesia</p>
+        <p className="m-0 font-medium">{branding.copyrightText || "© 2026 Universitas Komputer Indonesia"}</p>
         {appVersion ? (
           <p className="m-0 text-[11px] text-[#8fa0b5] font-semibold tracking-wide">
-            Versi {appVersion}{buildNumber ? ` • Build ${buildNumber}` : ""}
+            Versi {branding.appVersion || appVersion || "1.0.0"}{buildNumber ? ` • Build ${buildNumber}` : ""}
           </p>
         ) : null}
       </footer>
@@ -489,11 +491,11 @@ const Login: React.FC = () => {
           <Link
             to="/download"
             className="relative w-12 h-12 sm:w-14 sm:h-14 bg-[#138861] hover:bg-[#0e6e4e] text-white rounded-full flex items-center justify-center shadow-2xl shadow-[#138861]/40 hover:scale-110 active:scale-95 transition-all duration-300 border-2 border-white/80 cursor-pointer shrink-0"
-            aria-label="Unduh Aplikasi Seluler BERSEKA (APK)"
+            aria-label={`Unduh Aplikasi Seluler ${branding.appName || "BERSEKA"} (APK)`}
           >
             <Download size={20} className="sm:w-[22px] sm:h-[22px] text-white group-hover:rotate-12 transition-transform" />
             <span className="absolute right-16 top-1/2 -translate-y-1/2 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-black tracking-wide whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 translate-x-2 transition-all duration-300 shadow-xl border border-slate-800 hidden sm:block">
-              Unduh Aplikasi Seluler BERSEKA (APK)
+              Unduh Aplikasi Seluler {branding.appName || "BERSEKA"} (APK)
             </span>
           </Link>
         </div>

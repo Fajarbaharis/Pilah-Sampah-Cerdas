@@ -12,20 +12,20 @@ import toast from "react-hot-toast";
 import { User, Phone, Lock, Eye, EyeOff, MapPin, GraduationCap, Truck, ArrowRight, ShieldCheck, RefreshCcw, CheckCircle2, Smartphone } from "lucide-react";
 import { useThemeStore } from "../../store/useThemeStore";
 import { BERSEKA_LOGOS } from "../../constants/branding";
+import { useAppBrandingStore } from "../../store/useAppBrandingStore";
 import api from "../../utils/api";
 
 // Official High-Resolution BERSEKA Full Logo Asset
-const BersekaLogoIcon: React.FC<{ className?: string }> = ({ className = "h-9 w-auto" }) => (
-  <picture>
-    <source srcSet={BERSEKA_LOGOS.fullWebp} type="image/webp" />
+const BersekaLogoIcon: React.FC<{ className?: string }> = ({ className = "h-9 w-auto" }) => {
+  const { branding } = useAppBrandingStore();
+  return (
     <img
-      src={BERSEKA_LOGOS.fullPng}
-      alt="BERSEKA.ID"
+      src={branding.logoHorizontalUrl || BERSEKA_LOGOS.fullPng}
+      alt={branding.appName || "BERSEKA.ID"}
       className={`${className} object-contain shrink-0`}
     />
-  </picture>
-);
-
+  );
+};
 export const Register: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

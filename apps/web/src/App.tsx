@@ -12,12 +12,14 @@ import { ErrorBoundary } from "react-error-boundary";
 import AppRoutes from "./routes/AppRoutes";
 import { useThemeStore } from "./store/useThemeStore";
 import { useAuthStore } from "./store/useAuthStore";
+import { useAppBrandingStore } from "./store/useAppBrandingStore";
 import ErrorBoundaryFallback from "./components/common/ErrorBoundaryFallback";
 import "./App.css";
 
 const App: React.FC = () => {
   useEffect(() => {
     useThemeStore.getState().initTheme();
+    useAppBrandingStore.getState().fetchBranding().catch(() => {});
     if (useAuthStore.getState().isAuthenticated) {
       useAuthStore.getState().fetchPermissions().catch(() => {});
     }

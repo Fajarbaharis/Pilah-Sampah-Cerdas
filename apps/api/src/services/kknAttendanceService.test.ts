@@ -1280,6 +1280,61 @@ describe("kknAttendanceService - Auto-Attendance & Duration Verification", () =>
       // 15 mins before jeda + 10 mins elapsed since resume = 25 mins
       expect(result).toBe(25);
     });
+
+    it("should NOT reset to 0 when jedaLogs have unclosed or overlapping pause entries (Anti-Zero Reset)", () => {
+      // Skenario A: Mahasiswa berkegiatan 300 menit (5 jam), ada log jeda glitch / unclosed
+      const fiveHoursAgo = new Date(Date.now() - 300 * 60 * 1000);
+      const fourHoursAgo = new Date(Date.now() - 240 * 60 * 1000);
+      const threeHoursAgo = new Date(Date.now() - 180 * 60 * 1000);
+
+      const result = calculateLiveInZoneMinutes({
+        attendedAt: fiveHoursAgo,
+        status: "BERLANGSUNG",
+        actualInZoneMinutes: 240,
+        jedaLogs: [
+          {
+            waktuJeda: fourHoursAgo.toISOString(),
+            durasiSebelumJedaMenit: 60,
+          },
+          {
+            waktuJeda: threeHoursAgo.toISOString(),
+            durasiSebelumJedaMenit: 120,
+          },
+        ],
+      });
+
+      // Durasi TIDAK BOLEH 0!
+      expect(result).toBeGreaterThan(0);
+      expect(result).toBe(240);
+    });
+
+    it("should correctly merge overlapping pause intervals without double counting", () => {
+      // Sesi 120 menit: Jeda 1 [60m lalu - 30m lalu] (30 min) dan Jeda 2 [45m lalu - 15m lalu] (30 min)
+      // Overlapping union: [60m lalu - 15m lalu] = 45 min pause.
+      // Expected net: 120 - 45 = 75 mins.
+      const twoHoursAgo = new Date(Date.now() - 120 * 60 * 1000);
+      const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const fortyFiveMinutesAgo = new Date(Date.now() - 45 * 60 * 1000);
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+      const result = calculateLiveInZoneMinutes({
+        attendedAt: twoHoursAgo,
+        status: "BERLANGSUNG",
+        jedaLogs: [
+          {
+            waktuJeda: sixtyMinutesAgo.toISOString(),
+            waktuResume: thirtyMinutesAgo.toISOString(),
+          },
+          {
+            waktuJeda: fortyFiveMinutesAgo.toISOString(),
+            waktuResume: fifteenMinutesAgo.toISOString(),
+          },
+        ],
+      });
+
+      expect(result).toBe(75);
+    });
   });
 
   describe("autoCheckOutEndedSchedules", () => {
