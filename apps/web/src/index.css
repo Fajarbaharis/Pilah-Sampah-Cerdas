@@ -396,3 +396,12 @@ input:-webkit-autofill:active {
 .z-popover { z-index: 700; }
 .z-toast { z-index: 1000; }
 .z-max { z-index: 99999; }
+
+/* Prevent leaky focus outline on inputs across the app */
+input, textarea, select {
+  outline: none;
+}
+input:focus, input:focus-visible, textarea:focus, textarea:focus-visible, select:focus, select:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+}
