@@ -376,7 +376,7 @@ const Login: React.FC = () => {
                       setErrorMessage("");
                     }}
                     disabled={isLoading}
-                    className="w-full h-full pl-3 pr-2 text-sm sm:text-base font-medium text-[#0E1B33] placeholder-[#9AA6B2] bg-transparent outline-none border-0"
+                    style={{ outline: "none", boxShadow: "none" }} className="w-full h-full pl-3 pr-2 text-sm sm:text-base font-medium text-[#0E1B33] placeholder-[#9AA6B2] bg-transparent outline-none border-0 !outline-none focus:!outline-none focus-visible:!outline-none focus:ring-0 focus-visible:ring-0"
                   />
                 </div>
                 {phoneError && (
@@ -414,7 +414,7 @@ const Login: React.FC = () => {
                       setErrorMessage("");
                     }}
                     disabled={isLoading}
-                    className="w-full h-full pl-3 pr-2 text-sm sm:text-base font-medium text-[#0E1B33] placeholder-[#9AA6B2] bg-transparent outline-none border-0"
+                    style={{ outline: "none", boxShadow: "none" }} className="w-full h-full pl-3 pr-2 text-sm sm:text-base font-medium text-[#0E1B33] placeholder-[#9AA6B2] bg-transparent outline-none border-0 !outline-none focus:!outline-none focus-visible:!outline-none focus:ring-0 focus-visible:ring-0"
                   />
                   <button
                     type="button"
