@@ -1040,6 +1040,8 @@ export const LandingPage: React.FC = () => {
                   Lihat cerita kami
                 </a>
 
+                {/* Floating cards hero di-hide sementara sesuai arahan agar visual hero bersih */}
+                {/*
                 <div className="floats" aria-label="Sorotan program">
                   <a
                     className="fcard"
@@ -1078,6 +1080,7 @@ export const LandingPage: React.FC = () => {
                     </span>
                   </a>
                 </div>
+                */}
               </div>
             </div>
 
