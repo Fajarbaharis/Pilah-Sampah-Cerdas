@@ -981,106 +981,104 @@ export const LandingPage: React.FC = () => {
       <main>
         {/* ===================== HERO ===================== */}
         <section className="hero" id="beranda">
+          <div className="hero__img">
+            <img
+              src="/image/landingpage/hero-sorting.webp"
+              alt="Mahasiswa KKN tersenyum sambil memilah sampah organik, plastik, dan logam ke tempat sampah hijau, biru, dan kuning"
+            />
+          </div>
+
+          <a className="play rv d3" href="#berita">
+            <span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.4-6.5a1 1 0 0 0 0-1.8L9.5 4.6A1 1 0 0 0 8 5.5Z" />
+              </svg>
+            </span>
+            Lihat cerita kami
+          </a>
+
+          <div className="floats" aria-label="Sorotan program">
+            <a
+              className="fcard rv d2"
+              href="#program"
+              onClick={(e) => {
+                e.preventDefault();
+                setSelectedProgram(programsList[0] || PROGRAMS[0]);
+              }}
+            >
+              <img src="/image/landingpage/hero-qr-badge.webp" alt="" />
+              <span>
+                <b>Kodifikasi QR</b>
+                <small>Identitas digital tiap tempat sampah</small>
+              </span>
+            </a>
+            <a
+              className="fcard rv d3"
+              href="#program"
+              onClick={(e) => {
+                e.preventDefault();
+                const kompost =
+                  programsList.find(
+                    (p) => p.id.includes("kompost") || p.id.includes("camp-04")
+                  ) || programsList[3] || PROGRAMS[3];
+                setSelectedProgram(kompost);
+              }}
+            >
+              <img src="/image/landingpage/hero-compost-badge.webp" alt="" />
+              <span>
+                <b>Komposter IoT</b>
+                <small>Sampah organik jadi pupuk cair</small>
+              </span>
+            </a>
+            <a className="fcard rv d4" href="#pasar">
+              <img src="/image/landingpage/hero-circular-badge.webp" alt="" />
+              <span>
+                <b>Pasar Sirkular</b>
+                <small>Tukar poin dengan produk warga</small>
+              </span>
+            </a>
+          </div>
+
           <div className="wrap">
-            <div className="hero__grid">
-              <div className="hero__copy">
-                <span className="badge rv">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z" />
-                    <path d="M2 21c0-3 1.9-5.4 5.1-6C9.5 14.5 12 13 13 12" />
+            <div className="hero__copy">
+              <span className="badge rv">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z" />
+                  <path d="M2 21c0-3 1.9-5.4 5.1-6C9.5 14.5 12 13 13 12" />
+                </svg>
+                <span>Platform KKN Tematik untuk Pengelolaan Sampah Terpadu</span>
+              </span>
+              <h1 className="rv d1">
+                Sampah <span>Terkelola,</span> Kampung Lebih Berdaya.
+              </h1>
+              <p className="hero__lead rv d2">
+                BERSEKA menghubungkan warga, petugas, armada, fasilitas pengolahan, pemerintah, akademisi, dan pasar sirkular dalam satu ekosistem berbasis Web, Mobile, IoT, AI, GIS, QR Code, dan gamifikasi untuk mewujudkan ekonomi sirkular.
+              </p>
+              <div className="cta-pill rv d3">
+                <Link className="btn btn-line" to="/download">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
                   </svg>
-                  <span>Platform KKN Tematik untuk Pengelolaan Sampah Terpadu</span>
-                </span>
-                <h1 className="rv d1">
-                  Sampah <span>Terkelola,</span> Kampung Lebih Berdaya.
-                </h1>
-                <p className="hero__lead rv d2">
-                  BERSEKA menghubungkan warga, petugas, armada, fasilitas pengolahan, pemerintah, akademisi, dan pasar sirkular dalam satu ekosistem berbasis Web, Mobile, IoT, AI, GIS, QR Code, dan gamifikasi untuk mewujudkan ekonomi sirkular.
-                </p>
-                <div className="cta-pill rv d3">
-                  <Link className="btn btn-line" to="/download">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
-                    </svg>
-                    Unduh Aplikasi
-                  </Link>
-                  <a className="btn btn-leaf" href="#program">
-                    Jelajahi Program{" "}
-                    <svg className="go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M5 12h14M13 6l6 6-6 6" />
-                    </svg>
-                  </a>
-                </div>
-                <div className="people rv d4">
-                  <div className="avs" aria-hidden="true">
-                    <img src="/image/landingpage/mitra-dlh.webp" alt="" />
-                    <img src="/image/landingpage/mitra-pemkot.webp" alt="" />
-                    <img src="/image/landingpage/mitra-unikom.webp" alt="" />
-                  </div>
-                  <p>
-                    Bergabung bersama <b><span data-count={targetHero}>{heroCount.toLocaleString("id-ID")}</span>+ pengguna</b>
-                    <br />
-                    dari {kelurahanCount} kelurahan di Coblong
-                  </p>
-                </div>
-              </div>
-
-              {/* Hero Visual Column */}
-              <div className="hero__visual rv d2">
-                <div className="hero__img-frame">
-                  <img src="/image/landingpage/hero-sorting.webp" alt="Mahasiswa KKN tersenyum sambil memilah sampah organik, plastik, dan logam ke tempat sampah hijau, biru, dan kuning" />
-                </div>
-
-                <a className="play" href="#berita">
-                  <span>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.4-6.5a1 1 0 0 0 0-1.8L9.5 4.6A1 1 0 0 0 8 5.5Z" />
-                    </svg>
-                  </span>
-                  Lihat cerita kami
+                  Unduh Aplikasi
+                </Link>
+                <a className="btn btn-leaf" href="#program">
+                  Jelajahi Program{" "}
+                  <svg className="go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
                 </a>
-
-                {/* Floating cards hero di-hide sementara sesuai arahan agar visual hero bersih */}
-                {/*
-                <div className="floats" aria-label="Sorotan program">
-                  <a
-                    className="fcard"
-                    href="#program"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setSelectedProgram(programsList[0] || PROGRAMS[0]);
-                    }}
-                  >
-                    <img src="/image/landingpage/hero-qr-badge.webp" alt="" />
-                    <span>
-                      <b>Kodifikasi QR</b>
-                      <small>Identitas digital tiap tempat sampah</small>
-                    </span>
-                  </a>
-                  <a
-                    className="fcard"
-                    href="#program"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const kompost = programsList.find((p) => p.id.includes("kompost") || p.id.includes("camp-04")) || programsList[3] || PROGRAMS[3];
-                      setSelectedProgram(kompost);
-                    }}
-                  >
-                    <img src="/image/landingpage/hero-compost-badge.webp" alt="" />
-                    <span>
-                      <b>Komposter IoT</b>
-                      <small>Sampah organik jadi pupuk cair</small>
-                    </span>
-                  </a>
-                  <a className="fcard" href="#pasar">
-                    <img src="/image/landingpage/hero-circular-badge.webp" alt="" />
-                    <span>
-                      <b>Pasar Sirkular</b>
-                      <small>Tukar poin dengan produk warga</small>
-                    </span>
-                  </a>
+              </div>
+              <div className="people rv d4">
+                <div className="avs" aria-hidden="true">
+                  <img src="/image/landingpage/mitra-dlh.webp" alt="" />
+                  <img src="/image/landingpage/mitra-pemkot.webp" alt="" />
+                  <img src="/image/landingpage/mitra-unikom.webp" alt="" />
                 </div>
-                */}
+                <p>
+                  Bergabung bersama <b><span data-count={targetHero}>{heroCount.toLocaleString("id-ID")}</span>+ pengguna</b>
+                  <br />
+                  dari {kelurahanCount} kelurahan di Coblong
+                </p>
               </div>
             </div>
 
