@@ -305,22 +305,47 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 //   - Daily cap: 8 jam = 480 menit = 28800 detik
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Hitung total durasi pause (ms) dari jedaLogs manual */
-function calcTotalPauseMs(jedaLogs: any[], sessionEndMs: number): number {
-  let totalMs = 0;
+/** 
+ * Hitung total durasi pause (ms) dari jedaLogs manual dengan:
+ * 1. Proteksi Boundary: Dicocokkan ke rentang waktu aktif [sessionStartMs, sessionEndMs].
+ * 2. Interval Merging: Menghilangkan double-counting akibat interval overlapping.
+ * 3. Status Guard: Jeda tanpa resume hanya berjalan hingga sessionEndMs jika status saat ini TERJEDA.
+ * 4. Invariant Mutlak: 0 <= totalMs <= grossMs (tidak pernah melebihi durasi kotor sesi).
+ */
+function calcTotalPauseMs(
+  jedaLogs: any[],
+  sessionEndMs: number,
+  sessionStartMs: number = 0,
+  isCurrentlyPaused: boolean = false
+): number {
+  if (!Array.isArray(jedaLogs) || jedaLogs.length === 0 || sessionEndMs <= sessionStartMs) {
+    return 0;
+  }
+
+  const grossMs = Math.max(0, sessionEndMs - sessionStartMs);
+  const rawIntervals: Array<{ start: number; end: number }> = [];
+
   for (let i = 0; i < jedaLogs.length; i++) {
     const log = jedaLogs[i];
     if (!log || typeof log !== "object" || log.mode === "LOSS_MODE_INFO_ONLY") continue;
     // Abaikan jeda otomatis yang dipicu logout aplikasi atau event non-manual
     if (log.autoTriggered === true) continue;
     const alasanLower = String(log.alasan || "").toLowerCase();
-    if (alasanLower.includes("logout") || alasanLower.includes("keluar aplikasi") || alasanLower.includes("pengguna keluar")) continue;
+    if (
+      alasanLower.includes("logout") ||
+      alasanLower.includes("keluar aplikasi") ||
+      alasanLower.includes("pengguna keluar")
+    ) {
+      continue;
+    }
 
     if (!log.waktuJeda) continue;
     const pStart = new Date(log.waktuJeda).getTime();
     if (isNaN(pStart)) continue;
 
     let resumeTime = log.waktuResume || null;
+    let nextJedaTime: number | null = null;
+
     if (!resumeTime) {
       // Cari waktuResume pada entri log setelahnya jika tercatat secara terpisah
       for (let j = i + 1; j < jedaLogs.length; j++) {
@@ -329,23 +354,73 @@ function calcTotalPauseMs(jedaLogs: any[], sessionEndMs: number): number {
           break;
         }
         if (jedaLogs[j]?.waktuJeda) {
-          // Ditemukan event jeda lain berikutnya
+          const nextStart = new Date(jedaLogs[j].waktuJeda).getTime();
+          if (!isNaN(nextStart)) {
+            nextJedaTime = nextStart;
+          }
           break;
         }
       }
     }
 
+    let pEnd: number;
     if (resumeTime) {
-      const pEnd = new Date(resumeTime).getTime();
-      if (!isNaN(pEnd) && pEnd > pStart) totalMs += pEnd - pStart;
+      pEnd = new Date(resumeTime).getTime();
+    } else if (isCurrentlyPaused && i === jedaLogs.length - 1) {
+      // Sesi memang sedang TERJEDA aktif dan ini log terakhir: hitung hingga sessionEndMs
+      pEnd = sessionEndMs;
+    } else if (nextJedaTime) {
+      // Tidak ada resume tapi ada jeda berikutnya: batasi maksimal hingga jeda berikutnya
+      pEnd = nextJedaTime;
     } else {
-      // Jeda masih aktif (belum di-resume): hitung durasi jeda riil hingga sessionEndMs
-      if (sessionEndMs > pStart) {
-        totalMs += sessionEndMs - pStart;
-      }
+      // Sesi TIDAK sedang TERJEDA (misal status BERLANGSUNG) dan log tidak memiliki resume:
+      // Ini adalah log jeda anomali/terputus. Mahasiswa saat ini aktif berkegiatan,
+      // sehingga jeda ini TIDAK BOLEH dianggap terus berjalan hingga sessionEndMs!
+      pEnd = pStart; // durasi 0 agar tidak memangsa jam aktif
+    }
+
+    if (isNaN(pEnd) || pEnd <= pStart) continue;
+
+    // Clamp ke dalam rentang sesi [sessionStartMs, sessionEndMs]
+    const clampedStart = Math.max(sessionStartMs, pStart);
+    const clampedEnd = Math.min(sessionEndMs, pEnd);
+
+    if (clampedEnd > clampedStart) {
+      rawIntervals.push({ start: clampedStart, end: clampedEnd });
     }
   }
-  return totalMs;
+
+  if (rawIntervals.length === 0) {
+    return 0;
+  }
+
+  // Sorting interval berdasarkan waktu mulai
+  rawIntervals.sort((a, b) => a.start - b.start);
+
+  // Interval Merging untuk mencegah double counting
+  const mergedIntervals: Array<{ start: number; end: number }> = [];
+  let current = { ...rawIntervals[0] };
+
+  for (let k = 1; k < rawIntervals.length; k++) {
+    const next = rawIntervals[k];
+    if (next.start <= current.end) {
+      // Overlap atau bersambung: gabungkan
+      current.end = Math.max(current.end, next.end);
+    } else {
+      mergedIntervals.push(current);
+      current = { ...next };
+    }
+  }
+  mergedIntervals.push(current);
+
+  // Total durasi jeda yang sudah bersih dari tumpang tindih
+  let totalPauseMs = 0;
+  for (const interval of mergedIntervals) {
+    totalPauseMs += interval.end - interval.start;
+  }
+
+  // Invariant mutlak: total jeda tidak boleh melebihi durasi kotor (grossMs)
+  return Math.min(grossMs, Math.max(0, totalPauseMs));
 }
 
 /**
@@ -397,10 +472,17 @@ export function calculateLiveInZoneMinutes(att: {
     )
   );
 
+  const attendedMs = attendedDate.getTime();
   const rawEndMs = att.checkOutAt ? new Date(att.checkOutAt).getTime() : now.getTime();
   const sessionEndMs = Math.min(rawEndMs, cutoff20Wib.getTime());
-  const grossMs = Math.max(0, sessionEndMs - attendedDate.getTime());
-  const pauseMs = calcTotalPauseMs((att.jedaLogs as any[]) || [], sessionEndMs);
+  const grossMs = Math.max(0, sessionEndMs - attendedMs);
+  const isCurrentlyPaused = statusUpper === "TERJEDA";
+  const pauseMs = calcTotalPauseMs(
+    (att.jedaLogs as any[]) || [],
+    sessionEndMs,
+    attendedMs,
+    isCurrentlyPaused
+  );
   const netMins = Math.max(0, Math.floor((grossMs - pauseMs) / 60000));
 
   return Math.min(netMins, MAX_CAP);
@@ -454,10 +536,17 @@ export function calculateLiveInZoneSeconds(att: {
     )
   );
 
+  const attendedMs = attendedDate.getTime();
   const rawEndMs = att.checkOutAt ? new Date(att.checkOutAt).getTime() : now.getTime();
   const sessionEndMs = Math.min(rawEndMs, cutoff20Wib.getTime());
-  const grossMs = Math.max(0, sessionEndMs - attendedDate.getTime());
-  const pauseMs = calcTotalPauseMs((att.jedaLogs as any[]) || [], sessionEndMs);
+  const grossMs = Math.max(0, sessionEndMs - attendedMs);
+  const isCurrentlyPaused = statusUpper === "TERJEDA";
+  const pauseMs = calcTotalPauseMs(
+    (att.jedaLogs as any[]) || [],
+    sessionEndMs,
+    attendedMs,
+    isCurrentlyPaused
+  );
   const netSecs = Math.max(0, Math.floor((grossMs - pauseMs) / 1000));
 
   return Math.min(netSecs, MAX_CAP);
@@ -495,33 +584,15 @@ export function calculateTotalJedaMinutes(att: {
 
   const sessionEndMs = att.checkOutAt ? new Date(att.checkOutAt).getTime() : Date.now();
 
-  // 1. Akumulasi durasi jeda riil dari seluruh entri jedaLogs
-  let pauseFromLogsMs = 0;
-  const jedaLogs = (att.jedaLogs as any[]) || [];
-  for (let i = 0; i < jedaLogs.length; i++) {
-    const log = jedaLogs[i];
-    if (!log || typeof log !== "object") continue;
-    if (!log.waktuJeda) continue;
-    const pStart = new Date(log.waktuJeda).getTime();
-    if (isNaN(pStart)) continue;
-
-    let resumeTime = log.waktuResume || null;
-    if (!resumeTime) {
-      for (let j = i + 1; j < jedaLogs.length; j++) {
-        if (jedaLogs[j]?.waktuResume) {
-          resumeTime = jedaLogs[j].waktuResume;
-          break;
-        }
-        if (jedaLogs[j]?.waktuJeda) break;
-      }
-    }
-
-    const pEnd = resumeTime ? new Date(resumeTime).getTime() : sessionEndMs;
-    if (!isNaN(pEnd) && pEnd > pStart) {
-      pauseFromLogsMs += pEnd - pStart;
-    }
-  }
-
+  // 1. Akumulasi durasi jeda riil dari seluruh entri jedaLogs menggunakan SSOT calcTotalPauseMs
+  const attendedMs = att.attendedAt ? new Date(att.attendedAt).getTime() : 0;
+  const isCurrentlyPaused = statusUpper === "TERJEDA";
+  const pauseFromLogsMs = calcTotalPauseMs(
+    (att.jedaLogs as any[]) || [],
+    sessionEndMs,
+    attendedMs,
+    isCurrentlyPaused
+  );
   const pauseFromLogsMins = Math.floor(pauseFromLogsMs / 60000);
 
   // 2. Korelasi dengan selisih durasi kotor (gross) vs durasi bersih tersimpan (net)
@@ -1032,6 +1103,12 @@ export class KknAttendanceService {
         actualInZoneMinutes: inZoneMinutes,
         autoAttendanceTriggered: false,
         poskoArea: matchedPoskoName,
+        attendedAt: activeAttendanceForSeconds?.attendedAt
+          ? new Date(activeAttendanceForSeconds.attendedAt).toISOString()
+          : null,
+        jam_masuk: activeAttendanceForSeconds?.attendedAt
+          ? new Date(activeAttendanceForSeconds.attendedAt).toISOString()
+          : null,
       },
     };
   }
@@ -1613,6 +1690,7 @@ export class KknAttendanceService {
         actualInZoneMinutes: inZoneMinutes,
         autoAttendanceTriggered,
         jam_masuk: activeJamMasuk,
+        attendedAt: activeJamMasuk,
         targetDurationMinutes: activeTargetDurationMinutes,
         poskoArea: null,
         kelurahan: null,
