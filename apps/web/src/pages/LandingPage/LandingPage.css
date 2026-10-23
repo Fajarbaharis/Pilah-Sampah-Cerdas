@@ -493,7 +493,7 @@ button{font:inherit}
 .chip:hover{border-color:var(--leaf)}
 .chip[aria-pressed="true"]{background:var(--leaf-deep);border-color:var(--leaf-deep);color:#fff}
 .prod .card__img{aspect-ratio:16/9}
-.prod{background:var(--bg)}
+.prod{background:var(--bg);animation:fade .25s var(--ease)}
 .prod h3{margin:12px 0 2px;font-size:17.5px}
 .prod .meta{margin:0 0 16px;color:var(--muted);font-size:14px}
 .prod .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -501,6 +501,9 @@ button{font:inherit}
 .coin{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFE6A3,#F2B84B 55%,#D38E1E)}
 .btn-sm{min-height:40px;padding:0 16px;font-size:14px}
 .prod.hide{display:none}
+.pasar-empty{grid-column:1 / -1;text-align:center;padding:56px 24px;background:var(--sage-2);border-radius:24px;border:1px dashed var(--line);color:var(--ink-2)}
+.pasar-empty b{display:block;font-size:16px;margin-bottom:6px;color:var(--ink)}
+.pasar-empty p{font-size:14px;color:var(--muted);margin:0}
 
 /* ---------- AISAh ---------- */
 .ai{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(28px,5vw,72px);align-items:center;padding:clamp(28px,5vw,64px);border-radius:40px;background:var(--sage);position:relative;overflow:hidden}
