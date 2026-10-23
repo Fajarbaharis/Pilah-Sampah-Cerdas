@@ -263,7 +263,7 @@ const PRODUCTS: ProductItem[] = [
   {
     id: "prod-1",
     title: "Telur Ayam BERSEKA",
-    category: "Pupuk & Kompos",
+    category: "Pakan Organik",
     meta: "Kemasan 10 butir",
     img: "/image/landingpage/prod-telur-ayam.webp",
     desc: "Telur segar dari ayam yang diberi pakan maggot hasil biokonversi sampah organik warga.",
@@ -272,7 +272,7 @@ const PRODUCTS: ProductItem[] = [
   {
     id: "prod-2",
     title: "Sayuran Segar Buruan SAE",
-    category: "Eco-Enzyme",
+    category: "Bibit & Tanaman",
     meta: "1 Paket Sayuran",
     img: "/image/landingpage/prod-sayuran-segar.webp",
     desc: "Bayam, kangkung, dan pakcoy segar hasil pemupukan kompos dan pupuk organik BERSEKA.",
@@ -281,7 +281,7 @@ const PRODUCTS: ProductItem[] = [
   {
     id: "prod-3",
     title: "POC BERSEKA",
-    category: "Bibit & Tanaman",
+    category: "Pupuk & Kompos",
     meta: "Botol 500 ml",
     img: "/image/landingpage/prod-poc-500ml.webp",
     desc: "Pupuk Organik Cair murni dari komposter drum pintar IoT, mempercepat pertumbuhan tanaman.",
@@ -290,7 +290,7 @@ const PRODUCTS: ProductItem[] = [
   {
     id: "prod-4",
     title: "Ikan Bioflok BERSEKA",
-    category: "Daur Ulang Kreatif",
+    category: "Pakan Organik",
     meta: "Kemasan 500 gram",
     img: "/image/landingpage/prod-ikan-bioflok.webp",
     desc: "Ikan konsumsi segar dari kolam bioflok ramah lingkungan berpakan pelet maggot mandiri.",
@@ -397,6 +397,12 @@ export const LandingPage: React.FC = () => {
   const [programsList, setProgramsList] = useState<ProgramItem[]>(PROGRAMS);
   const [productsList, setProductsList] = useState<ProductItem[]>(PRODUCTS);
   const [newsList, setNewsList] = useState<NewsItem[]>(NEWS_LIST);
+
+  // Filtered market products (declarative & avoids DOM reveal conflicts)
+  const filteredProducts = useMemo(() => {
+    if (pasarFilter === "all") return productsList;
+    return productsList.filter((p) => p.category === pasarFilter);
+  }, [pasarFilter, productsList]);
 
   // Dynamic targets with graceful fallbacks
   const targetHero = useMemo(() => {
@@ -1289,35 +1295,42 @@ export const LandingPage: React.FC = () => {
                 Pakan Organik
               </button>
             </div>
-            <div className="grid3" id="prods">
-              {productsList.map((prod, idx) => (
-                <article
-                  key={prod.id}
-                  className={`card prod rv ${idx > 0 ? `d${idx % 3}` : ""} ${pasarFilter !== "all" && prod.category !== pasarFilter ? "hide" : ""}`}
-                  data-cat={prod.category}
-                >
-                  <div className="card__img">
-                    <img src={prod.img} alt={prod.title} />
-                  </div>
-                  <div className="card__b">
-                    <span className="tag">{prod.category}</span>
-                    <h3>{prod.title}</h3>
-                    <p className="meta">{prod.meta}</p>
-                    <div className="foot">
-                      <span className="poin">
-                        <span className="coin" aria-hidden="true" />
-                        {prod.points} Poin
-                      </span>
-                      <button
-                        className="btn btn-line btn-sm"
-                        onClick={() => setExchangeModalProduct(prod)}
-                      >
-                        Tukar Poin
-                      </button>
+            <div className="grid3 rv" id="prods">
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map((prod, idx) => (
+                  <article
+                    key={prod.id}
+                    className={`card prod ${idx > 0 ? `d${idx % 3}` : ""}`}
+                    data-cat={prod.category}
+                  >
+                    <div className="card__img">
+                      <img src={prod.img} alt={prod.title} />
                     </div>
-                  </div>
-                </article>
-              ))}
+                    <div className="card__b">
+                      <span className="tag">{prod.category}</span>
+                      <h3>{prod.title}</h3>
+                      <p className="meta">{prod.meta}</p>
+                      <div className="foot">
+                        <span className="poin">
+                          <span className="coin" aria-hidden="true" />
+                          {prod.points} Poin
+                        </span>
+                        <button
+                          className="btn btn-line btn-sm"
+                          onClick={() => setExchangeModalProduct(prod)}
+                        >
+                          Tukar Poin
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="pasar-empty">
+                  <b>Belum ada produk untuk kategori "{pasarFilter}"</b>
+                  <p>Silakan pilih kategori lain atau kembali ke kategori "Semua" untuk melihat katalog produk kami.</p>
+                </div>
+              )}
             </div>
           </div>
         </section>
