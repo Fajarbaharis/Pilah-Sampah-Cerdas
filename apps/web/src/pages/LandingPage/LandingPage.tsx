@@ -19,6 +19,7 @@ import {
   type NewsArticleItem,
   type ActionCampaignItem,
 } from "../../utils/cmsStorage";
+import { resolveImageUrl } from "../../utils/imageUrl";
 import "./LandingPage.css";
 
 interface ProgramItem {
@@ -185,12 +186,23 @@ const mapCmsCampaignToProgram = (c: ActionCampaignItem): ProgramItem => ({
   team: c.initiator || "KKN UNIKOM 2026",
 });
 
+const resolveNewsImage = (n: NewsArticleItem): string => {
+  if (n.imageUrl && typeof n.imageUrl === "string" && n.imageUrl.trim() !== "") {
+    const trimmed = n.imageUrl.trim();
+    if (trimmed.startsWith("/uploads/")) {
+      return resolveImageUrl(trimmed);
+    }
+    return trimmed;
+  }
+  return "/image/landingpage/news-rw11-dago.webp";
+};
+
 const mapCmsNewsToItem = (n: NewsArticleItem): NewsItem => ({
   id: n.id,
   title: n.title,
   date: n.date || "Terbaru",
   category: n.category || "Kabar Lingkungan",
-  img: n.imageUrl || "/image/landingpage/news-rw11-dago.webp",
+  img: resolveNewsImage(n),
   desc: n.summary || (n.content ? n.content.slice(0, 140) + "..." : ""),
   content: n.content,
   author: n.author || "Tim BERSEKA",
@@ -1543,7 +1555,18 @@ export const LandingPage: React.FC = () => {
                   style={{ cursor: "pointer" }}
                 >
                   <div className="card__img">
-                    <img src={item.img} alt={item.title} />
+                    <img
+                      src={item.img}
+                      alt={item.title}
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (target.src.includes("/uploads/") && !target.src.includes("https://berseka.id/uploads/")) {
+                          target.src = `https://berseka.id${new URL(target.src).pathname}`;
+                        } else {
+                          target.src = "/image/landingpage/news-rw11-dago.webp";
+                        }
+                      }}
+                    />
                   </div>
                   <div className="card__b">
                     <span className="date">{item.date}</span>
@@ -2002,7 +2025,19 @@ export const LandingPage: React.FC = () => {
               {selectedNews.author}
             </div>
             <div style={{ borderRadius: "20px", overflow: "hidden", marginBottom: "20px" }}>
-              <img src={selectedNews.img} alt={selectedNews.title} style={{ width: "100%", maxHeight: "360px", objectFit: "cover" }} />
+              <img
+                src={selectedNews.img}
+                alt={selectedNews.title}
+                style={{ width: "100%", maxHeight: "360px", objectFit: "cover" }}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (target.src.includes("/uploads/") && !target.src.includes("https://berseka.id/uploads/")) {
+                    target.src = `https://berseka.id${new URL(target.src).pathname}`;
+                  } else {
+                    target.src = "/image/landingpage/news-rw11-dago.webp";
+                  }
+                }}
+              />
             </div>
             <div style={{ fontSize: "15.5px", color: "var(--ink-2)", lineHeight: "1.7" }}>
               <p>{selectedNews.content || selectedNews.desc}</p>
@@ -2069,6 +2104,14 @@ export const LandingPage: React.FC = () => {
                     src={n.img}
                     alt={n.title}
                     style={{ width: "90px", height: "70px", borderRadius: "10px", objectFit: "cover", flexShrink: 0 }}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (target.src.includes("/uploads/") && !target.src.includes("https://berseka.id/uploads/")) {
+                        target.src = `https://berseka.id${new URL(target.src).pathname}`;
+                      } else {
+                        target.src = "/image/landingpage/news-rw11-dago.webp";
+                      }
+                    }}
                   />
                   <div>
                     <div style={{ fontSize: "12px", color: "var(--muted)" }}>
