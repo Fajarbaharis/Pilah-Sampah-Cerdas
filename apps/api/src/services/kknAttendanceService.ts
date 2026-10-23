@@ -1171,7 +1171,13 @@ export class KknAttendanceService {
     if (groupStudentIds.length > 0) {
       dampinganConditions.push(
         { pendampingStudentId: { in: groupStudentIds } },
-        ...(studentProfile?.kelompokId ? [{ kelompokKknId: studentProfile.kelompokId }] : []),
+        ...(studentProfile?.kelompokId
+          ? [
+              { kelompokKknId: studentProfile.kelompokId },
+              { bins: { some: { status: "ACTIVE_BOUND", kelompokId: studentProfile.kelompokId } } },
+              { binOwnerships: { some: { bin: { status: "ACTIVE_BOUND", kelompokId: studentProfile.kelompokId } } } },
+            ]
+          : []),
         { bins: { some: { status: "ACTIVE_BOUND", registeredByStudentId: { in: groupStudentIds } } } },
         { binOwnerships: { some: { bin: { status: "ACTIVE_BOUND", registeredByStudentId: { in: groupStudentIds } } } } }
       );
@@ -1196,8 +1202,9 @@ export class KknAttendanceService {
             },
           },
         },
-        rw: { include: { kelurahan: true } },
-        households: { include: { rw: { include: { kelurahan: true } } } },
+        kelompokKkn: { select: { id: true, name: true, kelurahan: true } },
+        rw: { include: { kelurahan: { include: { kecamatan: true } } } },
+        households: { include: { rw: { include: { kelurahan: { include: { kecamatan: true } } } } } },
         pointHistory: true,
         wargaViolations: true,
         setoranOtomatis: {
@@ -1208,7 +1215,8 @@ export class KknAttendanceService {
           include: {
             category: true,
             registeredByStudent: { select: { id: true, name: true } },
-            rw: { include: { kelurahan: true } },
+            rw: { include: { kelurahan: { include: { kecamatan: true } } } },
+            kelompok: { select: { id: true, name: true, kelurahan: true } },
             setoranOtomatis: {
               take: 20,
               orderBy: { createdAt: "desc" },
@@ -1222,7 +1230,8 @@ export class KknAttendanceService {
               include: {
                 category: true,
                 registeredByStudent: { select: { id: true, name: true } },
-                rw: { include: { kelurahan: true } },
+                rw: { include: { kelurahan: { include: { kecamatan: true } } } },
+                kelompok: { select: { id: true, name: true, kelurahan: true } },
                 setoranOtomatis: {
                   take: 20,
                   orderBy: { createdAt: "desc" },
@@ -1269,21 +1278,53 @@ export class KknAttendanceService {
 
       const resolvedRwId: number | null = u.rwId || household?.rwId || primaryBin?.rwId || studentProfile?.assignedRwId || null;
       const rwName = u.rw?.name || household?.rw?.name || primaryBin?.rw?.name || (resolvedRwId ? `RW 0${resolvedRwId}` : "");
-      const kelName = u.rw?.kelurahan?.name || household?.rw?.kelurahan?.name || primaryBin?.rw?.kelurahan?.name || "";
+      const kelName =
+        u.rw?.kelurahan?.name ||
+        household?.rw?.kelurahan?.name ||
+        primaryBin?.rw?.kelurahan?.name ||
+        binOrganik?.rw?.kelurahan?.name ||
+        binAnorganik?.rw?.kelurahan?.name ||
+        studentProfile?.kelompok?.kelurahan ||
+        u.kelompokKkn?.kelurahan ||
+        "";
+      const kecName =
+        u.rw?.kelurahan?.kecamatan?.name ||
+        household?.rw?.kelurahan?.kecamatan?.name ||
+        primaryBin?.rw?.kelurahan?.kecamatan?.name ||
+        "Coblong";
 
       const isActivated = !!primaryBin;
-      const registeredStudentId =
+      let registeredStudentId =
         u.pendampingStudentId ||
         primaryBin?.registeredByStudentId ||
         binOrganik?.registeredByStudentId ||
         binAnorganik?.registeredByStudentId ||
         null;
-      const registeredStudentName =
+      let registeredStudentName =
         u.pendampingStudent?.name ||
         primaryBin?.registeredByStudent?.name ||
         binOrganik?.registeredByStudent?.name ||
         binAnorganik?.registeredByStudent?.name ||
         null;
+
+      const binKelompokId =
+        primaryBin?.kelompokId ||
+        binOrganik?.kelompokId ||
+        binAnorganik?.kelompokId ||
+        u.kelompokKknId;
+
+      if (
+        !registeredStudentId &&
+        studentProfile?.kelompokId &&
+        (binKelompokId === studentProfile.kelompokId || u.kelompokKknId === studentProfile.kelompokId)
+      ) {
+        if (studentProfile?.isKetua) {
+          registeredStudentId = userId;
+          registeredStudentName = studentProfile?.user?.name || "Ketua Kelompok KKN";
+        } else {
+          registeredStudentName = studentProfile?.kelompok?.name || "Kelompok KKN";
+        }
+      }
 
       const totalKg = allSetoranLogs.reduce((sum: number, l: any) => sum + Number(l.berat || 0), 0);
       const totalPoin =
@@ -1320,6 +1361,9 @@ export class KknAttendanceService {
         phone: u.phone || "-",
         address: household?.address || u.address || "-",
         kelurahan: kelName,
+        kelurahanName: kelName,
+        kecamatan: kecName,
+        kecamatanName: kecName,
         rw: rwName,
         rwId: resolvedRwId,
         rt: household?.rt || "",
