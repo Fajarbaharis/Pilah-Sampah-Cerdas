@@ -223,7 +223,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         {/* Top Header */}
         <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 bg-slate-50/60">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#138861]/10 flex items-center justify-center text-[#138861]">
+            <div className="w-8 h-8 rounded-lg bg-[#0B7478]/10 flex items-center justify-center text-[#0B7478]">
               <KeyRound className="w-4 h-4" />
             </div>
             <div>
@@ -250,17 +250,17 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           <div className="flex items-center justify-center gap-2 pt-4 px-6">
             <div
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                step >= 1 ? "w-10 bg-[#138861]" : "w-6 bg-slate-200"
+                step >= 1 ? "w-10 bg-[#0B7478]" : "w-6 bg-slate-200"
               }`}
             />
             <div
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                step >= 2 ? "w-10 bg-[#138861]" : "w-6 bg-slate-200"
+                step >= 2 ? "w-10 bg-[#0B7478]" : "w-6 bg-slate-200"
               }`}
             />
             <div
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                step >= 3 ? "w-10 bg-[#138861]" : "w-6 bg-slate-200"
+                step >= 3 ? "w-10 bg-[#0B7478]" : "w-6 bg-slate-200"
               }`}
             />
           </div>
@@ -285,7 +285,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                     onChange={(e) => setPhone(e.target.value.replace(/[^\d+]/g, ""))}
                     disabled={isLoading}
                     autoFocus
-                    className="w-full h-12 pl-12 pr-4 bg-white text-[#0f2142] text-sm font-semibold rounded-xl border border-slate-200 focus:border-[#138861] focus:ring-4 focus:ring-[#138861]/10 outline-none transition-all"
+                    className="w-full h-12 pl-12 pr-4 bg-white text-[#0f2142] text-sm font-semibold rounded-xl border border-slate-200 focus:border-[#0B7478] focus:ring-4 focus:ring-[#0B7478]/10 outline-none transition-all"
                   />
                 </div>
                 <p className="mt-2 text-xs text-slate-500 leading-relaxed">
@@ -304,7 +304,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 <button
                   type="submit"
                   disabled={isLoading || !phone.trim()}
-                  className="w-2/3 h-11 flex items-center justify-center gap-2 text-xs font-bold text-white bg-[#138861] hover:bg-[#0e6e4e] rounded-xl transition-all shadow-md shadow-[#138861]/20 disabled:opacity-50 cursor-pointer"
+                  className="w-2/3 h-11 flex items-center justify-center gap-2 text-xs font-bold text-white bg-[#0B7478] hover:bg-[#075A5D] rounded-xl transition-all shadow-md shadow-[#0B7478]/20 disabled:opacity-50 cursor-pointer"
                 >
                   {isLoading ? (
                     <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
@@ -344,7 +344,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   disabled={isLoading}
-                  className="w-full h-14 text-center tracking-[0.6em] text-2xl font-black text-[#0f2142] bg-slate-50 border border-slate-200 rounded-xl focus:border-[#138861] focus:bg-white focus:ring-4 focus:ring-[#138861]/10 outline-none transition-all"
+                  className="w-full h-14 text-center tracking-[0.6em] text-2xl font-black text-[#0f2142] bg-slate-50 border border-slate-200 rounded-xl focus:border-[#0B7478] focus:bg-white focus:ring-4 focus:ring-[#0B7478]/10 outline-none transition-all"
                 />
               </div>
 
@@ -356,7 +356,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                     type="button"
                     onClick={handleResendOtp}
                     disabled={isLoading}
-                    className="flex items-center gap-1 font-bold text-[#138861] hover:underline cursor-pointer"
+                    className="flex items-center gap-1 font-bold text-[#0B7478] hover:underline cursor-pointer"
                   >
                     <RotateCw className="w-3 h-3" />
                     <span>Kirim Ulang</span>
@@ -380,7 +380,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 <button
                   type="submit"
                   disabled={isLoading || otp.length < 4}
-                  className="w-2/3 h-11 flex items-center justify-center gap-2 text-xs font-bold text-white bg-[#138861] hover:bg-[#0e6e4e] rounded-xl transition-all shadow-md shadow-[#138861]/20 disabled:opacity-50 cursor-pointer"
+                  className="w-2/3 h-11 flex items-center justify-center gap-2 text-xs font-bold text-white bg-[#0B7478] hover:bg-[#075A5D] rounded-xl transition-all shadow-md shadow-[#0B7478]/20 disabled:opacity-50 cursor-pointer"
                 >
                   {isLoading ? (
                     <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
@@ -408,7 +408,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                     onChange={(e) => setNewPassword(e.target.value)}
                     disabled={isLoading}
                     autoFocus
-                    className="w-full h-11 pl-11 pr-11 bg-white text-[#0f2142] text-sm font-medium rounded-xl border border-slate-200 focus:border-[#138861] focus:ring-4 focus:ring-[#138861]/10 outline-none transition-all"
+                    className="w-full h-11 pl-11 pr-11 bg-white text-[#0f2142] text-sm font-medium rounded-xl border border-slate-200 focus:border-[#0B7478] focus:ring-4 focus:ring-[#0B7478]/10 outline-none transition-all"
                   />
                   <button
                     type="button"
@@ -432,7 +432,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={isLoading}
-                    className="w-full h-11 pl-11 pr-4 bg-white text-[#0f2142] text-sm font-medium rounded-xl border border-slate-200 focus:border-[#138861] focus:ring-4 focus:ring-[#138861]/10 outline-none transition-all"
+                    className="w-full h-11 pl-11 pr-4 bg-white text-[#0f2142] text-sm font-medium rounded-xl border border-slate-200 focus:border-[#0B7478] focus:ring-4 focus:ring-[#0B7478]/10 outline-none transition-all"
                   />
                 </div>
                 {confirmPassword && confirmPassword !== newPassword && (
@@ -446,7 +446,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 <button
                   type="submit"
                   disabled={isLoading || newPassword.length < 8 || newPassword !== confirmPassword}
-                  className="w-full h-11 flex items-center justify-center gap-2 text-xs font-bold text-white bg-[#138861] hover:bg-[#0e6e4e] rounded-xl transition-all shadow-md shadow-[#138861]/20 disabled:opacity-50 cursor-pointer"
+                  className="w-full h-11 flex items-center justify-center gap-2 text-xs font-bold text-white bg-[#0B7478] hover:bg-[#075A5D] rounded-xl transition-all shadow-md shadow-[#0B7478]/20 disabled:opacity-50 cursor-pointer"
                 >
                   {isLoading ? (
                     <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
@@ -476,7 +476,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-full h-11 text-xs font-bold text-white bg-[#138861] hover:bg-[#0e6e4e] rounded-xl shadow-md transition-all cursor-pointer"
+                  className="w-full h-11 text-xs font-bold text-white bg-[#0B7478] hover:bg-[#075A5D] rounded-xl shadow-md transition-all cursor-pointer"
                 >
                   Masuk Sekarang
                 </button>
