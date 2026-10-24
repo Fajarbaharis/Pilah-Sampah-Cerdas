@@ -30,6 +30,7 @@ import { useThemeStore } from "../../store/useThemeStore";
 import { useAppBrandingStore } from "../../store/useAppBrandingStore";
 import showToast from "../../utils/showToast";
 import LoginKknHero from "./components/LoginKknHero";
+import ForgotPasswordModal from "./components/ForgotPasswordModal";
 import api from "../../services/api";
 
 const STORE_KEY = "berseka:lastPhone";
@@ -87,6 +88,7 @@ const Login: React.FC = () => {
   const [phoneError, setPhoneError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [isShaking, setIsShaking] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Deteksi Safari di Apple iPhone
   const [safariStatus, setSafariStatus] = useState<"ok" | "warn" | "default">("default");
@@ -125,7 +127,7 @@ const Login: React.FC = () => {
         : h < 18
         ? "Selamat sore"
         : "Selamat malam";
-    setGreeting(`${salam}! Masuk untuk melanjutkan kegiatanmu.`);
+    setGreeting(`${salam}. Silakan masuk untuk mengakses sistem BERSEKA.`);
   }, []);
 
   // Deteksi User-Agent Safari iPhone
@@ -183,11 +185,11 @@ const Login: React.FC = () => {
     const clean = phone.trim();
 
     if (!clean) {
-      setPhoneError("Nomor ponsel, NIM, atau NIP DPL wajib diisi.");
+      setPhoneError("Nomor ponsel wajib diisi.");
       isValid = false;
     } else if (isDplNipOrNim(clean)) {
       if (clean.length < 4) {
-        setPhoneError("NIP DPL / NIM terlalu pendek.");
+        setPhoneError("Nomor ponsel atau identitas akun terlalu pendek.");
         isValid = false;
       } else {
         setPhoneError("");
@@ -196,7 +198,7 @@ const Login: React.FC = () => {
       const digits = extractDigits(phone);
       const normalized = normalizeToIndoPhone(phone);
       if (!/^08\d{6,12}$/.test(normalized) && !/^\d{6,14}$/.test(digits)) {
-        setPhoneError("Format belum sesuai, contoh: 0812 3456 7890 atau NIP DPL.");
+        setPhoneError("Format nomor ponsel belum sesuai (contoh: 0812 3456 7890).");
         isValid = false;
       } else {
         setPhoneError("");
@@ -279,15 +281,15 @@ const Login: React.FC = () => {
       } else if (storeErr === "MAHASISWA_MUST_USE_IOS_SAFARI") {
         msg = "Mahasiswa KKN wajib menggunakan peramban Safari di perangkat Apple iPhone.";
       } else if (storeErr === "ROLE_NOT_ALLOWED_ON_WEB") {
-        msg = "Akses web khusus DPL dan Pengelola. Warga & Petugas Pemilah silakan gunakan aplikasi seluler (APK).";
+        msg = "Akses web khusus DPL dan pengelola. Warga dan petugas pemilah silakan gunakan aplikasi seluler (APK).";
       } else if (storeErr === "USER_INACTIVE") {
         msg = "Akun Anda belum aktif atau telah dinonaktifkan oleh administrator.";
       } else if (storeErr === "USER_PENDING_APPROVAL") {
         msg = "Akun Anda masih menunggu verifikasi dan persetujuan pengurus RW.";
       } else if (storeErr === "SERVICE_UNAVAILABLE") {
-        msg = "Server sedang dalam pemeliharaan. Coba beberapa saat lagi.";
+        msg = "Layanan sedang dalam pemeliharaan. Silakan coba beberapa saat lagi.";
       } else if (storeErr === "TOO_MANY_ATTEMPTS") {
-        msg = "Terlalu banyak percobaan masuk gagal. Coba lagi dalam 1 menit.";
+        msg = "Terlalu banyak percobaan masuk yang gagal. Silakan coba lagi dalam 1 menit.";
       } else if (storeErr === "NETWORK_ERROR") {
         msg = "Tidak dapat terhubung ke server. Periksa koneksi internet Anda.";
       }
@@ -314,16 +316,16 @@ const Login: React.FC = () => {
           <div className="hidden lg:flex justify-end items-center">
             <Link
               to="/"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#0B7478] hover:text-[#075A5D] transition-colors group"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0B7478] hover:text-[#075A5D] transition-colors group"
             >
               <span>Kembali ke beranda</span>
-              <ArrowUpRight size={17} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              <ArrowUpRight size={15} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Link>
           </div>
 
           {/* Card Form Login */}
           <div
-            className={`w-full max-w-[460px] mx-auto my-auto bg-white p-6 sm:p-8 xl:p-10 rounded-[24px] shadow-[0_40px_80px_-40px_rgba(14,27,51,0.22),0_2px_8px_rgba(14,27,51,0.04)] transition-all ${
+            className={`w-full max-w-[460px] mx-auto my-auto bg-white p-5 sm:p-8 xl:p-10 rounded-[20px] sm:rounded-[24px] border border-slate-100/80 shadow-[0_40px_80px_-40px_rgba(14,27,51,0.22),0_2px_8px_rgba(14,27,51,0.04)] transition-all ${
               isShaking ? "animate-shake" : ""
             }`}
           >
@@ -350,7 +352,7 @@ const Login: React.FC = () => {
               {/* Field 1: Nomor Ponsel */}
               <div>
                 <label htmlFor="phone" className="block text-xs sm:text-sm font-bold text-[#0E1B33] mb-1.5">
-                  Nomor ponsel / NIP DPL / NIM
+                  Nomor ponsel
                 </label>
                 <div
                   className={`flex items-center h-12 sm:h-13 px-3.5 rounded-xl border bg-white transition-all ${
@@ -366,7 +368,7 @@ const Login: React.FC = () => {
                     type="text"
                     inputMode={isDplNipOrNim(phone) ? "text" : "tel"}
                     autoComplete="tel"
-                    placeholder="Contoh: 0812 3456 7890 atau NIP DPL"
+                    placeholder="Contoh: 0812 3456 7890"
                     maxLength={32}
                     value={phone}
                     onChange={(e) => {
@@ -433,17 +435,25 @@ const Login: React.FC = () => {
                 )}
               </div>
 
-              {/* Row: Ingat Saya (Lupa Kata Sandi di-hide sementara sesuai arahan) */}
+              {/* Row: Ingat Saya & Lupa Kata Sandi */}
               <div className="flex items-center justify-between pt-1">
-                <label className="inline-flex items-center gap-2.5 cursor-pointer select-none text-[14px] font-medium text-[#2A3A4A] py-1">
+                <label className="inline-flex items-center gap-2.5 cursor-pointer select-none text-[13.5px] sm:text-[14px] font-medium text-[#2A3A4A] py-1">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-5 h-5 rounded-[6px] border-[1.5px] border-[#9AA6B2] text-[#0B7478] focus:ring-[#0B7478] focus:ring-offset-0 cursor-pointer accent-[#0B7478]"
+                    className="w-4.5 h-4.5 rounded-[5px] border-[1.5px] border-[#9AA6B2] text-[#0B7478] focus:ring-[#0B7478] focus:ring-offset-0 cursor-pointer accent-[#0B7478]"
                   />
                   <span>Ingat saya</span>
                 </label>
+
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="font-bold text-xs sm:text-sm text-[#0B7478] hover:text-[#075A5D] hover:underline cursor-pointer transition-colors"
+                >
+                  Lupa kata sandi?
+                </button>
               </div>
 
               {/* Tombol Masuk */}
@@ -451,7 +461,7 @@ const Login: React.FC = () => {
                 type="submit"
                 id="submitBtn"
                 disabled={isLoading}
-                className="w-full h-12 sm:h-13 flex items-center justify-center gap-2.5 bg-[#0B7478] hover:bg-[#075A5D] active:scale-[0.99] text-white font-bold text-sm sm:text-base rounded-xl shadow-[0_14px_28px_-14px_rgba(8,94,98,0.8)] transition-all cursor-pointer disabled:opacity-75 disabled:cursor-wait group"
+                className="w-full h-12 sm:h-13 flex items-center justify-center gap-2 bg-[#0B7478] hover:bg-[#075A5D] active:scale-[0.99] text-white font-bold text-sm sm:text-base rounded-xl shadow-[0_14px_28px_-14px_rgba(8,94,98,0.8)] transition-all cursor-pointer disabled:opacity-75 disabled:cursor-wait group"
               >
                 {isLoading ? (
                   <>
@@ -461,7 +471,7 @@ const Login: React.FC = () => {
                 ) : (
                   <>
                     <span>Masuk</span>
-                    <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                    <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
                   </>
                 )}
               </button>
@@ -479,13 +489,13 @@ const Login: React.FC = () => {
                     : "bg-[#EAF4FD] text-[#2C4A66]"
                 }`}
               >
-                <Smartphone size={14} className="shrink-0" />
+                <Smartphone size={13} className="shrink-0" />
                 <span>
                   {safariStatus === "ok"
-                    ? "Perangkatmu siap untuk presensi & logbook"
+                    ? "Perangkat siap untuk presensi dan logbook."
                     : safariStatus === "warn"
-                    ? "Buka di Safari iPhone untuk presensi & logbook"
-                    : "Presensi & logbook via Safari di iPhone"}
+                    ? "Gunakan peramban Safari di iPhone untuk presensi dan logbook."
+                    : "Presensi dan logbook mahasiswa via peramban Safari di iPhone."}
                 </span>
               </div>
 
@@ -497,7 +507,7 @@ const Login: React.FC = () => {
                   rel="noopener noreferrer"
                   className="font-bold text-[#0B7478] hover:text-[#075A5D] hover:underline"
                 >
-                  Hubungi tim BERSEKA
+                  Hubungi Layanan Bantuan
                 </a>
               </p>
             </div>
@@ -531,6 +541,19 @@ const Login: React.FC = () => {
           </Link>
         </div>
       </div>
+
+      {/* Modal Lupa Kata Sandi */}
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+        onSuccessReset={(resetPhone) => {
+          setPhone(formatPhoneDisplay(resetPhone));
+          setShowForgotPassword(false);
+          setTimeout(() => {
+            passwordInputRef.current?.focus();
+          }, 200);
+        }}
+      />
     </div>
   );
 };
