@@ -439,7 +439,7 @@ export const LandingPage: React.FC = () => {
 
   const targetSampah = useMemo(() => {
     const kg = landingStats?.totalSampahKg;
-    return typeof kg === "number" && kg > 0 ? kg : 7735.19;
+    return typeof kg === "number" && kg > 0 ? kg : 7680.19;
   }, [landingStats]);
 
   // Animated counters

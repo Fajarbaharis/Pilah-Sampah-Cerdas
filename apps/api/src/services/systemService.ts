@@ -893,32 +893,50 @@ export const systemService = {
         .count()
         .catch(() => 0),
       prisma.setoranManual
-        .aggregate({ _sum: { berat: true } })
-        .catch(() => ({ _sum: { berat: null } })),
-      prisma.setoranOtomatis
-        .aggregate({ _sum: { berat: true } })
+        .aggregate({
+          where: { petugas: { isTestAccount: false } },
+          _sum: { berat: true },
+        })
         .catch(() => ({ _sum: { berat: null } })),
       prisma.setoranOtomatis
         .aggregate({
-          where: { hasilKlasifikasiAi: { equals: "organik", mode: "insensitive" } },
+          where: { warga: { isTestAccount: false } },
+          _sum: { berat: true },
+        })
+        .catch(() => ({ _sum: { berat: null } })),
+      prisma.setoranOtomatis
+        .aggregate({
+          where: {
+            warga: { isTestAccount: false },
+            hasilKlasifikasiAi: { equals: "organik", mode: "insensitive" },
+          },
           _sum: { berat: true },
         })
         .catch(() => ({ _sum: { berat: null } })),
       prisma.setoranManual
         .aggregate({
-          where: { kategori: { equals: "organik", mode: "insensitive" } },
+          where: {
+            petugas: { isTestAccount: false },
+            kategori: { equals: "organik", mode: "insensitive" },
+          },
           _sum: { berat: true },
         })
         .catch(() => ({ _sum: { berat: null } })),
       prisma.setoranOtomatis
         .aggregate({
-          where: { hasilKlasifikasiAi: { equals: "anorganik", mode: "insensitive" } },
+          where: {
+            warga: { isTestAccount: false },
+            hasilKlasifikasiAi: { equals: "anorganik", mode: "insensitive" },
+          },
           _sum: { berat: true },
         })
         .catch(() => ({ _sum: { berat: null } })),
       prisma.setoranManual
         .aggregate({
-          where: { kategori: { equals: "anorganik", mode: "insensitive" } },
+          where: {
+            petugas: { isTestAccount: false },
+            kategori: { equals: "anorganik", mode: "insensitive" },
+          },
           _sum: { berat: true },
         })
         .catch(() => ({ _sum: { berat: null } })),
@@ -946,12 +964,18 @@ export const systemService = {
       systemService
         .getCuratedLandingActivities()
         .catch(() => systemService.getDefaultCuratedActivities()),
-      // Aggregates for daily trend
+      // Aggregates for daily trend (Filtering test accounts)
       prisma.setoranOtomatis
-        .aggregate({ where: { createdAt: { gte: startOfToday } }, _sum: { berat: true } })
+        .aggregate({
+          where: { createdAt: { gte: startOfToday }, warga: { isTestAccount: false } },
+          _sum: { berat: true },
+        })
         .catch(() => ({ _sum: { berat: null } })),
       prisma.setoranManual
-        .aggregate({ where: { createdAt: { gte: startOfToday } }, _sum: { berat: true } })
+        .aggregate({
+          where: { createdAt: { gte: startOfToday }, petugas: { isTestAccount: false } },
+          _sum: { berat: true },
+        })
         .catch(() => ({ _sum: { berat: null } })),
       prisma.pemanfaatan
         .findMany({
@@ -961,13 +985,19 @@ export const systemService = {
         .catch(() => []),
       prisma.setoranOtomatis
         .aggregate({
-          where: { createdAt: { gte: startOfYesterday, lt: startOfToday } },
+          where: {
+            createdAt: { gte: startOfYesterday, lt: startOfToday },
+            warga: { isTestAccount: false },
+          },
           _sum: { berat: true },
         })
         .catch(() => ({ _sum: { berat: null } })),
       prisma.setoranManual
         .aggregate({
-          where: { createdAt: { gte: startOfYesterday, lt: startOfToday } },
+          where: {
+            createdAt: { gte: startOfYesterday, lt: startOfToday },
+            petugas: { isTestAccount: false },
+          },
           _sum: { berat: true },
         })
         .catch(() => ({ _sum: { berat: null } })),
@@ -979,13 +1009,19 @@ export const systemService = {
         .catch(() => []),
       prisma.setoranOtomatis
         .aggregate({
-          where: { createdAt: { gte: startOf2DaysAgo, lt: startOfYesterday } },
+          where: {
+            createdAt: { gte: startOf2DaysAgo, lt: startOfYesterday },
+            warga: { isTestAccount: false },
+          },
           _sum: { berat: true },
         })
         .catch(() => ({ _sum: { berat: null } })),
       prisma.setoranManual
         .aggregate({
-          where: { createdAt: { gte: startOf2DaysAgo, lt: startOfYesterday } },
+          where: {
+            createdAt: { gte: startOf2DaysAgo, lt: startOfYesterday },
+            petugas: { isTestAccount: false },
+          },
           _sum: { berat: true },
         })
         .catch(() => ({ _sum: { berat: null } })),
@@ -996,10 +1032,16 @@ export const systemService = {
         })
         .catch(() => []),
       prisma.setoranOtomatis
-        .aggregate({ where: { createdAt: { gte: startOf7DaysAgo } }, _sum: { berat: true } })
+        .aggregate({
+          where: { createdAt: { gte: startOf7DaysAgo }, warga: { isTestAccount: false } },
+          _sum: { berat: true },
+        })
         .catch(() => ({ _sum: { berat: null } })),
       prisma.setoranManual
-        .aggregate({ where: { createdAt: { gte: startOf7DaysAgo } }, _sum: { berat: true } })
+        .aggregate({
+          where: { createdAt: { gte: startOf7DaysAgo }, petugas: { isTestAccount: false } },
+          _sum: { berat: true },
+        })
         .catch(() => ({ _sum: { berat: null } })),
       prisma.pemanfaatan
         .findMany({
