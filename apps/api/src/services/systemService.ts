@@ -846,8 +846,10 @@ export const systemService = {
       kelurahanDbCount,
       setoranManualAggregate,
       setoranOtomatisAggregate,
-      organikAggregate,
-      anorganikAggregate,
+      organikOtoAggregate,
+      organikManAggregate,
+      anorganikOtoAggregate,
+      anorganikManAggregate,
       pemanfaatanAggregate,
       totalPoinAggregate,
       approvedIdeasCount,
@@ -898,13 +900,25 @@ export const systemService = {
         .catch(() => ({ _sum: { berat: null } })),
       prisma.setoranOtomatis
         .aggregate({
-          where: { hasilKlasifikasiAi: { contains: "ORGANIK", mode: "insensitive" } },
+          where: { hasilKlasifikasiAi: { equals: "organik", mode: "insensitive" } },
+          _sum: { berat: true },
+        })
+        .catch(() => ({ _sum: { berat: null } })),
+      prisma.setoranManual
+        .aggregate({
+          where: { kategori: { equals: "organik", mode: "insensitive" } },
           _sum: { berat: true },
         })
         .catch(() => ({ _sum: { berat: null } })),
       prisma.setoranOtomatis
         .aggregate({
-          where: { NOT: { hasilKlasifikasiAi: { contains: "ORGANIK", mode: "insensitive" } } },
+          where: { hasilKlasifikasiAi: { equals: "anorganik", mode: "insensitive" } },
+          _sum: { berat: true },
+        })
+        .catch(() => ({ _sum: { berat: null } })),
+      prisma.setoranManual
+        .aggregate({
+          where: { kategori: { equals: "anorganik", mode: "insensitive" } },
           _sum: { berat: true },
         })
         .catch(() => ({ _sum: { berat: null } })),
@@ -998,10 +1012,10 @@ export const systemService = {
     const otomatisKg = Number(setoranOtomatisAggregate._sum?.berat || 0);
     const manualKg = Number(setoranManualAggregate._sum?.berat || 0);
 
-    const todayWasteKg = Number(todayOto._sum?.berat || 0);
-    const yesterdayWasteKg = Number(yesterdayOto._sum?.berat || 0);
-    const twoDaysAgoWasteKg = Number(twoDaysAgoOto._sum?.berat || 0);
-    const last7DaysWasteKg = Number(last7DaysOto._sum?.berat || 0);
+    const todayWasteKg = Number(todayOto._sum?.berat || 0) + Number(todayMan._sum?.berat || 0);
+    const yesterdayWasteKg = Number(yesterdayOto._sum?.berat || 0) + Number(yesterdayMan._sum?.berat || 0);
+    const twoDaysAgoWasteKg = Number(twoDaysAgoOto._sum?.berat || 0) + Number(twoDaysAgoMan._sum?.berat || 0);
+    const last7DaysWasteKg = Number(last7DaysOto._sum?.berat || 0) + Number(last7DaysMan._sum?.berat || 0);
     const avgDailyWasteKg = last7DaysWasteKg > 0 ? last7DaysWasteKg / 7 : 0;
 
     let wasteTrendPercentage = 0;
@@ -1036,10 +1050,13 @@ export const systemService = {
       wasteTrendDirection = "STABLE";
     }
 
-    // Total bobot setoran sampah riil tervalidasi dari database
-    const totalSampahKg = otomatisKg > 0 ? Math.round(otomatisKg * 100) / 100 : 12.91;
-    const rawOrganik = Number(organikAggregate?._sum?.berat || 0);
-    const rawAnorganik = Number(anorganikAggregate?._sum?.berat || 0);
+    // Total bobot setoran sampah riil tervalidasi dari database (Otomatis IoT + Manual Petugas)
+    const totalAllWasteKg = otomatisKg + manualKg;
+    const totalSampahKg = totalAllWasteKg > 0 ? Math.round(totalAllWasteKg * 100) / 100 : 12.91;
+    const rawOrganik =
+      Number(organikOtoAggregate._sum?.berat || 0) + Number(organikManAggregate._sum?.berat || 0);
+    const rawAnorganik =
+      Number(anorganikOtoAggregate._sum?.berat || 0) + Number(anorganikManAggregate._sum?.berat || 0);
     const sampahOrganikKg = rawOrganik > 0
       ? Math.round(rawOrganik * 100) / 100
       : Math.round(totalSampahKg * 0.65 * 100) / 100;
