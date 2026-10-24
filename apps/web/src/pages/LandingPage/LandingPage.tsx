@@ -136,13 +136,13 @@ const resolveProductCategory = (item: MarketProductItem): string => {
   const title = (item.title || "").toLowerCase();
 
   if (cat.includes("pupuk") || cat.includes("kompos") || label.includes("pupuk") || label.includes("kompos") || title.includes("poc")) {
-    return "Pupuk & Kompos";
+    return "Pupuk dan Kompos";
   }
   if (cat.includes("eco") || cat.includes("enzyme") || label.includes("eco")) {
     return "Eco-Enzyme";
   }
   if (cat.includes("bibit") || cat.includes("tanaman") || cat.includes("sayur") || cat.includes("buah") || cat.includes("buruan") || label.includes("buruan")) {
-    return "Bibit & Tanaman";
+    return "Bibit dan Tanaman";
   }
   if (cat.includes("kerajinan") || cat.includes("daur") || cat.includes("kreatif") || label.includes("daur") || label.includes("kreatif")) {
     return "Daur Ulang Kreatif";
@@ -221,13 +221,13 @@ const PROGRAMS: ProgramItem[] = [
   },
   {
     id: "gas-metana",
-    tag: "IoT & Lingkungan",
+    tag: "IoT dan Lingkungan",
     title: "Pemantauan Gas Metana di TPS Organik",
     desc: "Pemasangan sensor gas dan suhu pada komposter/TPS untuk mendeteksi pembentukan gas metana secara dini dan mencegah risiko ledakan atau bau berlebih.",
     img: "/image/landingpage/prog-gas-metana.webp",
     details: "Sistem sensor cerdas berbasis mikroprosesor memantau tingkat gas CH4 dan temperatur di pusat komposting RW, mengirimkan sinyal telemetri otomatis ke dashboard pengelola.",
-    rw: "RW 11 Dago & RW 08 Sekeloa",
-    team: "Tim IoT & Sensorik UNIKOM"
+    rw: "RW 11 Dago dan RW 08 Sekeloa",
+    team: "Tim IoT dan Sensorik UNIKOM"
   },
   {
     id: "buruan-sae",
@@ -236,7 +236,7 @@ const PROGRAMS: ProgramItem[] = [
     desc: "Penyiraman otomatis dan sensor kelembapan tanah untuk kebun pangan warga yang memanfaatkan kompos dari hasil olahan sampah organik rumah tangga.",
     img: "/image/landingpage/prog-buruan-sae.webp",
     details: "Integrasi sistem irigasi otomatis dengan pupuk organik cair BERSEKA di kebun Buruan SAE binaan, memastikan hasil panen sayuran sehat untuk warga.",
-    rw: "RW 03 Lebak Siliwangi & RW 05 Sekeloa",
+    rw: "RW 03 Lebak Siliwangi dan RW 05 Sekeloa",
     team: "Tim Buruan SAE KKN"
   },
   {
@@ -246,7 +246,7 @@ const PROGRAMS: ProgramItem[] = [
     desc: "Komposter drum pintar dengan aerasi terjadwal yang memproses sisa makanan menjadi pupuk cair berkualitas dan siap dimanfaatkan kebun warga.",
     img: "/image/landingpage/prog-komposter-poc.webp",
     details: "Pengomposan anaerobik terkontrol yang mengalirkan lindi matang ke penampung mikro-filtrasi, menghasilkan Pupuk Organik Cair (POC) kaya nutrisi.",
-    rw: "RW 08 Dago & RW 14 Sadang Serang",
+    rw: "RW 08 Dago dan RW 14 Sadang Serang",
     team: "Tim Bioteknologi Lingkungan"
   },
   {
@@ -263,10 +263,10 @@ const PROGRAMS: ProgramItem[] = [
     id: "produk-kreatif",
     tag: "Ekonomi Sirkular",
     title: "Pemanfaatan Sampah Menjadi Produk Kreatif",
-    desc: "Pelatihan pengolahan kantong plastik kresek menjadi tas anyaman, ecobrick bernilai ekonomis, dan pakan maggot untuk peternakan ayam lokal.",
+    desc: "Pelatihan pengolahan kemasan plastik kresek menjadi tas anyaman, ecobrick bernilai ekonomis, dan pakan maggot untuk peternakan ayam lokal.",
     img: "/image/landingpage/prog-produk-kreatif.webp",
     details: "Pemberdayaan kelompok ibu-ibu PKK dan pemuda karang taruna dalam kerajinan daur ulang bernilai tinggi yang langsung dipasarkan di Pasar BERSEKA.",
-    rw: "RW 06 & RW 11 Coblong",
+    rw: "RW 06 dan RW 11 Coblong",
     team: "Tim Pemberdayaan Warga"
   }
 ];
@@ -284,7 +284,7 @@ const PRODUCTS: ProductItem[] = [
   {
     id: "prod-2",
     title: "Sayuran Segar Buruan SAE",
-    category: "Bibit & Tanaman",
+    category: "Bibit dan Tanaman",
     meta: "1 Paket Sayuran",
     img: "/image/landingpage/prod-sayuran-segar.webp",
     desc: "Bayam, kangkung, dan pakcoy segar hasil pemupukan kompos dan pupuk organik BERSEKA.",
@@ -293,7 +293,7 @@ const PRODUCTS: ProductItem[] = [
   {
     id: "prod-3",
     title: "POC BERSEKA",
-    category: "Pupuk & Kompos",
+    category: "Pupuk dan Kompos",
     meta: "Botol 500 ml",
     img: "/image/landingpage/prod-poc-500ml.webp",
     desc: "Pupuk Organik Cair murni dari komposter drum pintar IoT, mempercepat pertumbuhan tanaman.",
@@ -349,9 +349,9 @@ const NEWS_LIST: NewsItem[] = [
   },
   {
     id: "news-3",
-    title: "Aktivitas KKN: RW 08 – Edukasi & Sosialisasi",
+    title: "Aktivitas KKN: RW 08 – Edukasi dan Sosialisasi",
     date: "16 Okt 2026",
-    category: "Edukasi & Sosialisasi",
+    category: "Edukasi dan Sosialisasi",
     img: "/image/landingpage/news-petugas-gaslah.webp",
     desc: "Pada Jumat, 16 Oktober 2026, Kelompok 3 KKN Kelurahan Lebak Siliwangi membantu petugas GASLAH di RW 08 dalam proses pemilahan sampah berdasa...",
     author: "Satgas GASLAH Coblong"
@@ -365,7 +365,7 @@ const FAQS = [
   },
   {
     q: "Bagaimana cara warga mendapatkan saldo poin BERSEKA?",
-    a: "Setiap warga memilah sampah dari rumah dan menyerahkannya ke petugas saat jadwal penjemputan. Petugas memindai kode QR tempat sampah warga dan menimbang bobotnya dengan timbangan digital terhubung BLE. Poin akan otomatis tercatat di akun mobile warga."
+    a: "Setiap warga memilah sampah dari rumah dan menyerahkannya ke petugas saat jadwal penjemputan. Petugas memindai kode QR Tempat Sampah warga dan menimbang bobotnya dengan timbangan digital terhubung BLE. Poin akan otomatis tercatat di akun mobile warga."
   },
   {
     q: "Apa saja produk yang bisa ditukarkan dengan poin?",
@@ -373,7 +373,7 @@ const FAQS = [
   },
   {
     q: "Bagaimana cara menggunakan fitur AISAh AI?",
-    a: "Cukup buka menu AISAh di web atau aplikasi, izinkan akses kamera gawai Anda, dan arahkan kamera ke objek sampah. Teknologi Vision AI BERSEKA akan mendeteksi material objek dan memberi rekomendasi tempat sampah pemilahan yang sesuai secara seketika."
+    a: "Cukup buka menu AISAh di web atau aplikasi, izinkan akses kamera gawai Anda, dan arahkan kamera ke objek sampah. Teknologi Vision AI BERSEKA akan mendeteksi material objek dan memberi rekomendasi Tempat Sampah pemilahan yang sesuai secara seketika."
   },
   {
     q: "Di mana lokasi penukaran produk Pasar BERSEKA?",
@@ -773,7 +773,7 @@ export const LandingPage: React.FC = () => {
   }, [calcOrganicKg, calcPlasticKg, calcOilLiters]);
 
   return (
-    <>
+    <div className="landing-root">
       {/* ===================== HEADER ===================== */}
       <header className={`hdr ${isScrolled ? "solid" : ""}`} id="hdr">
         <div className="wrap">
@@ -827,7 +827,7 @@ export const LandingPage: React.FC = () => {
                   onMouseEnter={() => setIsBantuanOpen(true)}
                 >
                   Bantuan{" "}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="m6 9 6 6 6-6" />
                   </svg>
                 </button>
@@ -841,7 +841,7 @@ export const LandingPage: React.FC = () => {
                     }}
                   >
                     <span className="i">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="9" />
                         <path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7M12 17h.01" />
                       </svg>
@@ -860,14 +860,14 @@ export const LandingPage: React.FC = () => {
                     }}
                   >
                     <span className="i">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <rect x="5" y="2" width="14" height="20" rx="3" />
                         <path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h8" />
                       </svg>
                     </span>
                     <span>
                       <b>Kalkulator BERSEKA</b>
-                      <small>Hitung nilai &amp; dampak sampahmu</small>
+                      <small>Hitung nilai dan dampak sampahmu</small>
                     </span>
                   </a>
                 </div>
@@ -891,7 +891,7 @@ export const LandingPage: React.FC = () => {
             aria-controls="drawer"
             onClick={() => setIsDrawerOpen(true)}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <path d="M4 7h16M4 12h16M4 17h10" />
             </svg>
           </button>
@@ -915,7 +915,7 @@ export const LandingPage: React.FC = () => {
               aria-label="Tutup menu"
               onClick={() => setIsDrawerOpen(false)}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                 <path d="M6 6l12 12M18 6 6 18" />
               </svg>
             </button>
@@ -941,7 +941,7 @@ export const LandingPage: React.FC = () => {
           <details>
             <summary>
               Bantuan{" "}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
                 <path d="m6 9 6 6 6-6" />
               </svg>
             </summary>
@@ -981,135 +981,142 @@ export const LandingPage: React.FC = () => {
       <main>
         {/* ===================== HERO ===================== */}
         <section className="hero" id="beranda">
-          <div className="hero__img">
-            <img
-              src="/image/landingpage/hero-sorting.webp"
-              alt="Mahasiswa KKN tersenyum sambil memilah sampah organik, plastik, dan logam ke tempat sampah hijau, biru, dan kuning"
-            />
-          </div>
-
-          <a className="play rv d3" href="#berita">
-            <span>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.4-6.5a1 1 0 0 0 0-1.8L9.5 4.6A1 1 0 0 0 8 5.5Z" />
-              </svg>
-            </span>
-            Lihat cerita kami
-          </a>
-
-          <div className="floats" aria-label="Sorotan program">
-            <a
-              className="fcard rv d2"
-              href="#program"
-              onClick={(e) => {
-                e.preventDefault();
-                setSelectedProgram(programsList[0] || PROGRAMS[0]);
-              }}
-            >
-              <img src="/image/landingpage/hero-qr-badge.webp" alt="" />
-              <span>
-                <b>Kodifikasi QR</b>
-                <small>Identitas digital tiap tempat sampah</small>
-              </span>
-            </a>
-            <a
-              className="fcard rv d3"
-              href="#program"
-              onClick={(e) => {
-                e.preventDefault();
-                const kompost =
-                  programsList.find(
-                    (p) => p.id.includes("kompost") || p.id.includes("camp-04")
-                  ) || programsList[3] || PROGRAMS[3];
-                setSelectedProgram(kompost);
-              }}
-            >
-              <img src="/image/landingpage/hero-compost-badge.webp" alt="" />
-              <span>
-                <b>Komposter IoT</b>
-                <small>Sampah organik jadi pupuk cair</small>
-              </span>
-            </a>
-            <a className="fcard rv d4" href="#pasar">
-              <img src="/image/landingpage/hero-circular-badge.webp" alt="" />
-              <span>
-                <b>Pasar Sirkular</b>
-                <small>Tukar poin dengan produk warga</small>
-              </span>
-            </a>
-          </div>
-
           <div className="wrap">
-            <div className="hero__copy">
-              <span className="badge rv">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z" />
-                  <path d="M2 21c0-3 1.9-5.4 5.1-6C9.5 14.5 12 13 13 12" />
-                </svg>
-                <span>Platform KKN Tematik untuk Pengelolaan Sampah Terpadu</span>
-              </span>
-              <h1 className="rv d1">
-                Sampah <span>Terkelola,</span> Kampung Lebih Berdaya.
-              </h1>
-              <p className="hero__lead rv d2">
-                BERSEKA menghubungkan warga, petugas, armada, fasilitas pengolahan, pemerintah, akademisi, dan pasar sirkular dalam satu ekosistem berbasis Web, Mobile, IoT, AI, GIS, QR Code, dan gamifikasi untuk mewujudkan ekonomi sirkular.
-              </p>
-              <div className="cta-pill rv d3">
-                <Link className="btn btn-line" to="/download">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+            <div className="hero__grid">
+              <div className="hero__copy">
+                <span className="badge rv">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z" />
+                    <path d="M2 21c0-3 1.9-5.4 5.1-6C9.5 14.5 12 13 13 12" />
                   </svg>
-                  Unduh Aplikasi
-                </Link>
-                <a className="btn btn-leaf" href="#program">
-                  Jelajahi Program{" "}
-                  <svg className="go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M5 12h14M13 6l6 6-6 6" />
-                  </svg>
-                </a>
-              </div>
-              <div className="people rv d4">
-                <div className="avs" aria-hidden="true">
-                  <img src="/image/landingpage/mitra-dlh.webp" alt="" />
-                  <img src="/image/landingpage/mitra-pemkot.webp" alt="" />
-                  <img src="/image/landingpage/mitra-unikom.webp" alt="" />
-                </div>
-                <p>
-                  Bergabung bersama <b><span data-count={targetHero}>{heroCount.toLocaleString("id-ID")}</span>+ pengguna</b>
-                  <br />
-                  dari {kelurahanCount} kelurahan di Coblong
+                  <span>Platform KKN Tematik untuk Pengelolaan Sampah Terpadu</span>
+                </span>
+                <h1 className="rv d1">
+                  Sampah <span>Terkelola,</span> Kampung Lebih Berdaya.
+                </h1>
+                <p className="hero__lead rv d2">
+                  BERSEKA menghubungkan warga, petugas, armada, fasilitas pengolahan, pemerintah, akademisi, dan pasar sirkular dalam satu ekosistem berbasis Web, Mobile, IoT, AI, GIS, QR Code, dan gamifikasi untuk mewujudkan ekonomi sirkular.
                 </p>
+                <div className="cta-pill rv d3">
+                  <Link className="btn btn-line" to="/download">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+                    </svg>
+                    Unduh Aplikasi
+                  </Link>
+                  <a className="btn btn-leaf" href="#program">
+                    Jelajahi Program{" "}
+                    <svg className="go" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  </a>
+                </div>
+                <div className="people rv d4">
+                  <div className="avs" aria-hidden="true">
+                    <img src="/image/landingpage/mitra-dlh.webp" alt="" />
+                    <img src="/image/landingpage/mitra-pemkot.webp" alt="" />
+                    <img src="/image/landingpage/mitra-unikom.webp" alt="" />
+                  </div>
+                  <p>
+                    Bergabung bersama <b><span data-count={targetHero}>{heroCount.toLocaleString("id-ID")}</span>+ pengguna</b>
+                    <br />
+                    dari {kelurahanCount} kelurahan di Coblong
+                  </p>
+                </div>
+              </div>
+
+              {/* Hero Visual Column */}
+              <div className="hero__visual rv d2">
+                <div className="hero__img-frame">
+                  <img src="/image/landingpage/hero-sorting.webp" alt="Mahasiswa KKN tersenyum sambil memilah sampah organik, plastik, dan logam ke Tempat Sampah hijau, biru, dan kuning" />
+                </div>
+
+                <a className="play" href="#berita">
+                  <span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.4-6.5a1 1 0 0 0 0-1.8L9.5 4.6A1 1 0 0 0 8 5.5Z" />
+                    </svg>
+                  </span>
+                  Lihat cerita kami
+                </a>
+
+                {/* Floating cards hero di-hide sementara sesuai arahan agar visual hero bersih */}
+                {/*
+                <div className="floats" aria-label="Sorotan program">
+                  <a
+                    className="fcard"
+                    href="#program"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setSelectedProgram(programsList[0] || PROGRAMS[0]);
+                    }}
+                  >
+                    <img src="/image/landingpage/hero-qr-badge.webp" alt="" />
+                    <span>
+                      <b>Kodifikasi QR</b>
+                      <small>Identitas digital tiap tempat sampah</small>
+                    </span>
+                  </a>
+                  <a
+                    className="fcard"
+                    href="#program"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const kompost = programsList.find((p) => p.id.includes("kompost") || p.id.includes("camp-04")) || programsList[3] || PROGRAMS[3];
+                      setSelectedProgram(kompost);
+                    }}
+                  >
+                    <img src="/image/landingpage/hero-compost-badge.webp" alt="" />
+                    <span>
+                      <b>Komposter IoT</b>
+                      <small>Sampah organik jadi pupuk cair</small>
+                    </span>
+                  </a>
+                  <a className="fcard" href="#pasar">
+                    <img src="/image/landingpage/hero-circular-badge.webp" alt="" />
+                    <span>
+                      <b>Pasar Sirkular</b>
+                      <small>Tukar poin dengan produk warga</small>
+                    </span>
+                  </a>
+                </div>
+                */}
               </div>
             </div>
 
             <div className="stats rv d4" aria-label="BERSEKA dalam angka">
               <div className="stat">
-                <b><span data-count={targetHero}>{heroCount.toLocaleString("id-ID")}</span>+</b>
-                <span>Pengguna</span>
-              </div>
-              <div className="stat">
-                <b data-count={kelurahanCount}>{kelurahanCount}</b>
-                <span>Kelurahan</span>
+                <b>
+                  <span data-count={targetHero}>{heroCount.toLocaleString("id-ID")}</span>
+                  <span>+</span>
+                </b>
+                <span className="stat__label">Pengguna</span>
               </div>
               <div className="stat">
                 <b>
-                  {landingStats?.totalSampahKg
+                  <span data-count={kelurahanCount}>{kelurahanCount}</span>
+                </b>
+                <span className="stat__label">Kelurahan</span>
+              </div>
+              <div className="stat">
+                <b>
+                  {landingStats?.totalSampahKg && landingStats.totalSampahKg > 0
                     ? `${landingStats.totalSampahKg.toLocaleString("id-ID")} kg`
                     : landingStats?.kegiatanCount
-                    ? `${landingStats.kegiatanCount} Kegiatan`
-                    : "Data"}
+                    ? `${landingStats.kegiatanCount}`
+                    : "100%"}
                 </b>
-                <span>
-                  {landingStats?.totalSampahKg
+                <span className="stat__label">
+                  {landingStats?.totalSampahKg && landingStats.totalSampahKg > 0
                     ? "Sampah Terkelola"
                     : landingStats?.kegiatanCount
                     ? "Aksi Terlaksana"
-                    : "Tercatat"}
+                    : "Target Terkelola"}
                 </span>
               </div>
               <div className="stat hl">
                 <b>Kolaborasi</b>
-                <span>Multipihak</span>
+                <span className="stat__label">Multipihak</span>
               </div>
             </div>
           </div>
@@ -1121,7 +1128,7 @@ export const LandingPage: React.FC = () => {
             <div className="head">
               <div>
                 <span className="badge rv">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
                     <path d="M21 3v5h-5" />
                   </svg>
@@ -1130,14 +1137,14 @@ export const LandingPage: React.FC = () => {
                 <h2 className="h2 rv d1">
                   Ekosistem <span>BERSEKA</span>
                 </h2>
-                <p className="sub rv d2">Enam pihak saling terhubung, supaya setiap kantong sampah punya jalan pulang yang jelas.</p>
+                <p className="sub rv d2">Enam pihak saling terhubung, supaya setiap sampah terpilah memiliki alur pemanfaatan yang jelas.</p>
               </div>
             </div>
             <ol className="eco">
               <li className="rv">
                 <span className="n">01</span>
                 <div className="ic">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z" />
                   </svg>
                 </div>
@@ -1147,19 +1154,19 @@ export const LandingPage: React.FC = () => {
               <li className="rv d1">
                 <span className="n">02</span>
                 <div className="ic">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="9" cy="7" r="4" />
                     <path d="M2 21v-2a4 4 0 0 1 4-4h6" />
                     <path d="m16 19 2 2 4-4" />
                   </svg>
                 </div>
                 <h3>Petugas</h3>
-                <p>Pengumpulan &amp; pendataan</p>
+                <p>Pengumpulan dan pendataan</p>
               </li>
               <li className="rv d2">
                 <span className="n">03</span>
                 <div className="ic">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M3 6h11v10H3zM14 9h4l3 3v4h-7" />
                     <circle cx="7" cy="18" r="2" />
                     <circle cx="17" cy="18" r="2" />
@@ -1171,35 +1178,35 @@ export const LandingPage: React.FC = () => {
               <li className="rv d3">
                 <span className="n">04</span>
                 <div className="ic">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M3 21V9l5 3V9l5 3V5l8 4v12Z" />
                     <path d="M8 17h1M12 17h1M16 17h1" />
                   </svg>
                 </div>
                 <h3>Pengolahan</h3>
-                <p>Pemrosesan &amp; valorisasi</p>
+                <p>Pemrosesan dan valorisasi</p>
               </li>
               <li className="rv d4">
                 <span className="n">05</span>
                 <div className="ic">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M3 21h18M4 10h16M12 3 3 8h18Z" />
                     <path d="M6 10v8M10 10v8M14 10v8M18 10v8" />
                   </svg>
                 </div>
                 <h3>Pemerintah</h3>
-                <p>Kebijakan &amp; pengawasan</p>
+                <p>Kebijakan dan pengawasan</p>
               </li>
               <li className="rv d5">
                 <span className="n">06</span>
                 <div className="ic">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M5 7h14l-1.5 13h-11Z" />
                     <path d="M9 10V6a3 3 0 0 1 6 0v4" />
                   </svg>
                 </div>
                 <h3>Pasar Sirkular</h3>
-                <p>Produk &amp; material bernilai</p>
+                <p>Produk dan material bernilai</p>
               </li>
             </ol>
           </div>
@@ -1211,7 +1218,7 @@ export const LandingPage: React.FC = () => {
             <div className="head">
               <div>
                 <span className="badge rv">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 2 15 8.5l7 1-5 4.8 1.2 6.9L12 18l-6.2 3.2L7 14.3 2 9.5l7-1Z" />
                   </svg>
                   Program unggulan
@@ -1247,7 +1254,7 @@ export const LandingPage: React.FC = () => {
                       onClick={() => setSelectedProgram(prog)}
                     >
                       Lihat Program{" "}
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M5 12h14M13 6l6 6-6 6" />
                       </svg>
                     </button>
@@ -1264,7 +1271,7 @@ export const LandingPage: React.FC = () => {
             <div className="head">
               <div>
                 <span className="badge rv">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M5 7h14l-1.5 13h-11Z" />
                     <path d="M9 10V6a3 3 0 0 1 6 0v4" />
                   </svg>
@@ -1278,7 +1285,7 @@ export const LandingPage: React.FC = () => {
             </div>
             <div className="loc rv">
               <span className="i">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
@@ -1292,14 +1299,14 @@ export const LandingPage: React.FC = () => {
               <button className="chip" aria-pressed={pasarFilter === "all"} onClick={() => setPasarFilter("all")}>
                 Semua
               </button>
-              <button className="chip" aria-pressed={pasarFilter === "Pupuk & Kompos"} onClick={() => setPasarFilter("Pupuk & Kompos")}>
-                Pupuk &amp; Kompos
+              <button className="chip" aria-pressed={pasarFilter === "Pupuk dan Kompos"} onClick={() => setPasarFilter("Pupuk dan Kompos")}>
+                Pupuk dan Kompos
               </button>
               <button className="chip" aria-pressed={pasarFilter === "Eco-Enzyme"} onClick={() => setPasarFilter("Eco-Enzyme")}>
                 Eco-Enzyme
               </button>
-              <button className="chip" aria-pressed={pasarFilter === "Bibit & Tanaman"} onClick={() => setPasarFilter("Bibit & Tanaman")}>
-                Bibit &amp; Tanaman
+              <button className="chip" aria-pressed={pasarFilter === "Bibit dan Tanaman"} onClick={() => setPasarFilter("Bibit dan Tanaman")}>
+                Bibit dan Tanaman
               </button>
               <button className="chip" aria-pressed={pasarFilter === "Daur Ulang Kreatif"} onClick={() => setPasarFilter("Daur Ulang Kreatif")}>
                 Daur Ulang Kreatif
@@ -1354,7 +1361,7 @@ export const LandingPage: React.FC = () => {
             <div className="ai rv">
               <div>
                 <span className="badge" style={{ background: "#fff" }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4Z" />
                     <path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8Z" />
                   </svg>
@@ -1369,7 +1376,7 @@ export const LandingPage: React.FC = () => {
                 <ul className="feats">
                   <li>
                     <span className="i">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M4 8h3l2-3h6l2 3h3v11H4Z" />
                         <circle cx="12" cy="13" r="3.5" />
                       </svg>
@@ -1381,19 +1388,19 @@ export const LandingPage: React.FC = () => {
                   </li>
                   <li>
                     <span className="i">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="9" />
                         <path d="m8 12 3 3 5-6" />
                       </svg>
                     </span>
                     <div>
                       <b>Panduan Tiga Wadah Pemilahan</b>
-                      <span>Rekomendasi langsung penempatan tempat sampah Organik (Hijau), Anorganik (Kuning), atau Residu (Merah).</span>
+                      <span>Rekomendasi langsung penempatan Tempat Sampah Organik (Hijau), Anorganik (Kuning), atau Residu (Merah).</span>
                     </div>
                   </li>
                   <li>
                     <span className="i">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M21 12a9 9 0 1 1-9-9v9Z" />
                         <path d="M15 3.5A9 9 0 0 1 20.5 9H15Z" />
                       </svg>
@@ -1407,11 +1414,11 @@ export const LandingPage: React.FC = () => {
                 <div className="ai__cta">
                   <a className="btn btn-leaf" href="https://aisah.berseka.id" target="_blank" rel="noopener">
                     Buka aisah.berseka.id{" "}
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M7 17 17 7M8 7h9v9" />
                     </svg>
                   </a>
-                  <small>Tersedia gratis untuk seluruh warga &amp; komunitas</small>
+                  <small>Tersedia gratis untuk seluruh warga dan komunitas</small>
                 </div>
               </div>
               <div className="scan" aria-label="Pratinjau AISAh Vision">
@@ -1421,13 +1428,13 @@ export const LandingPage: React.FC = () => {
                 </div>
                 <div className="scan__box">
                   <div className="cam">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M4 8h3l2-3h6l2 3h3v11H4Z" />
                       <circle cx="12" cy="13" r="3.5" />
                     </svg>
                   </div>
                   <b><span data-count={targetAisah}>{aisahCount.toLocaleString("id-ID")}</span> Sampah Terpindai</b>
-                  <p>Deteksi instan jenis material &amp; wadah tempat sampah yang sesuai secara real-time</p>
+                  <p>Deteksi instan jenis material dan wadah Tempat Sampah yang sesuai secara waktu nyata</p>
                 </div>
                 <div className="bins">
                   <div className="bin g">
@@ -1451,7 +1458,7 @@ export const LandingPage: React.FC = () => {
             <div className="head">
               <div>
                 <span className="badge rv">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 2a14.5 14.5 0 0 0 0 20M2 12a14.5 14.5 0 0 0 20 0" />
                   </svg>
@@ -1465,7 +1472,7 @@ export const LandingPage: React.FC = () => {
             <div className="sdgs">
               <article className="sdg rv">
                 <div className="sdg__t" style={{ background: "#A21942" }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />
                   </svg>
                   <b>8</b>
@@ -1475,7 +1482,7 @@ export const LandingPage: React.FC = () => {
               </article>
               <article className="sdg rv d1">
                 <div className="sdg__t" style={{ background: "#E8891F" }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M3 21h18M5 21V7l6-3v17M11 9h8v12" />
                   </svg>
                   <b>11</b>
@@ -1485,7 +1492,7 @@ export const LandingPage: React.FC = () => {
               </article>
               <article className="sdg rv d2">
                 <div className="sdg__t" style={{ background: "#B07D1E" }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 12c-2-2.5-4-4-6-4a4 4 0 0 0 0 8c2 0 4-1.5 6-4Zm0 0c2 2.5 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.5-6 4Z" />
                   </svg>
                   <b>12</b>
@@ -1495,7 +1502,7 @@ export const LandingPage: React.FC = () => {
               </article>
               <article className="sdg rv d3">
                 <div className="sdg__t" style={{ background: "#3F7E44" }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" />
                     <circle cx="12" cy="12" r="3" />
                   </svg>
@@ -1506,7 +1513,7 @@ export const LandingPage: React.FC = () => {
               </article>
               <article className="sdg rv d4">
                 <div className="sdg__t" style={{ background: "#19486A" }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="9" cy="9" r="4" />
                     <circle cx="15" cy="9" r="4" />
                     <circle cx="9" cy="15" r="4" />
@@ -1527,14 +1534,14 @@ export const LandingPage: React.FC = () => {
             <div className="head">
               <div>
                 <span className="badge rv">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M4 4h13a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3Z" />
                     <path d="M8 9h8M8 13h8M8 17h5" />
                   </svg>
                   Kabar dari kampung
                 </span>
                 <h2 className="h2 rv d1">
-                  Berita &amp; <span>Cerita Lapangan</span>
+                  Berita dan <span>Cerita Lapangan</span>
                 </h2>
               </div>
               <button
@@ -1542,7 +1549,7 @@ export const LandingPage: React.FC = () => {
                 onClick={() => setShowAllNewsModal(true)}
               >
                 Lihat Semua Berita ({newsList.length}){" "}
-                <svg className="go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg className="go" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
               </button>
@@ -1575,7 +1582,7 @@ export const LandingPage: React.FC = () => {
                     <p>{item.desc}</p>
                     <span className="more">
                       Baca cerita{" "}
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M5 12h14M13 6l6 6-6 6" />
                       </svg>
                     </span>
@@ -1592,10 +1599,10 @@ export const LandingPage: React.FC = () => {
             <div className="contact rv">
               <div>
                 <span className="badge">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z" />
                   </svg>
-                  Pusat Informasi &amp; Kolaborasi
+                  Pusat Informasi dan Kolaborasi
                 </span>
                 <h2 id="kT">
                   Butuh informasi tentang <span>BERSEKA?</span>
@@ -1605,7 +1612,7 @@ export const LandingPage: React.FC = () => {
               <div className="cinfo">
                 <div className="ci">
                   <span className="i">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z" />
                     </svg>
                   </span>
@@ -1618,7 +1625,7 @@ export const LandingPage: React.FC = () => {
                 </div>
                 <div className="ci">
                   <span className="i">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <rect x="2" y="4" width="20" height="16" rx="3" />
                       <path d="m22 7-10 6L2 7" />
                     </svg>
@@ -1630,7 +1637,7 @@ export const LandingPage: React.FC = () => {
                 </div>
                 <div className="ci wide">
                   <span className="i">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z" />
                       <circle cx="12" cy="10" r="3" />
                     </svg>
@@ -1643,7 +1650,7 @@ export const LandingPage: React.FC = () => {
               </div>
               <a className="btn btn-lime" href="https://wa.me/6285715516065" target="_blank" rel="noopener">
                 Hubungi CDC UNIKOM{" "}
-                <svg className="go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg className="go" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
               </a>
@@ -1668,14 +1675,14 @@ export const LandingPage: React.FC = () => {
               </p>
               <div className="soc">
                 <a href="https://instagram.com/" target="_blank" rel="noopener" aria-label="Instagram BERSEKA">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <rect x="3" y="3" width="18" height="18" rx="5" />
                     <circle cx="12" cy="12" r="4" />
                     <path d="M17.5 6.5h.01" />
                   </svg>
                 </a>
                 <a href="https://youtube.com/" target="_blank" rel="noopener" aria-label="YouTube BERSEKA">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <rect x="2" y="5" width="20" height="14" rx="4" />
                     <path d="m10 9 5 3-5 3Z" />
                   </svg>
@@ -1770,7 +1777,7 @@ export const LandingPage: React.FC = () => {
               <ul>
                 <li className="ci">
                   <span className="i">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z" />
                     </svg>
                   </span>
@@ -1778,7 +1785,7 @@ export const LandingPage: React.FC = () => {
                 </li>
                 <li className="ci">
                   <span className="i">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <rect x="2" y="4" width="20" height="16" rx="3" />
                       <path d="m22 7-10 6L2 7" />
                     </svg>
@@ -1787,7 +1794,7 @@ export const LandingPage: React.FC = () => {
                 </li>
                 <li className="ci">
                   <span className="i">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z" />
                       <circle cx="12" cy="10" r="3" />
                     </svg>
@@ -1811,7 +1818,7 @@ export const LandingPage: React.FC = () => {
         aria-label="Kembali ke atas"
         onClick={scrollToTop}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="m18 15-6-6-6 6" />
         </svg>
       </button>
@@ -1831,7 +1838,7 @@ export const LandingPage: React.FC = () => {
             </p>
             <div className="calc-grid">
               <div className="calc-field">
-                <label><span>🥬</span> Sampah Organik (kg)</label>
+                <label>Sampah Organik (kg)</label>
                 <input
                   type="number"
                   min="0"
@@ -1840,7 +1847,7 @@ export const LandingPage: React.FC = () => {
                 />
               </div>
               <div className="calc-field">
-                <label><span>🍾</span> Botol Plastik / Logam (kg)</label>
+                <label>Botol Plastik / Logam (kg)</label>
                 <input
                   type="number"
                   min="0"
@@ -1849,7 +1856,7 @@ export const LandingPage: React.FC = () => {
                 />
               </div>
               <div className="calc-field">
-                <label><span>🍳</span> Minyak Jelantah (Liter)</label>
+                <label>Minyak Jelantah (Liter)</label>
                 <input
                   type="number"
                   min="0"
@@ -1987,7 +1994,7 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
             <div style={{ fontSize: "13.5px", color: "var(--muted)", lineHeight: "1.5", marginBottom: "20px", background: "#fff", border: "1px solid var(--line)", padding: "12px 16px", borderRadius: "12px" }}>
-              📍 <b>Lokasi Pengambilan:</b> Posko KKN BERSEKA di sekretariat RW terdekat wilayah Coblong. Tunjukkan kode bukti pemesanan WhatsApp ke petugas piket.
+              <b>Lokasi Pengambilan:</b> Posko KKN BERSEKA di sekretariat RW terdekat wilayah Coblong. Tunjukkan kode bukti pemesanan WhatsApp ke petugas piket.
             </div>
             <div style={{ display: "flex", gap: "12px" }}>
               <a
@@ -2059,7 +2066,7 @@ export const LandingPage: React.FC = () => {
             <button className="landing-modal-close" onClick={() => setShowAllNewsModal(false)} aria-label="Tutup">
               ✕
             </button>
-            <h3 className="modal-title">Direktori Berita &amp; Cerita Lapangan</h3>
+            <h3 className="modal-title">Direktori Berita dan Cerita Lapangan</h3>
             <p className="modal-desc">
               Kumpulan dokumentasi, artikel inovasi, dan publikasi kegiatan KKN Tematik BERSEKA di Kecamatan Coblong.
             </p>
@@ -2128,7 +2135,7 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
