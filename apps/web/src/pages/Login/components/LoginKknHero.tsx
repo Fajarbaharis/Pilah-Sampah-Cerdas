@@ -22,7 +22,7 @@ export interface LoginKknHeroProps {
 }
 
 export const LoginKknHero: React.FC<LoginKknHeroProps> = ({ className = "" }) => {
-  const [activeStageTitle, setActiveStageTitle] = useState("Evaluasi & laporan akhir");
+  const [activeStageTitle, setActiveStageTitle] = useState("Evaluasi dan laporan akhir");
   const [activeStageDate, setActiveStageDate] = useState("7–31 Oktober 2026");
   const [phaseProgress, setPhaseProgress] = useState(0);
   const [phaseShortLabel, setPhaseShortLabel] = useState("berlangsung");
@@ -154,7 +154,7 @@ export const LoginKknHero: React.FC<LoginKknHeroProps> = ({ className = "" }) =>
         {/* Gambar WebP Hero Melayang */}
         <img
           src="/image/loginpage/berseka-login-hero.webp"
-          alt="Tiga mahasiswa KKN berdiskusi di depan laptop di samping tempat sampah daur ulang"
+          alt="Tiga mahasiswa KKN berdiskusi di depan laptop di samping Tempat Sampah daur ulang"
           className="relative z-10 max-h-full w-auto object-contain drop-shadow-xl animate-float pointer-events-none"
           loading="eager"
         />
