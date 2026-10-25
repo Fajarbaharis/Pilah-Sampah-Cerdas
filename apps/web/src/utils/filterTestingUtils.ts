@@ -113,6 +113,8 @@ const TEST_KEYWORDS = [
   "tester",
   "dpl test",
   "kelompok test",
+  "rw 99",
+  "rw99",
 ];
 
 const TEST_PHONES = [
@@ -160,10 +162,20 @@ export function isTestUser(
   user?: {
     id?: string | null;
     name?: string | null;
+    nama?: string | null;
+    namaAsli?: string | null;
+    namaDisplay?: string | null;
     email?: string | null;
     nip?: string | null;
     phone?: string | null;
     isTestAccount?: boolean | null;
+    petugasProfile?: {
+      nama?: string | null;
+      namaDisplay?: string | null;
+    } | null;
+    rw?: {
+      name?: string | null;
+    } | string | null;
     [key: string]: any;
   } | null,
   respectToggle = true
@@ -177,8 +189,20 @@ export function isTestUser(
     if (TEST_PHONES.some((tp) => cleanP === tp || cleanP.includes("12345678900"))) return true;
   }
   if (isTestOrDummyString(user.name)) return true;
+  if (isTestOrDummyString(user.nama)) return true;
+  if (isTestOrDummyString(user.namaAsli)) return true;
+  if (isTestOrDummyString(user.namaDisplay)) return true;
   if (isTestOrDummyString(user.email)) return true;
   if (isTestOrDummyString(user.nip)) return true;
+  if (user.petugasProfile) {
+    if (isTestOrDummyString(user.petugasProfile.nama)) return true;
+    if (isTestOrDummyString(user.petugasProfile.namaDisplay)) return true;
+  }
+  if (user.rw) {
+    const rwName = typeof user.rw === "string" ? user.rw : user.rw.name;
+    if (isTestOrDummyString(rwName)) return true;
+    if (rwName && (rwName.includes("99") || rwName.includes("00"))) return true;
+  }
   return false;
 }
 

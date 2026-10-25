@@ -230,12 +230,20 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({ mode = "al
         }
         if (d.pengangkut) {
           const validPengangkut = d.pengangkut.filter((p: any) => !isTestUser(p));
-          const apiPetugas = validPengangkut.map((p: any, i: number) => ({
-            rank: i + 1,
-            name: p.name,
-            subtitle: p.wilayah || "Wilayah Operasional",
-            points: Number(p.totalPoints || 0),
-          }));
+          const apiPetugas = validPengangkut.map((p: any, i: number) => {
+            const hasPersonilName = p.namaAsli && !p.namaAsli.toLowerCase().startsWith("petugas");
+            const cleanName = hasPersonilName ? p.namaAsli : (p.namaDisplay || p.name);
+            const rwText = p.rw ? (p.rw.toLowerCase().startsWith("rw") ? p.rw : `RW ${p.rw}`) : "";
+            const kelText = p.kelurahan ? (p.kelurahan.toLowerCase().startsWith("kel") ? p.kelurahan : `Kel. ${p.kelurahan}`) : "";
+            const cleanSubtitle = rwText && kelText ? `${rwText} • ${kelText}` : (rwText || kelText || p.wilayah || "Wilayah Operasional");
+            return {
+              rank: i + 1,
+              name: cleanName,
+              subtitle: cleanSubtitle,
+              points: Number(p.totalPoints || 0),
+              totalKg: Number(p.totalKgHandled || 0),
+            };
+          });
           setPetugasList(apiPetugas);
         }
         const rawRw = d.rw || d.rtRw;
@@ -359,6 +367,17 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({ mode = "al
     return wargaList;
   }, [isLurah, userKelurahan, wargaList]);
 
+  // Petugas filtered for Lurah
+  const displayedPetugasList = useMemo(() => {
+    if (isLurah && userKelurahan) {
+      const filtered = petugasList.filter((p) =>
+        (p.subtitle || "").toLowerCase().includes(userKelurahan.toLowerCase())
+      );
+      return filtered.length > 0 ? filtered.map((p, i) => ({ ...p, rank: i + 1 })) : petugasList;
+    }
+    return petugasList;
+  }, [isLurah, userKelurahan, petugasList]);
+
   // Map real database kelurahan data or RW data for charts
   const activeChartData = useMemo(() => {
     if (isLurah && lurahRwItems.length > 0) {
@@ -422,14 +441,14 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({ mode = "al
             linkTo="/peringkat?system=system1&tab=citizens"
           />
 
-          {/* 2. Top 10 Petugas Residu */}
+          {/* 2. Top 10 Petugas Pemilah */}
           <ColumnCard
-            title="Top 10 Petugas Pemilah"
+            title={isLurah ? `Top Petugas Kel. ${userKelurahan || "Cipaganti"}` : "Top 10 Petugas Pemilah"}
             icon={<Truck size={14} />}
             iconBg="bg-rose-500"
             barColor="#ef4444"
-            items={petugasList}
-            maxPoints={petugasList[0]?.points || 0}
+            items={displayedPetugasList}
+            maxPoints={displayedPetugasList[0]?.points || 0}
             linkTo="/peringkat?system=system1&tab=pengangkut"
           />
 
