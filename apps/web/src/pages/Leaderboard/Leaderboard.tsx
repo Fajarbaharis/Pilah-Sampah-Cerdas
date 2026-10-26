@@ -159,13 +159,24 @@ const Leaderboard: React.FC = () => {
           if (filtered.length > 0) raw = filtered.map((r, idx) => ({ ...r, rank: idx + 1 }));
         }
       } else if (s1Tab === "pengangkut") {
-        raw = pengangkut.map((p, i) => ({
-          id: p.id,
-          rank: i + 1,
-          name: p.namaDisplay || p.name,
-          subtitle: p.kelurahan ? `Kel. ${p.kelurahan}` : p.wilayah || "-",
-          points: p.totalPoints,
-        }));
+        raw = pengangkut.map((p, i) => {
+          const hasPersonilName = p.namaAsli && !p.namaAsli.toLowerCase().startsWith("petugas");
+          const cleanName = hasPersonilName ? `${p.namaAsli} (${p.namaDisplay || p.name})` : (p.namaDisplay || p.name);
+          const rwText = p.rw ? (p.rw.toLowerCase().startsWith("rw") ? p.rw : `RW ${p.rw}`) : "";
+          const kelText = p.kelurahan ? (p.kelurahan.toLowerCase().startsWith("kel") ? p.kelurahan : `Kel. ${p.kelurahan}`) : "";
+          const cleanSubtitle = rwText && kelText ? `${rwText} • ${kelText}` : (rwText || kelText || p.wilayah || "-");
+          return {
+            id: p.id,
+            rank: i + 1,
+            name: cleanName,
+            subtitle: cleanSubtitle,
+            points: p.totalPoints,
+          };
+        });
+        if (isLurah && userKelurahan) {
+          const filtered = raw.filter((r) => (r.subtitle || "").toLowerCase().includes(userKelurahan.toLowerCase()));
+          if (filtered.length > 0) raw = filtered.map((r, idx) => ({ ...r, rank: idx + 1 }));
+        }
 
       } else if (s1Tab === "kelurahan") {
         raw = (regions || []).map((k: any, i: number) => {

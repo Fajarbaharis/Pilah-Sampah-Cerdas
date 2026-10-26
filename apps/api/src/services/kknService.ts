@@ -4963,7 +4963,36 @@ export class KknService {
       whereClause.kategori = { not: "LAPORAN_AKHIR" };
     }
     if (filters?.statusUsulan && filters.statusUsulan !== "ALL") {
-      whereClause.statusUsulan = { equals: filters.statusUsulan, mode: "insensitive" };
+      const u = filters.statusUsulan.toUpperCase();
+      if (u === "DISETUJUI" || u === "DITERIMA") {
+        whereClause.OR = [
+          { statusUsulan: { in: ["DISETUJUI", "DITERIMA", "disetujui", "diterima"] } },
+          { status: { in: ["DITERIMA", "SEDANG_BERJALAN", "SELESAI", "DISETUJUI"] } },
+        ];
+      } else if (
+        u === "DITOLAK" ||
+        u === "TIDAK_DISETUJUI" ||
+        u === "KADALUARSA" ||
+        u === "KADALUARSA_OTOMATIS"
+      ) {
+        whereClause.OR = [
+          {
+            statusUsulan: {
+              in: ["DITOLAK", "TIDAK_DISETUJUI", "KADALUARSA_OTOMATIS", "KADALUARSA"],
+            },
+          },
+          { status: "DITOLAK" },
+        ];
+      } else if (u === "BELUM_DISETUJUI" || u === "MENUNGGU" || u === "PENDING") {
+        whereClause.status = { notIn: ["DITERIMA", "SEDANG_BERJALAN", "SELESAI", "DITOLAK", "DISETUJUI"] };
+        whereClause.OR = [
+          { statusUsulan: { in: ["BELUM_DISETUJUI", "MENUNGGU", "PENDING"] } },
+          { statusUsulan: null },
+          { status: "BELUM_DISETUJUI" },
+        ];
+      } else {
+        whereClause.statusUsulan = { equals: filters.statusUsulan, mode: "insensitive" };
+      }
     }
     if (filters?.statusPelaksanaan && filters.statusPelaksanaan !== "ALL") {
       whereClause.statusPelaksanaan = { equals: filters.statusPelaksanaan, mode: "insensitive" };
@@ -5030,19 +5059,31 @@ export class KknService {
         let judul = parsed.judul;
         let deskripsiDetail = parsed.deskripsi;
         let catatan = item.catatanDpl;
-        const st = String(item.status);
-        let u = (item as any).statusUsulan;
-        if (!u) {
-          if (
-            st === "DITERIMA" ||
-            st === "SEDANG_BERJALAN" ||
-            st === "SELESAI" ||
-            st === "APPROVED" ||
-            st === "DISETUJUI"
-          )
-            u = "DISETUJUI";
-          else if (st === "DITOLAK" || st === "REJECTED" || st === "TIDAK_DISETUJUI") u = "DITOLAK";
-          else u = "BELUM_DISETUJUI";
+        const st = String(item.status || "").toUpperCase();
+        const rawU = String((item as any).statusUsulan || "").toUpperCase();
+        let u = rawU;
+        if (
+          rawU === "DISETUJUI" ||
+          rawU === "DITERIMA" ||
+          st === "DITERIMA" ||
+          st === "SEDANG_BERJALAN" ||
+          st === "SELESAI" ||
+          st === "APPROVED" ||
+          st === "DISETUJUI"
+        ) {
+          u = "DISETUJUI";
+        } else if (
+          rawU === "DITOLAK" ||
+          rawU === "TIDAK_DISETUJUI" ||
+          rawU === "KADALUARSA" ||
+          rawU === "KADALUARSA_OTOMATIS" ||
+          st === "DITOLAK" ||
+          st === "REJECTED" ||
+          st === "TIDAK_DISETUJUI"
+        ) {
+          u = "DITOLAK";
+        } else {
+          u = "BELUM_DISETUJUI";
         }
         let pl = (item as any).statusPelaksanaan;
         if (!pl) {
@@ -5204,19 +5245,31 @@ export class KknService {
     if (!proker) throw new Error("Program kerja tidak ditemukan");
 
     const parsed = parseProkerDeskripsi(proker.deskripsi);
-    const st = String(proker.status);
-    let u = (proker as any).statusUsulan;
-    if (!u) {
-      if (
-        st === "DITERIMA" ||
-        st === "SEDANG_BERJALAN" ||
-        st === "SELESAI" ||
-        st === "APPROVED" ||
-        st === "DISETUJUI"
-      )
-        u = "DISETUJUI";
-      else if (st === "DITOLAK" || st === "REJECTED" || st === "TIDAK_DISETUJUI") u = "DITOLAK";
-      else u = "BELUM_DISETUJUI";
+    const st = String(proker.status || "").toUpperCase();
+    const rawU = String((proker as any).statusUsulan || "").toUpperCase();
+    let u = rawU;
+    if (
+      rawU === "DISETUJUI" ||
+      rawU === "DITERIMA" ||
+      st === "DITERIMA" ||
+      st === "SEDANG_BERJALAN" ||
+      st === "SELESAI" ||
+      st === "APPROVED" ||
+      st === "DISETUJUI"
+    ) {
+      u = "DISETUJUI";
+    } else if (
+      rawU === "DITOLAK" ||
+      rawU === "TIDAK_DISETUJUI" ||
+      rawU === "KADALUARSA" ||
+      rawU === "KADALUARSA_OTOMATIS" ||
+      st === "DITOLAK" ||
+      st === "REJECTED" ||
+      st === "TIDAK_DISETUJUI"
+    ) {
+      u = "DITOLAK";
+    } else {
+      u = "BELUM_DISETUJUI";
     }
     let pl = (proker as any).statusPelaksanaan;
     if (!pl) {

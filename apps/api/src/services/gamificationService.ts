@@ -307,7 +307,7 @@ export const gamificationService = {
       .sort((a, b) => b.totalPoints - a.totalPoints)
       .slice(0, 10);
 
-    // 5. Pengangkut Leaderboard (Opsi D: Composite Formula — Kuantitas + SLA Kecepatan + Akurasi)
+    // 5. Pengangkut Leaderboard (Penyelarasan Poin Riil Pemilahan Operasional SSOT + Skor Komposit Armada Jemputan)
     const petugasUsers = await prisma.user.findMany({
       where: {
         OR: [
@@ -315,11 +315,14 @@ export const gamificationService = {
           { role: { name: "PENGANGKUT" } },
           { claimedTasks: { some: {} } },
         ],
+        isTestAccount: false,
       },
       select: {
         id: true,
         name: true,
         email: true,
+        phone: true,
+        isTestAccount: true,
         rw: { select: { name: true } },
         petugasProfile: {
           select: {
@@ -330,6 +333,7 @@ export const gamificationService = {
           },
         },
         setoranManual: { select: { berat: true } },
+        pointHistory: { select: { points: true } },
         claimedTasks: {
           select: {
             status: true,
@@ -358,15 +362,29 @@ export const gamificationService = {
         const slaScore = totalCompleted > 0 ? Math.max(0, 100 - avgSlaMinutes) : 0;
 
         // Akurasi/Tingkat keberhasilan penjemputan tanpa batal/escalated
-        const successRate = totalClaimed > 0 ? totalCompleted / totalClaimed : 1;
+        // Jika belum ada tiket penjemputan armada yang diklaim, successRate adalah 0 (tidak menggelembungkan poin kosong)
+        const successRate = totalClaimed > 0 ? totalCompleted / totalClaimed : 0;
 
-        // Opsi D: Skor Komposit seimbang & minim error
-        const compositeScore = 0.5 * totalCompleted + 0.3 * slaScore + 0.2 * successRate * 100;
+        // Skor Komposit tugas penjemputan armada
+        const compositeScore = totalClaimed > 0
+          ? 0.5 * totalCompleted + 0.3 * slaScore + 0.2 * successRate * 100
+          : 0;
+
+        // Poin riil operasional dari buku besar pointHistory (SUBMIT_RESIDU + VALIDASI_PENGOSONGAN)
+        const totalPoinLedger = (p.pointHistory || []).reduce(
+          (acc: number, cur: any) => acc + (cur.points || 0),
+          0
+        );
 
         const totalKg = p.setoranManual.reduce(
           (acc: number, cur: any) => acc + Number(cur.berat || 0),
           0
         );
+
+        // Poin akhir: Poin riil operasional dari buku besar, ditambah skor komposit tugas armada (jika ada)
+        const totalPoints = totalPoinLedger > 0
+          ? totalPoinLedger + Math.round(compositeScore)
+          : (compositeScore > 0 ? parseFloat(compositeScore.toFixed(2)) : (totalKg > 0 ? Math.round(totalKg) : 0));
 
         const displayName = p.petugasProfile?.namaDisplay || p.name;
         const displayWilayah = p.petugasProfile?.kelurahan
@@ -380,15 +398,15 @@ export const gamificationService = {
           namaAsli: p.petugasProfile?.nama || null,
           kelurahan: p.petugasProfile?.kelurahan || null,
           wilayah: displayWilayah,
+          rw: p.rw?.name || null,
           totalCompleted,
           avgSlaMinutes: parseFloat(avgSlaMinutes.toFixed(2)),
           successRatePercent: parseFloat((successRate * 100).toFixed(2)),
-          totalPoints: parseFloat(compositeScore.toFixed(2)),
-          totalKgHandled: totalKg,
+          totalPoints,
+          totalKgHandled: parseFloat(totalKg.toFixed(2)),
         };
       })
-
-      .sort((a, b) => b.totalPoints - a.totalPoints)
+      .sort((a, b) => b.totalPoints - a.totalPoints || b.totalKgHandled - a.totalKgHandled)
       .slice(0, 10);
 
     return {

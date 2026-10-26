@@ -272,10 +272,10 @@ export const TimelineKknModal: React.FC<TimelineKknModalProps> = ({
                   onChange={(e) => setFormData({ ...formData, kelompokId: e.target.value })}
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:border-emerald-500 transition"
                 >
-                  <option value="GLOBAL">🌐 Global (Acuan Seluruh Mahasiswa)</option>
+                  <option value="GLOBAL">Global (Acuan Seluruh Mahasiswa)</option>
                   {groups.map((g) => (
                     <option key={g.id} value={g.id}>
-                      👥 {g.name} {g.kelurahan ? `(${g.kelurahan})` : ""}
+                      {g.name} {g.kelurahan ? `(${g.kelurahan})` : ""}
                     </option>
                   ))}
                 </select>
