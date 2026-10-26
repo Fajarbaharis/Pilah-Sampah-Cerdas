@@ -234,6 +234,24 @@ Setiap pengembang maupun asisten AI wajib mematuhi 3 pilar perlindungan sistem b
 - **Alur Integrasi Git-Flow**:
   - Commits PR #360 diintegrasikan secara resmi ke branch development dan staging sesuai protokol 3-Tier Git-Flow Berseka.
 
+### F. 26 Oktober 2026 - Penyelarasan Kurasi Landing Page, Kuota 6 Program Inovasi, dan FAQ Dinamis (PR #361)
+- **Konteks & Latar Belakang**:
+  1. Penyelarasan CMS Kurasi Landing Page (`KurasiLandingPage.tsx`) dengan Landing Page Publik (`LandingPage.tsx`) untuk memastikan seluruh entitas berelasi presisi 1:1 tanpa fitur hantu (*ghost feature*).
+  2. Pembersihan Tab Hero Carousel dari CMS karena Hero Section publik telah distandarisasi ke prototipe modern BERSEKA terintegrasi video banner.
+  3. Penegakan kuota ketat 6 Program Inovasi KKN BERSEKA (grid 3x2) dengan penguncian tombol `+ Tambah Program Baru` saat slot 6/6 penuh, pencegahan bypass form, pembukaan modal form bersih tanpa data dummy, penyediaan 8 preset tag kategori cepat, pembersihan metrik donasi BenihBaik, serta penghapusan tombol impor logbook pada tab ini (kurasi manual admin).
+  4. Pembersihan kolom Live Activity Ticker yang tidak terpakai dari CMS dan transformasi tab menjadi modul murni "Kelola FAQ" dengan sinkronisasi instan real-time via `BroadcastChannel` dan `applyCmsContent` serta penanganan jujur *empty state*.
+  5. Penyelarasan kategori dan grouping filter Pasar BERSEKA (*Pangan & Buruan SAE*, *Pupuk & Kompos*, *Eco-Enzyme*, *Bibit & Tanaman*, *Daur Ulang Kreatif*, *Pakan Ternak (Maggot)*) serta ketahanan *image fallback* berbasis `onError`.
+- **Validasi Mutu & Quality Gate**:
+  - `cd apps/web && npx tsc --noEmit`: 0 error (100% Pass).
+  - `cd apps/api && npx tsc --noEmit`: 0 error (100% Pass).
+  - `apps/web` Vite Production Build: Sukses (`✓ built in 4.55s`).
+  - Vitest Test Suite DPL (30 tests): 100% Green (`dplApproval.test.ts`, `logbookVerifikasi.test.ts`, `penilaianKknRoleGuard.test.ts`).
+  - Vitest Test Suite Gamifikasi & Proker (40 tests): 100% Green (`prokerProgressQC.test.ts`, `penilaianKknNormalization.test.ts`, `kknGamificationLogic.test.ts`).
+  - Pemindaian Kata Terlarang: 0 kata "tong" ditemukan.
+  - Skema Database Prisma (`schema.prisma`): 0 perubahan (100% aman bagi integritas database operasional VPS).
+- **Alur Integrasi Git-Flow**:
+  - Merge PR #361 (`feat/pasar-berseka` -> `development`) dan diteruskan (*release candidate*) ke branch `staging` sesuai protokol 3-Tier Git-Flow Berseka.
+
 ---
 
 ## 5. Direktori & Arsip Dokumen
