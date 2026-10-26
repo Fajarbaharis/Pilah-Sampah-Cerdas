@@ -48,7 +48,6 @@ import {
   saveCmsContent,
   resetCmsContent,
   DEFAULT_CMS_CONTENT,
-  type HeroSlideItem,
   type MarketProductItem,
   type ActionCampaignItem,
   type NewsArticleItem,
@@ -66,6 +65,17 @@ const PRESET_GALLERY_IMAGES = [
   { label: "Daur Ulang & Sosialisasi", url: "/image/activity-1.webp", desc: "Sosialisasi penimbangan warga" },
   { label: "Aksi Bersih Lingkungan", url: "/image/activity-3.webp", desc: "Pelatihan eco-enzyme & POC" },
   { label: "Komunitas & Inovasi", url: "/image/landingpage.webp", desc: "Kerjasama KKN UNIKOM" },
+];
+
+const CAMPAIGN_TAG_PRESETS = [
+  { label: "IDENTITAS DIGITAL", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  { label: "MONITORING LINGKUNGAN", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  { label: "PERTANIAN PERKOTAAN", color: "bg-green-100 text-green-800 border-green-200" },
+  { label: "SAMPAH ORGANIK", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  { label: "DATA TIMBANGAN", color: "bg-cyan-100 text-cyan-800 border-cyan-200" },
+  { label: "EKONOMI SIRKULAR", color: "bg-amber-100 text-amber-800 border-amber-200" },
+  { label: "INISIATIF KKN", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  { label: "EDUKASI WARGA", color: "bg-amber-100 text-amber-800 border-amber-200" },
 ];
 
 // ── Reusable Image Upload & Picker Component ──────────────────────────────────
@@ -352,7 +362,7 @@ const ImageUploadPicker: React.FC<ImageUploadPickerProps> = ({
 
 export const KurasiLandingPage: React.FC = () => {
   // Tab State
-  const [activeTab, setActiveTab] = useState<"pasar" | "hero" | "campaign" | "news" | "ticker_faq">("pasar");
+  const [activeTab, setActiveTab] = useState<"pasar" | "campaign" | "news" | "faq">("pasar");
 
   // Main CMS Data State
   const [content, setContent] = useState<LandingContentPayload>(DEFAULT_CMS_CONTENT);
@@ -361,7 +371,7 @@ export const KurasiLandingPage: React.FC = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
   // Modals State
-  const [modalType, setModalType] = useState<"product" | "slide" | "campaign" | "news" | "faq" | null>(null);
+  const [modalType, setModalType] = useState<"product" | "campaign" | "news" | "faq" | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [deleteConfig, setDeleteConfig] = useState<{
     tab: string;
@@ -388,17 +398,6 @@ export const KurasiLandingPage: React.FC = () => {
     imageUrl: "/image/activity-2.webp",
     description: "",
     benefits: [""],
-    isPublished: true,
-  });
-
-  const [slideForm, setSlideForm] = useState<HeroSlideItem>({
-    id: "",
-    image: "/image/kkn-hero-sorting.webp",
-    badge: "Gerakan Kolaboratif",
-    title: "",
-    location: "Kecamatan Coblong, Kota Bandung",
-    metric: "100+ KK Terbina",
-    highlight: "100% Berbasis QR Code",
     isPublished: true,
   });
 
@@ -443,7 +442,7 @@ export const KurasiLandingPage: React.FC = () => {
 
   // ── Universal Import Sources State (Strict by ID per Kategori) ───────────────
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
-  const [importTargetCategory, setImportTargetCategory] = useState<"campaign" | "news" | "hero" | "pasar">("campaign");
+  const [importTargetCategory, setImportTargetCategory] = useState<"news" | "pasar">("news");
   const [importSourceType, setImportSourceType] = useState<"logbook" | "proker">("proker");
   const [logbookSources, setLogbookSources] = useState<any[]>([]);
   const [prokerSources, setProkerSources] = useState<any[]>([]);
@@ -653,8 +652,8 @@ export const KurasiLandingPage: React.FC = () => {
     setImportPage(1);
   };
 
-  const handleOpenImportModal = (targetCategory?: "campaign" | "news" | "hero" | "pasar") => {
-    const target = targetCategory || (activeTab === "campaign" ? "campaign" : activeTab === "news" ? "news" : activeTab === "hero" ? "hero" : activeTab === "pasar" ? "pasar" : "campaign");
+  const handleOpenImportModal = (targetCategory?: "news" | "pasar") => {
+    const target = targetCategory || (activeTab === "pasar" ? "pasar" : "news");
     setImportTargetCategory(target);
     setShowImportModal(true);
     setImportSearchTerm("");
@@ -672,22 +671,7 @@ export const KurasiLandingPage: React.FC = () => {
     }
   };
 
-  // Helper mapping category for campaigns
-  const mapProkerToCampaignCategory = (rawCat?: string, desc?: string): { category: "organic" | "recycle" | "kkn" | "education"; categoryLabel: string; categoryColor: string } => {
-    const text = `${rawCat || ""} ${desc || ""}`.toLowerCase();
-    if (text.includes("organik") || text.includes("kompos") || text.includes("maggot") || text.includes("pupuk") || text.includes("poc")) {
-      return { category: "organic", categoryLabel: "Organik & Maggot", categoryColor: "bg-emerald-100 text-emerald-800 border-emerald-200" };
-    }
-    if (text.includes("bank sampah") || text.includes("anorganik") || text.includes("daur ulang") || text.includes("plastik") || text.includes("jelantah")) {
-      return { category: "recycle", categoryLabel: "Bank Sampah & Daur Ulang", categoryColor: "bg-blue-100 text-blue-800 border-blue-200" };
-    }
-    if (text.includes("edukasi") || text.includes("sosialisasi") || text.includes("sekolah") || text.includes("pelatihan") || text.includes("bimbingan")) {
-      return { category: "education", categoryLabel: "Edukasi Pemilahan", categoryColor: "bg-amber-100 text-amber-800 border-amber-200" };
-    }
-    return { category: "kkn", categoryLabel: "Inisiatif KKN", categoryColor: "bg-purple-100 text-purple-800 border-purple-200" };
-  };
-
-  const handleSelectImportItem = (item: any, type: "logbook" | "proker", overrideTarget?: "campaign" | "news" | "hero" | "pasar") => {
+  const handleSelectImportItem = (item: any, type: "logbook" | "proker", overrideTarget?: "news" | "pasar") => {
     const target = overrideTarget || importTargetCategory;
     const sourceId = String(item.id);
     const kelompokNama = item.kelompokNama || null;
@@ -695,80 +679,7 @@ export const KurasiLandingPage: React.FC = () => {
     const prokerId = type === "proker" ? sourceId : (item.prokerId ? String(item.prokerId) : null);
     const logbookId = type === "logbook" ? sourceId : null;
 
-    if (target === "campaign") {
-      // ── MAPPING KE PROGRAM AKSI (CAMPAIGN) ──
-      if (type === "proker") {
-        const lines = (item.deskripsi || "").split("\n").map((l: string) => l.trim().replace(/\*\*/g, "").replace(/^#+\s*/, "")).filter(Boolean);
-        let derivedTitle = lines[0] || "Program Aksi KKN";
-        if (derivedTitle.length > 75) derivedTitle = derivedTitle.slice(0, 72) + "...";
-        const catConfig = mapProkerToCampaignCategory(item.kategori, item.deskripsi);
-
-        setCampaignForm({
-          id: `camp-proker-${sourceId}`,
-          title: derivedTitle,
-          category: catConfig.category,
-          categoryLabel: catConfig.categoryLabel,
-          categoryColor: catConfig.categoryColor,
-          initiator: kelompokNama || "Kelompok KKN UNIKOM",
-          initiatorBadge: item.status === "DISETUJUI" || item.status === "SELESAI" ? "Terverifikasi KKN" : "Inisiatif Mahasiswa",
-          location: item.kelurahan ? `Kelurahan ${item.kelurahan}, Kec. Coblong` : "Kecamatan Coblong, Kota Bandung",
-          imageUrl: getSafeImageUrl(item.fotoBuktiUrl, "/image/activity-2.webp"),
-          currentAmount: 0,
-          targetAmount: item.kategori === "ORGANIK" ? 500 : 300,
-          unit: item.kategori === "ORGANIK" ? "kg" : "Aksi",
-          daysRemaining: 14,
-          participantsCount: 25,
-          description: lines.slice(1).join("\n") || item.deskripsi || "Program kerja KKN tematik pengelolaan lingkungan bersama warga.",
-          impactHighlight: `Inisiatif program ${item.kategori || "KKN"} oleh ${kelompokNama || "Mahasiswa KKN"} bersama warga setempat.`,
-          isPublished: true,
-          sourceType: "proker",
-          sourceId,
-          prokerId,
-          logbookId: null,
-          kelompokId,
-          kelompokNama,
-          isStrictRelation: true,
-        });
-      } else {
-        // From logbook
-        const firstLine = (item.deskripsi || "").split("\n")[0].trim().replace(/\*\*/g, "");
-        const derivedTitle = item.prokerDeskripsi ? `${item.prokerDeskripsi.slice(0, 60)} (${kelompokNama || "KKN"})` : (firstLine.slice(0, 75) || "Aksi Lapangan KKN");
-        const catConfig = mapProkerToCampaignCategory(item.prokerKategori, item.deskripsi);
-
-        setCampaignForm({
-          id: `camp-logbook-${sourceId}`,
-          title: derivedTitle,
-          category: catConfig.category,
-          categoryLabel: catConfig.categoryLabel,
-          categoryColor: catConfig.categoryColor,
-          initiator: kelompokNama || item.penulisNama || "Mahasiswa KKN",
-          initiatorBadge: "Aksi Terverifikasi",
-          location: item.tempat ? `${item.tempat}, Kel. ${item.kelurahan || "Coblong"}` : (item.kelurahan ? `Kel. ${item.kelurahan}, Coblong` : "Kecamatan Coblong"),
-          imageUrl: getSafeImageUrl(item.fotoBuktiUrl, "/image/activity-1.webp"),
-          currentAmount: 0,
-          targetAmount: 350,
-          unit: "kg",
-          daysRemaining: 14,
-          participantsCount: 20,
-          description: item.deskripsi || "Dokumentasi kegiatan lapangan aksi lingkungan KKN.",
-          impactHighlight: `Kegiatan lapangan di ${item.tempat || "Coblong"} oleh ${kelompokNama || "Mahasiswa KKN"}.`,
-          isPublished: true,
-          sourceType: "logbook",
-          sourceId,
-          logbookId,
-          prokerId,
-          kelompokId,
-          kelompokNama,
-          isStrictRelation: true,
-        });
-      }
-
-      setEditingIndex(null);
-      setShowImportModal(false);
-      setModalType("campaign");
-      showToast.success(`Data ${type === "proker" ? "Program Kerja" : "Logbook"} #${sourceId.slice(0, 8)} berhasil ditarik ke Program Aksi dengan relasi Strict ID!`);
-
-    } else if (target === "news") {
+    if (target === "news") {
       // ── MAPPING KE BERITA & ARTIKEL ──
       if (type === "logbook") {
         let derivedTitle = "";
@@ -841,53 +752,6 @@ export const KurasiLandingPage: React.FC = () => {
       setShowImportModal(false);
       setModalType("news");
       showToast.success(`Data ${type === "proker" ? "Program Kerja" : "Logbook"} #${sourceId.slice(0, 8)} berhasil ditarik ke Berita dengan relasi Strict ID!`);
-
-    } else if (target === "hero") {
-      // ── MAPPING KE HERO CAROUSEL ──
-      if (type === "proker") {
-        const firstLine = (item.deskripsi || "").split("\n")[0].replace(/\*\*/g, "").slice(0, 80);
-        setSlideForm({
-          id: `slide-proker-${sourceId}`,
-          image: getSafeImageUrl(item.fotoBuktiUrl, "/image/kkn-hero-sorting.webp"),
-          badge: item.kategori ? `Proker ${item.kategori}` : "Inisiatif Kolaboratif",
-          title: firstLine || "Aksi Inovasi Lingkungan KKN BERSEKA",
-          location: item.kelurahan ? `Kelurahan ${item.kelurahan}, Kec. Coblong` : "Kecamatan Coblong, Bandung",
-          metric: `${kelompokNama || "Kelompok KKN"} Terlibat`,
-          highlight: "Program Kerja Resmi KKN",
-          isPublished: true,
-          sourceType: "proker",
-          sourceId,
-          prokerId,
-          logbookId: null,
-          kelompokId,
-          kelompokNama,
-          isStrictRelation: true,
-        });
-      } else {
-        const firstLine = (item.deskripsi || "").split("\n")[0].replace(/\*\*/g, "").slice(0, 80);
-        setSlideForm({
-          id: `slide-logbook-${sourceId}`,
-          image: getSafeImageUrl(item.fotoBuktiUrl, "/image/activity-1.webp"),
-          badge: "Aksi Lapangan KKN",
-          title: firstLine || "Dokumentasi Aksi Lapangan Mahasiswa KKN",
-          location: item.tempat ? `${item.tempat}, Kel. ${item.kelurahan || "Coblong"}` : (item.kelurahan ? `Kel. ${item.kelurahan}, Coblong` : "Kecamatan Coblong"),
-          metric: `Aksi ${kelompokNama || "Mahasiswa KKN"}`,
-          highlight: "Foto Bukti Terverifikasi Lapangan",
-          isPublished: true,
-          sourceType: "logbook",
-          sourceId,
-          logbookId,
-          prokerId,
-          kelompokId,
-          kelompokNama,
-          isStrictRelation: true,
-        });
-      }
-
-      setEditingIndex(null);
-      setShowImportModal(false);
-      setModalType("slide");
-      showToast.success(`Data ${type === "proker" ? "Program Kerja" : "Logbook"} #${sourceId.slice(0, 8)} berhasil ditarik ke Hero Carousel dengan relasi Strict ID!`);
 
     } else if (target === "pasar") {
       // ── MAPPING KE PASAR BERSEKA ──
@@ -1079,19 +943,19 @@ export const KurasiLandingPage: React.FC = () => {
     setProductForm({
       id: `prod-${Date.now()}`,
       title: "",
-      category: "pupuk",
-      categoryLabel: "Pupuk & Kompos",
+      category: "pangan",
+      categoryLabel: "Pangan Lokal",
       categoryColor: "bg-emerald-100 text-emerald-800",
-      initiator: "KKN Kelompok RW",
-      priceIdr: 15000,
-      pricePoints: 150,
-      stock: 50,
-      unit: "Pack",
+      initiator: "",
+      priceIdr: "" as any,
+      pricePoints: "" as any,
+      stock: "" as any,
+      unit: "",
       rating: 5.0,
       soldCount: 0,
-      imageUrl: "/image/activity-2.webp",
+      imageUrl: "",
       description: "",
-      benefits: ["100% Organik ramah lingkungan", "Mendukung ekonomi sirkular warga"],
+      benefits: [],
       isPublished: true,
     });
     setModalType("product");
@@ -1110,11 +974,27 @@ export const KurasiLandingPage: React.FC = () => {
       return;
     }
 
+    const priceNum = Number(productForm.priceIdr) || 0;
+    const pointsNum = productForm.pricePoints !== "" && productForm.pricePoints !== undefined && productForm.pricePoints !== null
+      ? Number(productForm.pricePoints)
+      : Math.round(priceNum / 100);
+
+    const sanitizedProduct: MarketProductItem = {
+      ...productForm,
+      title: productForm.title.trim(),
+      initiator: productForm.initiator.trim() || "Warga Binaan",
+      priceIdr: priceNum,
+      pricePoints: pointsNum,
+      stock: Number(productForm.stock) || 0,
+      unit: productForm.unit.trim() || "Pcs",
+      imageUrl: productForm.imageUrl.trim() || "/image/landingpage/prod-telur-ayam.webp",
+    };
+
     const updated = [...content.marketProducts];
     if (editingIndex !== null) {
-      updated[editingIndex] = productForm;
+      updated[editingIndex] = sanitizedProduct;
     } else {
-      updated.unshift(productForm);
+      updated.unshift(sanitizedProduct);
     }
 
     updateAndPersistContent({ ...content, marketProducts: updated });
@@ -1122,65 +1002,28 @@ export const KurasiLandingPage: React.FC = () => {
     showToast.success(editingIndex !== null ? "Produk diperbarui di Landing Page" : "Produk ditambahkan ke Landing Page");
   };
 
-  // ── Hero Slide Handlers ─────────────────────────────────────────────────────
-  const handleOpenAddSlide = () => {
-    setEditingIndex(null);
-    setSlideForm({
-      id: `slide-${Date.now()}`,
-      image: "/image/kkn-hero-sorting.webp",
-      badge: "Gerakan Kolaboratif",
-      title: "",
-      location: "Kecamatan Coblong, Kota Bandung",
-      metric: "100+ KK Terbina",
-      highlight: "100% Berbasis QR Code",
-      isPublished: true,
-    });
-    setModalType("slide");
-  };
-
-  const handleOpenEditSlide = (index: number) => {
-    setEditingIndex(index);
-    setSlideForm({ ...content.heroSlides[index] });
-    setModalType("slide");
-  };
-
-  const handleSaveSlide = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!slideForm.title.trim()) {
-      showToast.warning("Judul slide wajib diisi");
-      return;
-    }
-
-    const updated = [...content.heroSlides];
-    if (editingIndex !== null) {
-      updated[editingIndex] = slideForm;
-    } else {
-      updated.push(slideForm);
-    }
-
-    updateAndPersistContent({ ...content, heroSlides: updated });
-    setModalType(null);
-    showToast.success(editingIndex !== null ? "Slide diperbarui di Landing Page" : "Slide ditambahkan ke Landing Page");
-  };
-
   // ── Campaign Handlers ───────────────────────────────────────────────────────
   const handleOpenAddCampaign = () => {
+    if ((content.actionCampaigns?.length || 0) >= 6) {
+      showToast.warning("Maksimal 6 program telah tercapai. Hapus salah satu program untuk menambah yang baru.");
+      return;
+    }
     setEditingIndex(null);
     setCampaignForm({
       id: `camp-${Date.now()}`,
       title: "",
-      category: "recycle",
-      categoryLabel: "Bank Sampah",
+      category: "kkn",
+      categoryLabel: "IDENTITAS DIGITAL",
       categoryColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
-      initiator: "Tim KKN UNIKOM & Petugas DLH",
-      initiatorBadge: "Bank Sampah",
-      location: "Kecamatan Coblong, Kota Bandung",
-      imageUrl: "/image/program/timbangan-digital-petugas.webp",
+      initiator: "",
+      initiatorBadge: "",
+      location: "",
+      imageUrl: "",
       currentAmount: 0,
-      targetAmount: 500,
-      unit: "kg",
-      daysRemaining: 14,
-      participantsCount: 20,
+      targetAmount: 0,
+      unit: "",
+      daysRemaining: 0,
+      participantsCount: 0,
       description: "",
       impactHighlight: "",
       isPublished: true,
@@ -1197,7 +1040,12 @@ export const KurasiLandingPage: React.FC = () => {
   const handleSaveCampaign = (e: React.FormEvent) => {
     e.preventDefault();
     if (!campaignForm.title.trim()) {
-      showToast.warning("Judul program aksi wajib diisi");
+      showToast.warning("Judul program inovasi wajib diisi");
+      return;
+    }
+
+    if (editingIndex === null && (content.actionCampaigns?.length || 0) >= 6) {
+      showToast.warning("Maksimal 6 program telah tercapai. Hapus salah satu program untuk menambah yang baru.");
       return;
     }
 
@@ -1205,12 +1053,12 @@ export const KurasiLandingPage: React.FC = () => {
     if (editingIndex !== null) {
       updated[editingIndex] = campaignForm;
     } else {
-      updated.unshift(campaignForm);
+      updated.push(campaignForm);
     }
 
     updateAndPersistContent({ ...content, actionCampaigns: updated });
     setModalType(null);
-    showToast.success(editingIndex !== null ? "Program aksi diperbarui di Landing Page" : "Program aksi ditambahkan ke Landing Page");
+    showToast.success(editingIndex !== null ? "Program inovasi diperbarui di Landing Page" : "Program inovasi ditambahkan ke Landing Page");
   };
 
   // ── News Handlers ───────────────────────────────────────────────────────────
@@ -1298,8 +1146,6 @@ export const KurasiLandingPage: React.FC = () => {
 
     if (tab === "product") {
       updatedContent.marketProducts = content.marketProducts.filter((_, i) => i !== index);
-    } else if (tab === "slide") {
-      updatedContent.heroSlides = content.heroSlides.filter((_, i) => i !== index);
     } else if (tab === "campaign") {
       updatedContent.actionCampaigns = content.actionCampaigns.filter((_, i) => i !== index);
     } else if (tab === "news") {
@@ -1333,7 +1179,7 @@ export const KurasiLandingPage: React.FC = () => {
             Kelola Konten Landing Page BERSEKA
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Atur dan publikasikan produk Pasar Berseka, banner carousel hero, program aksi, artikel berita, dan FAQ publik secara dinamis.
+            Atur dan publikasikan produk Pasar Berseka, program aksi, artikel berita, dan FAQ publik secara dinamis.
           </p>
         </div>
 
@@ -1383,18 +1229,6 @@ export const KurasiLandingPage: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setActiveTab("hero")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs transition cursor-pointer ${
-            activeTab === "hero"
-              ? "bg-[#005841] text-white shadow-xs"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
-          }`}
-        >
-          <ImageIcon size={15} />
-          <span>Hero Carousel ({content.heroSlides?.length || 0})</span>
-        </button>
-
-        <button
           onClick={() => setActiveTab("campaign")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs transition cursor-pointer ${
             activeTab === "campaign"
@@ -1403,7 +1237,7 @@ export const KurasiLandingPage: React.FC = () => {
           }`}
         >
           <Layers size={15} />
-          <span>Program Aksi ({content.actionCampaigns?.length || 0})</span>
+          <span>Program Inovasi ({content.actionCampaigns?.length || 0}/6)</span>
         </button>
 
         <button
@@ -1419,15 +1253,15 @@ export const KurasiLandingPage: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setActiveTab("ticker_faq")}
+          onClick={() => setActiveTab("faq")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs transition cursor-pointer ${
-            activeTab === "ticker_faq"
+            activeTab === "faq"
               ? "bg-[#005841] text-white shadow-xs"
               : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
           }`}
         >
           <HelpCircle size={15} />
-          <span>Ticker &amp; FAQ ({content.faqItems?.length || 0})</span>
+          <span>Kelola FAQ ({content.faqItems?.length || 0})</span>
         </button>
       </div>
 
@@ -1537,191 +1371,109 @@ export const KurasiLandingPage: React.FC = () => {
             </div>
           )}
 
-          {/* ════════════════════ TAB 2: HERO CAROUSEL ════════════════════ */}
-          {activeTab === "hero" && (
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-black text-slate-900 text-lg">Slide Banner Hero Carousel (Top-Right)</h3>
-                  <p className="text-xs text-slate-500 font-medium">Urutan gambar sliding interaktif di hero section landing page.</p>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenImportModal("hero")}
-                    className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#005841] border border-emerald-200 text-xs font-extrabold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                  >
-                    <Sparkles size={15} className="text-emerald-700" />
-                    <span>Tarik dari Logbook / Proker</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenAddSlide}
-                    className="btn-primary-emerald py-2 px-4 text-xs flex items-center gap-1.5"
-                  >
-                    <Plus size={16} />
-                    <span>Tambah Slide Baru</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {content.heroSlides?.map((slide, idx) => (
-                  <div key={slide.id || idx} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs flex flex-col justify-between">
-                    <div className="relative h-44 w-full bg-slate-900">
-                      <img
-                        src={slide.image}
-                        alt={slide.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).src = "/image/activity-1.webp"; }}
-                      />
-                      <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase">
-                        Slide #{idx + 1}: {slide.badge}
-                      </span>
-                      {slide.isStrictRelation && (
-                        <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-emerald-950/80 backdrop-blur-xs text-emerald-300 text-[10px] font-bold border border-emerald-400/40 flex items-center gap-1 shadow-xs">
-                          <ShieldCheck size={11} className="text-emerald-300" />
-                          <span>{slide.sourceType === "logbook" ? "Logbook" : "Proker"} #{String(slide.sourceId || slide.prokerId || slide.id).slice(0, 8)}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                      <div className="space-y-1">
-                        <h4 className="font-extrabold text-slate-900 text-sm line-clamp-2">{slide.title}</h4>
-                        <p className="text-xs text-slate-500 font-semibold flex items-center gap-1">
-                          <MapPin size={12} /> {slide.location}
-                        </p>
-                        {slide.kelompokNama && (
-                          <div className="text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded w-fit border border-emerald-200/60">
-                            Unit: {slide.kelompokNama}
-                          </div>
-                        )}
-                        <div className="text-xs text-emerald-700 font-bold pt-1">
-                          📊 {slide.metric} • ✨ {slide.highlight}
-                        </div>
-                      </div>
-
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditSlide(idx)}
-                          className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
-                          title="Edit Slide"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteConfig({ tab: "slide", index: idx, title: slide.title })}
-                          className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 transition cursor-pointer"
-                          title="Hapus Slide"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ════════════════════ TAB 3: PROGRAM AKSI (CAMPAIGNS) ════════════════════ */}
+          {/* ════════════════════ TAB 2: PROGRAM INOVASI KKN (MAKSIMAL 6) ════════════════════ */}
           {activeTab === "campaign" && (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-black text-slate-900 text-lg">Program Aksi &amp; Inisiatif Berseka (BenihBaik Style)</h3>
-                  <p className="text-xs text-slate-500 font-medium">Program kerja KKN dan inisiatif pengumpulan sampah warga dengan progress target.</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-slate-900 text-lg">Program Inovasi KKN BERSEKA</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-[#005841]">
+                      {content.actionCampaigns?.length || 0} / 6 Slot
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Kelola maksimal 6 program inovasi mahasiswa dan warga yang ditampilkan pada etalase landing page publik.
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenImportModal("campaign")}
-                    className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#005841] border border-emerald-200 text-xs font-extrabold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                  >
-                    <Sparkles size={15} className="text-emerald-700" />
-                    <span>Tarik dari Logbook / Proker</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenAddCampaign}
-                    className="btn-primary-emerald py-2 px-4 text-xs flex items-center gap-1.5"
-                  >
-                    <Plus size={16} />
-                    <span>Tambah Program Aksi</span>
-                  </button>
+                  {(content.actionCampaigns?.length || 0) >= 6 ? (
+                    <div
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 text-slate-400 border border-slate-200 text-xs font-bold cursor-not-allowed shadow-2xs"
+                      title="Maksimal 6 program telah tercapai. Hapus salah satu program untuk menambah yang baru."
+                    >
+                      <Plus size={16} />
+                      <span>Slot Penuh (Maks. 6)</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleOpenAddCampaign}
+                      className="btn-primary-emerald py-2 px-4 text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Plus size={16} />
+                      <span>Tambah Program Baru ({6 - (content.actionCampaigns?.length || 0)} slot tersedia)</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {content.actionCampaigns?.map((camp, idx) => {
-                  const progress = Math.min(Math.round((camp.currentAmount / camp.targetAmount) * 100), 100);
-                  return (
-                    <div key={camp.id || idx} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs flex flex-col justify-between">
-                      <div className="relative h-44 w-full bg-slate-900">
-                        <img
-                          src={camp.imageUrl}
-                          alt={camp.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).src = "/image/program/timbangan-digital-petugas.webp"; }}
-                        />
-                        <span className={`absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${camp.categoryColor}`}>
-                          {camp.categoryLabel}
-                        </span>
-                        {camp.isStrictRelation && (
-                          <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-emerald-950/80 backdrop-blur-xs text-emerald-300 text-[10px] font-bold border border-emerald-400/40 flex items-center gap-1 shadow-xs">
-                            <ShieldCheck size={11} className="text-emerald-300" />
-                            <span>{camp.sourceType === "logbook" ? "Logbook" : "Proker"} #{String(camp.sourceId || camp.prokerId || camp.id).slice(0, 8)}</span>
-                          </span>
-                        )}
-                        <span className="absolute bottom-3 right-3 px-2 py-0.5 rounded-lg bg-black/60 text-white text-[11px] font-bold">
-                          {progress}% tercapai
-                        </span>
+                {content.actionCampaigns?.map((camp, idx) => (
+                  <div key={camp.id || idx} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs flex flex-col justify-between hover:border-emerald-300 transition">
+                    <div className="relative h-44 w-full bg-slate-900">
+                      <img
+                        src={camp.imageUrl}
+                        alt={camp.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).src = "/image/program/kodifikasi-tempat-sampah-qr.webp"; }}
+                      />
+                      <span className={`absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${camp.categoryColor || "bg-emerald-100 text-emerald-800 border-emerald-200"}`}>
+                        {camp.categoryLabel || "Program KKN"}
+                      </span>
+                      <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold">
+                        Slot #{idx + 1}
+                      </span>
+                    </div>
+
+                    <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                      <div className="space-y-1.5">
+                        <h4 className="font-extrabold text-slate-900 text-sm line-clamp-2">{camp.title}</h4>
+                        <p className="text-xs text-slate-600 line-clamp-2">{camp.description}</p>
+
+                        <div className="pt-2 space-y-1 text-[11px] text-slate-500 border-t border-slate-100">
+                          {camp.location && (
+                            <div className="flex items-center gap-1 truncate">
+                              <MapPin size={12} className="text-[#005841] shrink-0" />
+                              <span className="font-semibold text-slate-700">{camp.location}</span>
+                            </div>
+                          )}
+                          {camp.initiator && (
+                            <div className="flex items-center gap-1 truncate">
+                              <span className="font-bold text-slate-500">Pelaksana:</span>
+                              <span className="font-semibold text-slate-700">{camp.initiator}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                        <div className="space-y-1">
-                          <span className="text-[11px] font-bold text-slate-400 block truncate">Inisiator: {camp.initiator}</span>
-                          {camp.kelompokNama && (
-                            <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200/60 block w-fit">
-                              {camp.kelompokNama}
-                            </span>
-                          )}
-                          <h4 className="font-extrabold text-slate-900 text-sm line-clamp-2">{camp.title}</h4>
-                          <p className="text-xs text-slate-500 font-semibold">{camp.location}</p>
-                          <p className="text-xs text-slate-600 line-clamp-2">{camp.description}</p>
-                        </div>
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                          Tampil di Landing Page
+                        </span>
 
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                          <div className="text-xs font-black text-[#005841]">
-                            {camp.currentAmount} / {camp.targetAmount} {camp.unit}
-                          </div>
-
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditCampaign(idx)}
-                              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
-                              title="Edit Program"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDeleteConfig({ tab: "campaign", index: idx, title: camp.title })}
-                              className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 transition cursor-pointer"
-                              title="Hapus Program"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditCampaign(idx)}
+                            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
+                            title="Edit Program"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteConfig({ tab: "campaign", index: idx, title: camp.title })}
+                            className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 transition cursor-pointer"
+                            title="Hapus Program"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1810,38 +1562,54 @@ export const KurasiLandingPage: React.FC = () => {
             </div>
           )}
 
-          {/* ════════════════════ TAB 5: TICKER & FAQ ════════════════════ */}
-          {activeTab === "ticker_faq" && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Left Column: FAQ List */}
-              <div className="lg:col-span-8 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-black text-slate-900 text-lg">Pertanyaan &amp; Jawaban (FAQ)</h3>
-                    <p className="text-xs text-slate-500 font-medium">Daftar FAQ yang tampil di accordion landing page publik.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleOpenAddFaq}
-                    className="btn-primary-emerald py-1.5 px-3.5 text-xs flex items-center gap-1"
-                  >
-                    <Plus size={15} />
-                    <span>Tambah FAQ</span>
-                  </button>
+          {/* ════════════════════ TAB 4: KELOLA FAQ ════════════════════ */}
+          {activeTab === "faq" && (
+            <div className="space-y-4 max-w-4xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-slate-200">
+                <div>
+                  <h3 className="font-black text-slate-900 text-lg flex items-center gap-2">
+                    <span>Pertanyaan &amp; Jawaban (FAQ)</span>
+                    <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+                      {content.faqItems?.length || 0} Pertanyaan Aktif
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    Daftar FAQ yang langsung tampil di modal FAQ pada Landing Page publik (menu Bantuan navbar &amp; footer).
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddFaq}
+                  className="btn-primary-emerald py-2 px-4 text-xs flex items-center gap-1.5 shrink-0"
+                >
+                  <Plus size={15} />
+                  <span>Tambah Pertanyaan FAQ</span>
+                </button>
+              </div>
 
-                <div className="space-y-3">
-                  {content.faqItems?.map((faq, idx) => (
-                    <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2">
+              <div className="space-y-3">
+                {(!content.faqItems || content.faqItems.length === 0) ? (
+                  <div className="p-8 text-center bg-white rounded-2xl border border-dashed border-slate-300">
+                    <HelpCircle size={32} className="mx-auto text-slate-300 mb-2" />
+                    <p className="text-xs font-bold text-slate-600">Belum ada pertanyaan FAQ.</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Klik tombol di atas untuk menambahkan pertanyaan baru.</p>
+                  </div>
+                ) : (
+                  content.faqItems.map((faq, idx) => (
+                    <div key={idx} className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-2 hover:border-emerald-200 transition">
                       <div className="flex items-start justify-between gap-3">
-                        <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm">
-                          {idx + 1}. {faq.q}
+                        <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center text-xs font-black shrink-0 border border-emerald-200/50">
+                            {idx + 1}
+                          </span>
+                          <span>{faq.q}</span>
                         </h4>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
                             onClick={() => handleOpenEditFaq(idx)}
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
+                            title="Edit Pertanyaan"
                           >
                             <Edit size={13} />
                           </button>
@@ -1849,40 +1617,18 @@ export const KurasiLandingPage: React.FC = () => {
                             type="button"
                             onClick={() => setDeleteConfig({ tab: "faq", index: idx, title: faq.q })}
                             className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition cursor-pointer"
+                            title="Hapus Pertanyaan"
                           >
                             <Trash2 size={13} />
                           </button>
                         </div>
                       </div>
-                      <p className="text-xs text-slate-600 font-medium leading-relaxed bg-slate-50 p-3 rounded-xl">
+                      <p className="text-xs text-slate-600 font-medium leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-100 ml-8">
                         {faq.a}
                       </p>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Right Column: Live Logs Preview */}
-              <div className="lg:col-span-4 space-y-4">
-                <div>
-                  <h3 className="font-black text-slate-900 text-base">Live Activity Ticker</h3>
-                  <p className="text-xs text-slate-500 font-medium">Log aliran aktivitas penimbangan dan sedekah sampah terkini.</p>
-                </div>
-
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2.5 max-h-[500px] overflow-y-auto">
-                  {content.liveLogs?.map((log) => (
-                    <div key={log.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs space-y-1">
-                      <div className="flex justify-between font-bold text-slate-800">
-                        <span>{log.user} ({log.rw})</span>
-                        <span className="text-[10px] text-slate-400">{log.time}</span>
-                      </div>
-                      <p className="text-slate-600 text-[11px]">{log.action}</p>
-                      <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[10px]">
-                        {log.reward}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -1939,9 +1685,13 @@ export const KurasiLandingPage: React.FC = () => {
                       const labels: Record<string, string> = {
                         pangan: "Pangan Lokal",
                         buruan_sae: "Buruan SAE",
-                        pupuk: "Pupuk Organik",
+                        sayuran: "Sayuran Segar",
+                        buah: "Buah Segar",
+                        telur: "Telur Segar",
+                        daging: "Daging Segar",
                         perikanan: "Perikanan",
-                        kerajinan: "Produk Kreatif",
+                        pupuk: "Pupuk Organik",
+                        kerajinan: "Daur Ulang Kreatif",
                         pakan: "Pakan Ternak",
                         ecoenzyme: "Eco-Enzyme",
                         bibit: "Bibit & Tanaman",
@@ -1949,11 +1699,15 @@ export const KurasiLandingPage: React.FC = () => {
                       const colors: Record<string, string> = {
                         pangan: "bg-emerald-100 text-emerald-800",
                         buruan_sae: "bg-emerald-100 text-emerald-800",
+                        sayuran: "bg-emerald-100 text-emerald-800",
+                        buah: "bg-yellow-100 text-yellow-800",
+                        telur: "bg-amber-100 text-amber-800",
+                        daging: "bg-rose-100 text-rose-800",
+                        perikanan: "bg-cyan-100 text-cyan-800",
                         pupuk: "bg-emerald-100 text-emerald-800",
-                        perikanan: "bg-emerald-100 text-emerald-800",
-                        kerajinan: "bg-emerald-100 text-emerald-800",
-                        pakan: "bg-emerald-100 text-emerald-800",
-                        ecoenzyme: "bg-amber-100 text-amber-800",
+                        kerajinan: "bg-blue-100 text-blue-800",
+                        pakan: "bg-amber-100 text-amber-800",
+                        ecoenzyme: "bg-teal-100 text-teal-800",
                         bibit: "bg-green-100 text-green-800",
                       };
                       setProductForm({
@@ -1967,10 +1721,14 @@ export const KurasiLandingPage: React.FC = () => {
                   >
                     <option value="pangan">Pangan Lokal</option>
                     <option value="buruan_sae">Buruan SAE</option>
+                    <option value="sayuran">Sayuran Segar</option>
+                    <option value="buah">Buah Segar</option>
+                    <option value="telur">Telur Segar</option>
+                    <option value="daging">Daging Segar</option>
+                    <option value="perikanan">Perikanan &amp; Bioflok</option>
                     <option value="pupuk">Pupuk Organik</option>
-                    <option value="perikanan">Perikanan</option>
-                    <option value="kerajinan">Produk Kreatif</option>
-                    <option value="pakan">Pakan Ternak</option>
+                    <option value="kerajinan">Daur Ulang Kreatif</option>
+                    <option value="pakan">Pakan Ternak (Maggot)</option>
                     <option value="ecoenzyme">Eco-Enzyme Kebersihan</option>
                     <option value="bibit">Bibit &amp; Tanaman</option>
                   </select>
@@ -1983,7 +1741,7 @@ export const KurasiLandingPage: React.FC = () => {
                     required
                     value={productForm.initiator}
                     onChange={(e) => setProductForm({ ...productForm, initiator: e.target.value })}
-                    placeholder="Contoh: KKN Kelompok 04 RW 05"
+                    placeholder="Contoh: KKN Kelompok 04 RW 05 / UMKM Warga"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none"
                   />
                 </div>
@@ -1996,8 +1754,9 @@ export const KurasiLandingPage: React.FC = () => {
                     type="number"
                     required
                     min={0}
-                    value={productForm.priceIdr}
-                    onChange={(e) => setProductForm({ ...productForm, priceIdr: Number(e.target.value) })}
+                    value={productForm.priceIdr !== undefined && productForm.priceIdr !== null ? productForm.priceIdr : ""}
+                    onChange={(e) => setProductForm({ ...productForm, priceIdr: e.target.value === "" ? ("" as any) : Number(e.target.value) })}
+                    placeholder="Contoh: 25000"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none"
                   />
                 </div>
@@ -2008,8 +1767,9 @@ export const KurasiLandingPage: React.FC = () => {
                     type="number"
                     required
                     min={0}
-                    value={productForm.pricePoints}
-                    onChange={(e) => setProductForm({ ...productForm, pricePoints: Number(e.target.value) })}
+                    value={productForm.pricePoints !== undefined && productForm.pricePoints !== null ? productForm.pricePoints : ""}
+                    onChange={(e) => setProductForm({ ...productForm, pricePoints: e.target.value === "" ? ("" as any) : Number(e.target.value) })}
+                    placeholder="Contoh: 200"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none"
                   />
                 </div>
@@ -2021,15 +1781,16 @@ export const KurasiLandingPage: React.FC = () => {
                       type="number"
                       required
                       min={0}
-                      value={productForm.stock}
-                      onChange={(e) => setProductForm({ ...productForm, stock: Number(e.target.value) })}
+                      value={productForm.stock !== undefined && productForm.stock !== null ? productForm.stock : ""}
+                      onChange={(e) => setProductForm({ ...productForm, stock: e.target.value === "" ? ("" as any) : Number(e.target.value) })}
+                      placeholder="50"
                       className="w-16 px-2 py-2 rounded-xl border border-slate-300 font-semibold"
                     />
                     <input
                       type="text"
                       value={productForm.unit}
                       onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
-                      placeholder="Pack"
+                      placeholder="Contoh: Pack, Botol, Pcs"
                       className="w-full px-2 py-2 rounded-xl border border-slate-300 font-semibold"
                     />
                   </div>
@@ -2075,273 +1836,143 @@ export const KurasiLandingPage: React.FC = () => {
         </div>
       )}
 
-      {/* ───────────────── MODAL: SLIDE ADD / EDIT ───────────────── */}
-      {modalType === "slide" && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-100 my-8">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-black text-slate-900 text-base">
-                {editingIndex !== null ? "Edit Slide Carousel Hero" : "Tambah Slide Baru"}
-              </h3>
-              <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveSlide} className="space-y-3.5 text-xs">
-              {slideForm.isStrictRelation && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs text-emerald-900">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck size={16} className="text-[#005841] shrink-0" />
-                    <span>
-                      <strong>Relasi Strict ID Aktif:</strong> Terhubung ke {slideForm.sourceType === "logbook" ? "Logbook Kegiatan" : "Program Kerja"} #{String(slideForm.sourceId || slideForm.prokerId || slideForm.id).slice(0, 8)}
-                      {slideForm.kelompokNama ? ` • ${slideForm.kelompokNama}` : ""}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-200/70 text-[#005841] px-2 py-0.5 rounded-full shrink-0">
-                    Strict ID
-                  </span>
-                </div>
-              )}
-              <div>
-                <label className="block font-extrabold text-slate-700 mb-1">Judul Utama Slide *</label>
-                <input
-                  type="text"
-                  required
-                  value={slideForm.title}
-                  onChange={(e) => setSlideForm({ ...slideForm, title: e.target.value })}
-                  placeholder="Contoh: Aksi Pemilahan Sampah Mandiri KKN Tematik"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-extrabold text-slate-700 mb-1">Label Tag Badge *</label>
-                  <input
-                    type="text"
-                    required
-                    value={slideForm.badge}
-                    onChange={(e) => setSlideForm({ ...slideForm, badge: e.target.value })}
-                    placeholder="Contoh: Gerakan Kolaboratif"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-extrabold text-slate-700 mb-1">Lokasi Kegiatan</label>
-                  <input
-                    type="text"
-                    value={slideForm.location}
-                    onChange={(e) => setSlideForm({ ...slideForm, location: e.target.value })}
-                    placeholder="Contoh: Kec. Coblong"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-extrabold text-slate-700 mb-1">Metrik Angka</label>
-                  <input
-                    type="text"
-                    value={slideForm.metric}
-                    onChange={(e) => setSlideForm({ ...slideForm, metric: e.target.value })}
-                    placeholder="Contoh: 340+ KK Terbina"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-extrabold text-slate-700 mb-1">Highlight Keunggulan</label>
-                  <input
-                    type="text"
-                    value={slideForm.highlight}
-                    onChange={(e) => setSlideForm({ ...slideForm, highlight: e.target.value })}
-                    placeholder="Contoh: 100% Berbasis QR Code"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Enhanced Image Upload Picker */}
-              <ImageUploadPicker
-                label="Foto Banner Slide Hero"
-                value={slideForm.image}
-                onChange={(newUrl) => setSlideForm({ ...slideForm, image: newUrl })}
-                helperText="Rekomendasi rasio landscape 16:9 atau 4:3 (Maks. 10MB)"
-              />
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setModalType(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary-emerald py-2 px-5 text-xs"
-                >
-                  Simpan ke Draft
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ───────────────── MODAL: CAMPAIGN ADD / EDIT ───────────────── */}
+      {/* ───────────────── MODAL: CAMPAIGN ADD / EDIT (PROGRAM INOVASI KKN) ───────────────── */}
       {modalType === "campaign" && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-100 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-black text-slate-900 text-base">
-                {editingIndex !== null ? "Edit Program Aksi" : "Tambah Program Aksi Baru"}
-              </h3>
+              <div>
+                <h3 className="font-black text-slate-900 text-base">
+                  {editingIndex !== null ? "Edit Program Inovasi KKN" : "Tambah Program Inovasi Baru"}
+                </h3>
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 inline-block mt-0.5">
+                  Slot #{editingIndex !== null ? editingIndex + 1 : (content.actionCampaigns?.length || 0) + 1} dari 6
+                </span>
+              </div>
               <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSaveCampaign} className="space-y-3.5 text-xs">
-              {campaignForm.isStrictRelation && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs text-emerald-900">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck size={16} className="text-[#005841] shrink-0" />
-                    <span>
-                      <strong>Relasi Strict ID Aktif:</strong> Terhubung ke {campaignForm.sourceType === "logbook" ? "Logbook Kegiatan" : "Program Kerja"} #{String(campaignForm.sourceId || campaignForm.prokerId || campaignForm.id).slice(0, 8)}
-                      {campaignForm.kelompokNama ? ` • ${campaignForm.kelompokNama}` : ""}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-200/70 text-[#005841] px-2 py-0.5 rounded-full shrink-0">
-                    Strict ID
-                  </span>
-                </div>
-              )}
+              {/* 1. Foto / Banner Poster Program */}
+              <ImageUploadPicker
+                label="Foto Banner / Poster Program"
+                value={campaignForm.imageUrl}
+                onChange={(newUrl) => setCampaignForm({ ...campaignForm, imageUrl: newUrl })}
+                helperText="Rekomendasi rasio landscape atau poster grafis inovasi (Maks. 10MB)"
+              />
+
+              {/* 2. Judul Program */}
               <div>
-                <label className="block font-extrabold text-slate-700 mb-1">Judul Program Aksi *</label>
+                <label className="block font-extrabold text-slate-700 mb-1">Judul Program Inovasi *</label>
                 <input
                   type="text"
                   required
                   value={campaignForm.title}
                   onChange={(e) => setCampaignForm({ ...campaignForm, title: e.target.value })}
-                  placeholder="Contoh: Inisiatif Biokonversi Maggot BSF RW 05"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none"
+                  placeholder="Contoh: Kodifikasi Tempat Sampah Berbasis QR"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none focus:border-[#005841]"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-extrabold text-slate-700 mb-1">Kategori</label>
+              {/* 3. Tag Kategori */}
+              <div>
+                <label className="block font-extrabold text-slate-700 mb-1">Tag Kategori (Pill Badge) *</label>
+                <div className="space-y-1.5">
                   <select
-                    value={campaignForm.category}
+                    value={campaignForm.categoryLabel}
                     onChange={(e) => {
-                      const val = e.target.value as any;
-                      const labels: Record<string, string> = {
-                        organic: "Organik & Maggot",
-                        recycle: "Daur Ulang & Kreativitas",
-                        kkn: "Inisiatif KKN",
-                        education: "Edukasi Warga",
-                      };
-                      const colors: Record<string, string> = {
-                        organic: "bg-emerald-100 text-emerald-800 border-emerald-200",
-                        recycle: "bg-blue-100 text-blue-800 border-blue-200",
-                        kkn: "bg-purple-100 text-purple-800 border-purple-200",
-                        education: "bg-amber-100 text-amber-800 border-amber-200",
-                      };
+                      const selectedVal = e.target.value;
+                      const preset = CAMPAIGN_TAG_PRESETS.find((p) => p.label === selectedVal);
                       setCampaignForm({
                         ...campaignForm,
-                        category: val,
-                        categoryLabel: labels[val] || "Program",
-                        categoryColor: colors[val] || "bg-slate-100 text-slate-800",
+                        categoryLabel: selectedVal,
+                        categoryColor: preset?.color || "bg-emerald-100 text-emerald-800 border-emerald-200",
                       });
                     }}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none focus:border-[#005841] bg-white cursor-pointer"
                   >
-                    <option value="organic">Organik &amp; Maggot</option>
-                    <option value="recycle">Daur Ulang &amp; Kreativitas</option>
-                    <option value="kkn">Inisiatif KKN Mahasiswa</option>
-                    <option value="education">Edukasi &amp; Sosialisasi</option>
+                    {CAMPAIGN_TAG_PRESETS.map((p) => (
+                      <option key={p.label} value={p.label}>
+                        {p.label}
+                      </option>
+                    ))}
+                    <option value="CUSTOM">✏️ Ketik Kategori Kustom Sendiri...</option>
                   </select>
+
+                  {(!CAMPAIGN_TAG_PRESETS.some((p) => p.label === campaignForm.categoryLabel) || campaignForm.categoryLabel === "CUSTOM") && (
+                    <input
+                      type="text"
+                      required
+                      value={campaignForm.categoryLabel === "CUSTOM" ? "" : campaignForm.categoryLabel}
+                      onChange={(e) => setCampaignForm({
+                        ...campaignForm,
+                        categoryLabel: e.target.value.toUpperCase(),
+                        categoryColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+                      })}
+                      placeholder="Masukkan nama tag kategori kustom..."
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none focus:border-[#005841]"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* 4. Deskripsi Singkat di Kartu */}
+              <div>
+                <label className="block font-extrabold text-slate-700 mb-1">
+                  Deskripsi Ringkas (Tampil di Kartu Landing Page) *
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  value={campaignForm.description}
+                  onChange={(e) => setCampaignForm({ ...campaignForm, description: e.target.value })}
+                  placeholder="Ringkasan inovasi yang langsung dibaca pengunjung pada kartu program..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none focus:border-[#005841]"
+                />
+              </div>
+
+              {/* 5. Detail / Capaian Lengkap di Modal Pop-up */}
+              <div>
+                <label className="block font-extrabold text-slate-700 mb-1">
+                  Detail / Capaian Lengkap (Tampil di Pop-up Modal 'Lihat Program') *
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  value={campaignForm.impactHighlight}
+                  onChange={(e) => setCampaignForm({ ...campaignForm, impactHighlight: e.target.value })}
+                  placeholder="Penjelasan mendalam atau capaian inovasi saat pengunjung mengklik tombol 'Lihat Program'..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none focus:border-[#005841]"
+                />
+              </div>
+
+              {/* 6. Wilayah Percontohan & Pelaksana */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-extrabold text-slate-700 mb-1">Wilayah Percontohan *</label>
+                  <input
+                    type="text"
+                    required
+                    value={campaignForm.location}
+                    onChange={(e) => setCampaignForm({ ...campaignForm, location: e.target.value })}
+                    placeholder="Contoh: Kecamatan Coblong, Kota Bandung"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none focus:border-[#005841]"
+                  />
                 </div>
 
                 <div>
-                  <label className="block font-extrabold text-slate-700 mb-1">Inisiator *</label>
+                  <label className="block font-extrabold text-slate-700 mb-1">Pelaksana *</label>
                   <input
                     type="text"
                     required
                     value={campaignForm.initiator}
                     onChange={(e) => setCampaignForm({ ...campaignForm, initiator: e.target.value })}
-                    placeholder="Contoh: Kelompok 04 KKN UNIKOM"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none"
+                    placeholder="Contoh: KKN UNIKOM 2026"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none focus:border-[#005841]"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-extrabold text-slate-700 mb-1">Terkumpul</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={campaignForm.currentAmount}
-                    onChange={(e) => setCampaignForm({ ...campaignForm, currentAmount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="block font-extrabold text-slate-700 mb-1">Target *</label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={campaignForm.targetAmount}
-                    onChange={(e) => setCampaignForm({ ...campaignForm, targetAmount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="block font-extrabold text-slate-700 mb-1">Satuan</label>
-                  <input
-                    type="text"
-                    value={campaignForm.unit}
-                    onChange={(e) => setCampaignForm({ ...campaignForm, unit: e.target.value })}
-                    placeholder="kg"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold"
-                  />
-                </div>
-              </div>
-
-              {/* Enhanced Image Upload Picker */}
-              <ImageUploadPicker
-                label="Foto Dokumentasi Program Aksi"
-                value={campaignForm.imageUrl}
-                onChange={(newUrl) => setCampaignForm({ ...campaignForm, imageUrl: newUrl })}
-                helperText="Unggah foto kegiatan pengumpulan sampah dari perangkat"
-              />
-
-              <div>
-                <label className="block font-extrabold text-slate-700 mb-1">Capaian / Highlight Nyata</label>
-                <input
-                  type="text"
-                  value={campaignForm.impactHighlight}
-                  onChange={(e) => setCampaignForm({ ...campaignForm, impactHighlight: e.target.value })}
-                  placeholder="Contoh: Menghasilkan 80 kg pupuk kasgot untuk petani lokal."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold"
-                />
-              </div>
-
-              <div>
-                <label className="block font-extrabold text-slate-700 mb-1">Deskripsi Singkat</label>
-                <textarea
-                  rows={2}
-                  value={campaignForm.description}
-                  onChange={(e) => setCampaignForm({ ...campaignForm, description: e.target.value })}
-                  placeholder="Rangkum tujuan aksi..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold"
-                />
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
@@ -2354,9 +1985,9 @@ export const KurasiLandingPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary-emerald py-2 px-5 text-xs"
+                  className="btn-primary-emerald py-2 px-5 text-xs cursor-pointer shadow-xs"
                 >
-                  Simpan ke Draft
+                  {editingIndex !== null ? "Simpan Perubahan" : "Tambahkan ke Program"}
                 </button>
               </div>
             </form>
@@ -2551,9 +2182,7 @@ export const KurasiLandingPage: React.FC = () => {
                   </span>
                   <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] sm:text-[11px] font-black uppercase">
                     Kategori Target: {
-                      importTargetCategory === "campaign" ? "Program Aksi (Program KKN)" :
                       importTargetCategory === "news" ? "Berita & Cerita Lapangan" :
-                      importTargetCategory === "hero" ? "Hero Carousel" :
                       "Pasar Berseka"
                     }
                   </span>
@@ -2579,17 +2208,6 @@ export const KurasiLandingPage: React.FC = () => {
               <span className="text-slate-500 px-2 text-[10px] uppercase font-black">Tujuan Impor:</span>
               <button
                 type="button"
-                onClick={() => setImportTargetCategory("campaign")}
-                className={`px-3 py-1 rounded-xl transition cursor-pointer ${
-                  importTargetCategory === "campaign"
-                    ? "bg-[#005841] text-white font-extrabold shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
-                }`}
-              >
-                Program Aksi
-              </button>
-              <button
-                type="button"
                 onClick={() => setImportTargetCategory("news")}
                 className={`px-3 py-1 rounded-xl transition cursor-pointer ${
                   importTargetCategory === "news"
@@ -2598,17 +2216,6 @@ export const KurasiLandingPage: React.FC = () => {
                 }`}
               >
                 Berita &amp; Artikel
-              </button>
-              <button
-                type="button"
-                onClick={() => setImportTargetCategory("hero")}
-                className={`px-3 py-1 rounded-xl transition cursor-pointer ${
-                  importTargetCategory === "hero"
-                    ? "bg-[#005841] text-white font-extrabold shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
-                }`}
-              >
-                Hero Carousel
               </button>
               <button
                 type="button"
@@ -2875,9 +2482,7 @@ export const KurasiLandingPage: React.FC = () => {
               ) : (
                 (() => {
                   const targetLabel =
-                    importTargetCategory === "campaign" ? "Program Aksi" :
                     importTargetCategory === "news" ? "Berita" :
-                    importTargetCategory === "hero" ? "Hero Carousel" :
                     "Pasar Berseka";
 
                   return (

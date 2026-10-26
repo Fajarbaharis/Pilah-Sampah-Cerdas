@@ -18,6 +18,7 @@ import {
   type MarketProductItem,
   type NewsArticleItem,
   type ActionCampaignItem,
+  type FaqItem,
 } from "../../utils/cmsStorage";
 import { resolveImageUrl } from "../../utils/imageUrl";
 import "./LandingPage.css";
@@ -37,6 +38,7 @@ interface ProductItem {
   id: string;
   title: string;
   category: string;
+  filterGroup?: string;
   meta: string;
   img: string;
   desc: string;
@@ -119,7 +121,19 @@ const PROGRAM_IMAGE_FALLBACKS: Record<string, string> = {
 };
 
 const resolveProductImage = (item: MarketProductItem): string => {
+  // 1. PRIORITAS UTAMA: Gunakan imageUrl jika tersedia (hasil upload CMS atau link terdefinisi)
+  if (item.imageUrl && typeof item.imageUrl === "string" && item.imageUrl.trim() !== "") {
+    const trimmed = item.imageUrl.trim();
+    if (trimmed.startsWith("/uploads/")) {
+      return resolveImageUrl(trimmed);
+    }
+    return trimmed;
+  }
+
+  // 2. FALLBACK 1: Cek fallback ID produk bawaan jika imageUrl kosong
   if (PRODUCT_IMAGE_FALLBACKS[item.id]) return PRODUCT_IMAGE_FALLBACKS[item.id];
+
+  // 3. FALLBACK 2: Cek kata kunci pada judul jika belum cocok
   const titleLower = (item.title || "").toLowerCase();
   if (titleLower.includes("telur")) return "/image/landingpage/prod-telur-ayam.webp";
   if (titleLower.includes("sayur")) return "/image/landingpage/prod-sayuran-segar.webp";
@@ -127,36 +141,111 @@ const resolveProductImage = (item: MarketProductItem): string => {
   if (titleLower.includes("bioflok") || titleLower.includes("ikan")) return "/image/landingpage/prod-ikan-bioflok.webp";
   if (titleLower.includes("kerajinan") || titleLower.includes("anyaman") || titleLower.includes("tas")) return "/image/landingpage/prod-tas-anyaman.webp";
   if (titleLower.includes("maggot")) return "/image/landingpage/prod-maggot-kering.webp";
-  return item.imageUrl || "/image/landingpage/prod-telur-ayam.webp";
+
+  return "/image/landingpage/prod-telur-ayam.webp";
 };
 
-const resolveProductCategory = (item: MarketProductItem): string => {
+const resolveProductFilterGroup = (item: MarketProductItem): string => {
   const cat = (item.category || "").toLowerCase();
   const label = (item.categoryLabel || "").toLowerCase();
   const title = (item.title || "").toLowerCase();
 
-  if (cat.includes("pupuk") || cat.includes("kompos") || label.includes("pupuk") || label.includes("kompos") || title.includes("poc")) {
-    return "Pupuk dan Kompos";
+  // 1. Pupuk & Kompos
+  if (
+    cat === "pupuk" ||
+    cat.includes("kompos") ||
+    label.includes("pupuk") ||
+    label.includes("kompos") ||
+    title.includes("poc ") ||
+    title.startsWith("poc") ||
+    title.includes("kasgot")
+  ) {
+    return "Pupuk & Kompos";
   }
+
+  // 2. Eco-Enzyme
   if (cat.includes("eco") || cat.includes("enzyme") || label.includes("eco")) {
     return "Eco-Enzyme";
   }
-  if (cat.includes("bibit") || cat.includes("tanaman") || cat.includes("sayur") || cat.includes("buah") || cat.includes("buruan") || label.includes("buruan")) {
-    return "Bibit dan Tanaman";
+
+  // 3. Pakan Ternak (Maggot) - khusus pakan / larva BSF
+  if (
+    cat === "pakan" ||
+    label.includes("pakan") ||
+    title.includes("maggot kering") ||
+    title.includes("pakan") ||
+    (title.includes("maggot") && !title.includes("kasgot"))
+  ) {
+    return "Pakan Ternak (Maggot)";
   }
-  if (cat.includes("kerajinan") || cat.includes("daur") || cat.includes("kreatif") || label.includes("daur") || label.includes("kreatif")) {
+
+  // 4. Bibit & Tanaman
+  if (
+    cat === "bibit" ||
+    cat.includes("benih") ||
+    label.includes("bibit") ||
+    label.includes("tanaman") ||
+    title.includes("bibit") ||
+    title.includes("benih")
+  ) {
+    return "Bibit & Tanaman";
+  }
+
+  // 5. Daur Ulang Kreatif
+  if (
+    cat === "kerajinan" ||
+    cat.includes("daur") ||
+    cat.includes("kreatif") ||
+    label.includes("daur") ||
+    label.includes("kreatif") ||
+    title.includes("anyaman") ||
+    title.includes("kerajinan") ||
+    title.includes("tas ")
+  ) {
     return "Daur Ulang Kreatif";
   }
-  if (cat.includes("pakan") || cat.includes("maggot") || cat.includes("ikan") || cat.includes("telur") || cat.includes("daging") || cat.includes("pangan")) {
-    return "Pakan Organik";
+
+  // 6. Pangan & Buruan SAE (Pangan Lokal, Buruan SAE, Perikanan, Telur, Daging, Sayuran, Buah)
+  if (
+    cat === "pangan" ||
+    cat === "buruan_sae" ||
+    cat === "perikanan" ||
+    cat === "sayuran" ||
+    cat === "buah" ||
+    cat === "telur" ||
+    cat === "daging" ||
+    label.includes("pangan") ||
+    label.includes("buruan") ||
+    label.includes("ikan") ||
+    label.includes("telur") ||
+    label.includes("sayur") ||
+    label.includes("buah") ||
+    label.includes("daging") ||
+    title.includes("telur") ||
+    title.includes("ikan") ||
+    title.includes("sayur") ||
+    title.includes("ayam") ||
+    title.includes("buah") ||
+    title.includes("pisang")
+  ) {
+    return "Pangan & Buruan SAE";
   }
-  return item.categoryLabel || "Daur Ulang Kreatif";
+
+  return "Pangan & Buruan SAE";
+};
+
+const resolveProductCategory = (item: MarketProductItem): string => {
+  if (item.categoryLabel && item.categoryLabel.trim() !== "") {
+    return item.categoryLabel.trim();
+  }
+  return resolveProductFilterGroup(item);
 };
 
 const mapCmsProductToItem = (item: MarketProductItem): ProductItem => ({
   id: item.id,
   title: item.title,
   category: resolveProductCategory(item),
+  filterGroup: resolveProductFilterGroup(item),
   meta: item.unit || `${item.stock || 0} Stok Tersedia`,
   img: resolveProductImage(item),
   desc: item.description || (item.benefits && item.benefits.length > 0 ? item.benefits.join(". ") : ""),
@@ -164,7 +253,19 @@ const mapCmsProductToItem = (item: MarketProductItem): ProductItem => ({
 });
 
 const resolveProgramImage = (c: ActionCampaignItem): string => {
+  // 1. PRIORITAS UTAMA: Gunakan c.imageUrl jika ada dan valid
+  if (c.imageUrl && typeof c.imageUrl === "string" && c.imageUrl.trim() !== "") {
+    const trimmed = c.imageUrl.trim();
+    if (trimmed.startsWith("/uploads/")) {
+      return resolveImageUrl(trimmed);
+    }
+    return trimmed;
+  }
+
+  // 2. FALLBACK 1: Cek fallback ID program bawaan jika imageUrl kosong
   if (PROGRAM_IMAGE_FALLBACKS[c.id]) return PROGRAM_IMAGE_FALLBACKS[c.id];
+
+  // 3. FALLBACK 2: Cek kata kunci pada judul
   const titleLower = (c.title || "").toLowerCase();
   if (titleLower.includes("qr") || titleLower.includes("kodifikasi")) return "/image/landingpage/prog-kodifikasi-qr.webp";
   if (titleLower.includes("gas") || titleLower.includes("metana")) return "/image/landingpage/prog-gas-metana.webp";
@@ -172,7 +273,8 @@ const resolveProgramImage = (c: ActionCampaignItem): string => {
   if (titleLower.includes("komposter") || titleLower.includes("poc")) return "/image/landingpage/prog-komposter-poc.webp";
   if (titleLower.includes("timbangan") || titleLower.includes("digital")) return "/image/landingpage/prog-timbangan-digital.webp";
   if (titleLower.includes("kreatif") || titleLower.includes("produk") || titleLower.includes("pemanfaatan")) return "/image/landingpage/prog-produk-kreatif.webp";
-  return c.imageUrl || "/image/landingpage/prog-kodifikasi-qr.webp";
+
+  return "/image/landingpage/prog-kodifikasi-qr.webp";
 };
 
 const mapCmsCampaignToProgram = (c: ActionCampaignItem): ProgramItem => ({
@@ -275,7 +377,8 @@ const PRODUCTS: ProductItem[] = [
   {
     id: "prod-1",
     title: "Telur Ayam BERSEKA",
-    category: "Pakan Organik",
+    category: "Pangan Lokal",
+    filterGroup: "Pangan & Buruan SAE",
     meta: "Kemasan 10 butir",
     img: "/image/landingpage/prod-telur-ayam.webp",
     desc: "Telur segar dari ayam yang diberi pakan maggot hasil biokonversi sampah organik warga.",
@@ -284,7 +387,8 @@ const PRODUCTS: ProductItem[] = [
   {
     id: "prod-2",
     title: "Sayuran Segar Buruan SAE",
-    category: "Bibit dan Tanaman",
+    category: "Buruan SAE",
+    filterGroup: "Pangan & Buruan SAE",
     meta: "1 Paket Sayuran",
     img: "/image/landingpage/prod-sayuran-segar.webp",
     desc: "Bayam, kangkung, dan pakcoy segar hasil pemupukan kompos dan pupuk organik BERSEKA.",
@@ -293,7 +397,8 @@ const PRODUCTS: ProductItem[] = [
   {
     id: "prod-3",
     title: "POC BERSEKA",
-    category: "Pupuk dan Kompos",
+    category: "Pupuk Organik",
+    filterGroup: "Pupuk & Kompos",
     meta: "Botol 500 ml",
     img: "/image/landingpage/prod-poc-500ml.webp",
     desc: "Pupuk Organik Cair murni dari komposter drum pintar IoT, mempercepat pertumbuhan tanaman.",
@@ -302,7 +407,8 @@ const PRODUCTS: ProductItem[] = [
   {
     id: "prod-4",
     title: "Ikan Bioflok BERSEKA",
-    category: "Pakan Organik",
+    category: "Perikanan",
+    filterGroup: "Pangan & Buruan SAE",
     meta: "Kemasan 500 gram",
     img: "/image/landingpage/prod-ikan-bioflok.webp",
     desc: "Ikan konsumsi segar dari kolam bioflok ramah lingkungan berpakan pelet maggot mandiri.",
@@ -312,6 +418,7 @@ const PRODUCTS: ProductItem[] = [
     id: "prod-5",
     title: "Kerajinan Daur Ulang BERSEKA",
     category: "Daur Ulang Kreatif",
+    filterGroup: "Daur Ulang Kreatif",
     meta: "1 Produk",
     img: "/image/landingpage/prod-tas-anyaman.webp",
     desc: "Tas belanja modis dan pernak-pernik estetik hasil kreasi anyaman sampah plastik kresek.",
@@ -320,7 +427,8 @@ const PRODUCTS: ProductItem[] = [
   {
     id: "prod-6",
     title: "Maggot Kering BERSEKA",
-    category: "Pakan Organik",
+    category: "Pakan Ternak",
+    filterGroup: "Pakan Ternak (Maggot)",
     meta: "Botol 500 gram",
     img: "/image/landingpage/prod-maggot-kering.webp",
     desc: "Pakan burung dan ikan berprotein tinggi dari larva BSF pengurai sampah sisa makanan.",
@@ -409,11 +517,12 @@ export const LandingPage: React.FC = () => {
   const [programsList, setProgramsList] = useState<ProgramItem[]>(PROGRAMS);
   const [productsList, setProductsList] = useState<ProductItem[]>(PRODUCTS);
   const [newsList, setNewsList] = useState<NewsItem[]>(NEWS_LIST);
+  const [faqsList, setFaqsList] = useState<FaqItem[]>(FAQS);
 
   // Filtered market products (declarative & avoids DOM reveal conflicts)
   const filteredProducts = useMemo(() => {
     if (pasarFilter === "all") return productsList;
-    return productsList.filter((p) => p.category === pasarFilter);
+    return productsList.filter((p) => (p.filterGroup || p.category) === pasarFilter || p.category === pasarFilter);
   }, [pasarFilter, productsList]);
 
   // Dynamic targets with graceful fallbacks
@@ -643,10 +752,13 @@ export const LandingPage: React.FC = () => {
         }
       }
       if (Array.isArray(content.actionCampaigns) && content.actionCampaigns.length > 0) {
-        const published = content.actionCampaigns.filter((c) => c.isPublished !== false);
+        const published = content.actionCampaigns.filter((c) => c.isPublished !== false).slice(0, 6);
         if (published.length > 0) {
           setProgramsList(published.map(mapCmsCampaignToProgram));
         }
+      }
+      if (Array.isArray(content.faqItems) && content.faqItems.length > 0) {
+        setFaqsList(content.faqItems);
       }
     };
 
@@ -1245,7 +1357,7 @@ export const LandingPage: React.FC = () => {
             <div className="head">
               <div>
                 <h2 className="h2 rv">
-                  {programsList.length} Program <span>KKN BERSEKA</span>
+                  {Math.min(programsList.length, 6)} Program <span>KKN BERSEKA</span>
                 </h2>
                 <p className="sub rv d2">
                   Inovasi mahasiswa dan warga untuk memperkuat tata kelola sampah berbasis teknologi, lingkungan, dan ekonomi sirkular di Kecamatan Coblong.
@@ -1260,7 +1372,7 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
             <div className="grid3 rv">
-              {programsList.map((prog, idx) => (
+              {programsList.slice(0, 6).map((prog, idx) => (
                 <article key={prog.id} className={`card ${idx > 0 ? `d${idx % 3}` : ""}`}>
                   <div className="card__img">
                     <img src={prog.img} alt={prog.title} />
@@ -1313,20 +1425,23 @@ export const LandingPage: React.FC = () => {
               <button className="chip" aria-pressed={pasarFilter === "all"} onClick={() => setPasarFilter("all")}>
                 Semua
               </button>
-              <button className="chip" aria-pressed={pasarFilter === "Pupuk dan Kompos"} onClick={() => setPasarFilter("Pupuk dan Kompos")}>
-                Pupuk dan Kompos
+              <button className="chip" aria-pressed={pasarFilter === "Pangan & Buruan SAE"} onClick={() => setPasarFilter("Pangan & Buruan SAE")}>
+                Pangan &amp; Buruan SAE
+              </button>
+              <button className="chip" aria-pressed={pasarFilter === "Pupuk & Kompos"} onClick={() => setPasarFilter("Pupuk & Kompos")}>
+                Pupuk &amp; Kompos
               </button>
               <button className="chip" aria-pressed={pasarFilter === "Eco-Enzyme"} onClick={() => setPasarFilter("Eco-Enzyme")}>
                 Eco-Enzyme
               </button>
-              <button className="chip" aria-pressed={pasarFilter === "Bibit dan Tanaman"} onClick={() => setPasarFilter("Bibit dan Tanaman")}>
-                Bibit dan Tanaman
+              <button className="chip" aria-pressed={pasarFilter === "Bibit & Tanaman"} onClick={() => setPasarFilter("Bibit & Tanaman")}>
+                Bibit &amp; Tanaman
               </button>
               <button className="chip" aria-pressed={pasarFilter === "Daur Ulang Kreatif"} onClick={() => setPasarFilter("Daur Ulang Kreatif")}>
                 Daur Ulang Kreatif
               </button>
-              <button className="chip" aria-pressed={pasarFilter === "Pakan Organik"} onClick={() => setPasarFilter("Pakan Organik")}>
-                Pakan Organik
+              <button className="chip" aria-pressed={pasarFilter === "Pakan Ternak (Maggot)"} onClick={() => setPasarFilter("Pakan Ternak (Maggot)")}>
+                Pakan Ternak (Maggot)
               </button>
             </div>
             <div className="grid3 rv" id="prods">
@@ -1338,7 +1453,13 @@ export const LandingPage: React.FC = () => {
                     data-cat={prod.category}
                   >
                     <div className="card__img">
-                      <img src={prod.img} alt={prod.title} />
+                      <img
+                        src={prod.img}
+                        alt={prod.title}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/image/landingpage/prod-telur-ayam.webp";
+                        }}
+                      />
                     </div>
                     <div className="card__b">
                       <span className="tag">{prod.category}</span>
@@ -1905,15 +2026,21 @@ export const LandingPage: React.FC = () => {
               Pelajari tata cara pemilahan, sistem poin, penjemputan armada, dan program KKN Tematik BERSEKA.
             </p>
             <div style={{ marginTop: "16px" }}>
-              {FAQS.map((faq, index) => (
-                <div key={index} className="faq-item">
-                  <button className="faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}>
-                    <span>{faq.q}</span>
-                    <span>{openFaqIndex === index ? "−" : "+"}</span>
-                  </button>
-                  {openFaqIndex === index && <p className="faq-answer">{faq.a}</p>}
-                </div>
-              ))}
+              {faqsList.length === 0 ? (
+                <p style={{ textAlign: "center", color: "var(--ink-3)", padding: "24px 0", fontSize: "14px" }}>
+                  Belum ada pertanyaan FAQ yang dipublikasikan.
+                </p>
+              ) : (
+                faqsList.map((faq, index) => (
+                  <div key={index} className="faq-item">
+                    <button className="faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}>
+                      <span>{faq.q}</span>
+                      <span>{openFaqIndex === index ? "−" : "+"}</span>
+                    </button>
+                    {openFaqIndex === index && <p className="faq-answer">{faq.a}</p>}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1970,6 +2097,9 @@ export const LandingPage: React.FC = () => {
               <img
                 src={exchangeModalProduct.img}
                 alt={exchangeModalProduct.title}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/image/landingpage/prod-telur-ayam.webp";
+                }}
                 style={{ width: "120px", height: "120px", borderRadius: "18px", objectFit: "cover", margin: "0 auto 12px" }}
               />
               <span className="tag">{exchangeModalProduct.category.toUpperCase()}</span>
