@@ -213,6 +213,27 @@ Setiap pengembang maupun asisten AI wajib mematuhi 3 pilar perlindungan sistem b
   - `npx tsc --noEmit --project apps/web/tsconfig.json`: 0 errors.
   - `npm run build --prefix apps/web`: Vite build sukses 100% (`✓ built in 12.46s`).
 
+### E. 26 Oktober 2026 - Penyelarasan Leaderboard Petugas Pemilah Riil & Default Mode Kartu KKN (PR #360)
+- **Konteks & Latar Belakang**:
+  1. Koreksi anomali skor fiktif seragam 20 poin pada petugas non-aktif di Leaderboard akibat fallback successRate bernilai 1 saat totalClaimed === 0.
+  2. Penyelarasan sumber poin operasional petugas pemilah dengan mengintegrasikan buku besar pointHistory (SUBMIT_RESIDU & VALIDASI_PENGOSONGAN) sebagai SSOT riil lapangan, serta penambahan atribut wilayah rw.
+  3. Memperluas utilitas penyaringan akun pengujian/dummy (isTestUser) pada backend dan web frontend agar mendeteksi nama personil pengujian dan wilayah simulasi (RW 99 / RW 00), serta menambahkan filter langsung isTestAccount: false pada kueri database.
+  4. Penyempurnaan tampilan Leaderboard: menampilkan nama asli personil petugas, badge wilayah operasional, serta filter otomatis petugas sewilayah bagi pengguna dengan peran Lurah.
+  5. Penyempurnaan Dasbor Eksekutif KKN: mengubah mode default daftar kelompok KKN ke mode kartu (groupViewMode = "cards"), batas pagination kartu menjadi 12 per halaman (grid simetris 4x3) dengan opsi 12, 24, 48, Semua, serta reset pagination ke 10 saat beralih ke tabel.
+  6. Normalisasi status usulan proker KKN dan pembersihan 5 kartu stat redundan pada menu Program Kerja KKN.
+  7. Pembersihan simbol emoji mentah pada elemen <option> HTML Jadwal Kegiatan dan penggantian dengan SVG Lucide & animasi CSS pulse murni.
+  8. Injeksi metadata rilis build tanggal commit Git pada frontend (__APP_LAST_COMMIT_DATE__) menggantikan teks tanggal statis lama.
+- **Validasi Mutu & Quality Gate**:
+  - `cd apps/api && npx tsc --noEmit`: 0 error (100% Pass).
+  - `cd apps/web && npx tsc --noEmit`: 0 error (100% Pass).
+  - `apps/web` Vite Production Build: Sukses dalam 12.54s (`✓ built in 12.54s`).
+  - `apps/api` Build: Sukses 100%.
+  - Vitest Test Suite DPL (30 tests): 100% Green (`dplApproval.test.ts`, `logbookVerifikasi.test.ts`, `penilaianKknRoleGuard.test.ts`).
+  - Vitest Test Suite Gamifikasi & Filter (56 tests): 100% Green (`filterTestingUtils.test.ts`, `kknGamificationLogic.test.ts`, `prokerProgressQC.test.ts`, `penilaianKknNormalization.test.ts`).
+  - Pemindaian Kata Terlarang: 0 kata "tong" ditemukan.
+- **Alur Integrasi Git-Flow**:
+  - Commits PR #360 diintegrasikan secara resmi ke branch development dan staging sesuai protokol 3-Tier Git-Flow Berseka.
+
 ---
 
 ## 5. Direktori & Arsip Dokumen
