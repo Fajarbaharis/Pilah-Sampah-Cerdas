@@ -17,6 +17,7 @@ import {
   Users,
   Layers,
   Info,
+  ExternalLink,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
@@ -421,10 +422,10 @@ export const TimelineImportModal: React.FC<TimelineImportModalProps> = ({
                 onChange={(e) => setTargetKelompokId(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:border-emerald-500 focus:bg-white transition cursor-pointer"
               >
-                <option value="GLOBAL">🌐 Global / Acuan Semua Kelompok</option>
+                <option value="GLOBAL">Global / Acuan Semua Kelompok</option>
                 {groups.map((g) => (
                   <option key={g.id} value={g.id}>
-                    👥 Kelompok: {g.name} {g.kelurahan ? `(${g.kelurahan})` : ""}
+                    Kelompok: {g.name} {g.kelurahan ? `(${g.kelurahan})` : ""}
                   </option>
                 ))}
               </select>
@@ -441,8 +442,8 @@ export const TimelineImportModal: React.FC<TimelineImportModalProps> = ({
                 onChange={(e) => setImportMode(e.target.value as any)}
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:border-emerald-500 focus:bg-white transition cursor-pointer"
               >
-                <option value="APPEND">➕ Tambahkan ke data yang ada (Append)</option>
-                <option value="REPLACE">⚠️ Ganti semua data pada scope terpilih (Replace)</option>
+                <option value="APPEND">Tambahkan ke data yang ada (Append)</option>
+                <option value="REPLACE">Ganti semua data pada scope terpilih (Replace)</option>
               </select>
             </div>
           </div>
@@ -532,8 +533,9 @@ export const TimelineImportModal: React.FC<TimelineImportModalProps> = ({
                         <td className="py-2 px-3 font-bold text-slate-900 dark:text-slate-100">{r.kegiatanUtama}</td>
                         <td className="py-2 px-3">
                           {r.linkGoogleDrive ? (
-                            <span className="text-emerald-600 font-bold flex items-center gap-1 truncate max-w-[100px]" title={r.linkGoogleDrive}>
-                              🔗 Drive
+                            <span className="text-emerald-600 font-bold inline-flex items-center gap-1 truncate max-w-[100px]" title={r.linkGoogleDrive}>
+                              <ExternalLink size={12} className="shrink-0" />
+                              <span>Drive</span>
                             </span>
                           ) : (
                             <span className="text-slate-400 text-[10px]">-</span>
