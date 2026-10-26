@@ -22,6 +22,11 @@ import {
   Upload,
   RotateCcw,
   ExternalLink,
+  Users,
+  Globe,
+  AlertTriangle,
+  Info,
+  CircleDot,
 } from "lucide-react";
 /**
  * Project: BERSEKA
@@ -1093,10 +1098,10 @@ const JadwalKegiatan: React.FC = () => {
                   onChange={(e) => setSelectedKelurahan(e.target.value)}
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 outline-none focus:border-emerald-500 focus:bg-white transition cursor-pointer"
                 >
-                  <option value="ALL">📍 Semua Kelurahan</option>
+                  <option value="ALL">Semua Kelurahan</option>
                   {kelurahanOptions.map((k) => (
                     <option key={k} value={k}>
-                      📍 Kel. {k}
+                      Kel. {k}
                     </option>
                   ))}
                 </select>
@@ -1109,11 +1114,11 @@ const JadwalKegiatan: React.FC = () => {
                   onChange={(e) => setSelectedScope(e.target.value)}
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 outline-none focus:border-emerald-500 focus:bg-white transition cursor-pointer"
                 >
-                  <option value="ALL">🌐 Semua Kelompok / Global</option>
-                  <option value="GLOBAL">🏛️ Acuan Global KKN</option>
+                  <option value="ALL">Semua Kelompok / Global</option>
+                  <option value="GLOBAL">Acuan Global KKN</option>
                   {availableGroups.map((g) => (
                     <option key={g.id} value={g.id}>
-                      👥 {g.name} {g.kelurahan ? `(${g.kelurahan})` : ""}
+                      {g.name} {g.kelurahan ? `(${g.kelurahan})` : ""}
                     </option>
                   ))}
                 </select>
@@ -1126,7 +1131,7 @@ const JadwalKegiatan: React.FC = () => {
                   onChange={(e) => setSelectedBidang(e.target.value)}
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 outline-none focus:border-emerald-500 focus:bg-white transition cursor-pointer"
                 >
-                  <option value="ALL">🏷️ Semua Bidang Kegiatan</option>
+                  <option value="ALL">Semua Bidang Kegiatan</option>
                   {BIDANG_FILTER_OPTIONS.filter((b) => b !== "ALL").map((b) => (
                     <option key={b} value={b}>
                       {b}
@@ -1253,8 +1258,9 @@ const JadwalKegiatan: React.FC = () => {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                        ⚡ Pekan Sedang Berlangsung (Hari Ini: {todayFormatted})
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 inline-flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                        Pekan Sedang Berlangsung (Hari Ini: {todayFormatted})
                       </span>
                       <span className="text-xs font-black text-slate-900 dark:text-slate-100">
                         {activeItem.tahapMinggu} • {activeItem.tanggal}
@@ -1346,20 +1352,23 @@ const JadwalKegiatan: React.FC = () => {
                         </td>
                         <td className="py-3.5 px-4">
                           <span
-                            className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-[10.5px] font-bold block truncate max-w-[130px]"
+                            className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-[10.5px] font-bold inline-flex items-center gap-1.5 max-w-[130px]"
                             title={item.kelurahan || item.kelompok?.kelurahan || "Coblong"}
                           >
-                            📍 {item.kelurahan || item.kelompok?.kelurahan || "Coblong"}
+                            <MapPin size={11} className="text-slate-500 shrink-0" />
+                            <span className="truncate">{item.kelurahan || item.kelompok?.kelurahan || "Coblong"}</span>
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
                           {item.kelompok ? (
-                            <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-[10px] font-extrabold block truncate max-w-[130px]">
-                              👥 {item.kelompok.name}
+                            <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-[10px] font-extrabold inline-flex items-center gap-1.5 max-w-[130px]">
+                              <Users size={11} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                              <span className="truncate">{item.kelompok.name}</span>
                             </span>
                           ) : (
-                            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold block truncate max-w-[130px]">
-                              🌐 Global
+                            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold inline-flex items-center gap-1.5 max-w-[130px]">
+                              <Globe size={11} className="text-slate-500 shrink-0" />
+                              <span className="truncate">Global</span>
                             </span>
                           )}
                         </td>
@@ -2045,7 +2054,8 @@ const JadwalKegiatan: React.FC = () => {
                             : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                         }`}
                       >
-                        <span>🔵 Radius Lingkaran (Bulat)</span>
+                        <CircleDot size={14} className={geofenceMode === "CIRCLE" ? "text-blue-600 dark:text-blue-400" : "text-slate-400"} />
+                        <span>Radius Lingkaran (Bulat)</span>
                       </button>
                       <button
                         type="button"
@@ -2056,7 +2066,8 @@ const JadwalKegiatan: React.FC = () => {
                             : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                         }`}
                       >
-                        <span>🟢 Polygon Kustom (Multi-Sudut)</span>
+                        <Layers size={14} className={geofenceMode === "POLYGON" ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"} />
+                        <span>Polygon Kustom (Multi-Sudut)</span>
                       </button>
                     </div>
 
@@ -2177,13 +2188,13 @@ const JadwalKegiatan: React.FC = () => {
                               onClick={() =>
                                 setFormData((prev: any) => ({ ...prev, radius: preset.val }))
                               }
-                              className={`px-2.5 py-1 text-[11px] font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
+                              className={`px-2.5 py-1 text-[11px] font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
                                 Number(formData.radius) === preset.val
                                   ? "bg-emerald-700 text-white shadow-2xs ring-1 ring-emerald-800"
                                   : "bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700/40 text-emerald-950 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-slate-700"
                               }`}
                             >
-                              <span>📍</span>
+                              <MapPin size={11} className="shrink-0" />
                               <span>{preset.label}</span>
                             </button>
                           ))}
@@ -2214,12 +2225,14 @@ const JadwalKegiatan: React.FC = () => {
                             Daftar Titik Sudut Poligon ({formData.polygon.length} Titik)
                           </span>
                           {formData.polygon.length >= 3 ? (
-                            <span className="text-[10.5px] font-black text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
-                              ✓ Poligon Valid & Siap Digunakan
+                            <span className="text-[10.5px] font-black text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300 inline-flex items-center gap-1">
+                              <CheckCircle2 size={12} className="shrink-0 text-emerald-600" />
+                              Poligon Valid & Siap Digunakan
                             </span>
                           ) : (
-                            <span className="text-[10.5px] font-black text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">
-                              ⚠️ Butuh minimal 3 titik sudut (Kurang {3 - formData.polygon.length})
+                            <span className="text-[10.5px] font-black text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300 inline-flex items-center gap-1">
+                              <AlertTriangle size={12} className="shrink-0 text-amber-700" />
+                              Butuh minimal 3 titik sudut (Kurang {3 - formData.polygon.length})
                             </span>
                           )}
                         </div>
@@ -2318,7 +2331,7 @@ const JadwalKegiatan: React.FC = () => {
                   <div className="flex flex-col gap-4">
                     {isDpl && (
                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 font-semibold flex items-center gap-2">
-                        <span>📌</span>
+                        <Info size={16} className="text-amber-700 shrink-0" />
                         <span>
                           Jadwal kegiatan ini akan otomatis ditugaskan ke seluruh Mahasiswa KKN di
                           kelompok bimbingan Anda.

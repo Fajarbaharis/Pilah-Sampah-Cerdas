@@ -480,15 +480,19 @@ export const DplDashboardPage: React.FC = () => {
 
   // Normalizer Status Usulan & Pelaksanaan Program Kerja
   const normalizeStatusUsulan = (statusUsulan?: string, legacyStatus?: string): "BELUM_DISETUJUI" | "DISETUJUI" | "DITOLAK" => {
-    let u = statusUsulan;
+    const u = String(statusUsulan || "").toUpperCase();
     const leg = String(legacyStatus || "").toUpperCase();
-    if (!u) {
-      if (leg === "DITERIMA" || leg === "DISETUJUI" || leg === "SEDANG_BERJALAN" || leg === "SELESAI") u = "DISETUJUI";
-      else if (leg === "DITOLAK" || leg === "TIDAK_DISETUJUI") u = "DITOLAK";
-      else u = "BELUM_DISETUJUI";
+    if (
+      u === "DISETUJUI" ||
+      u === "DITERIMA" ||
+      leg === "DITERIMA" ||
+      leg === "DISETUJUI" ||
+      leg === "SEDANG_BERJALAN" ||
+      leg === "SELESAI"
+    ) {
+      return "DISETUJUI";
     }
-    if (u === "DISETUJUI" || u === "DITERIMA") return "DISETUJUI";
-    if (u === "DITOLAK" || u === "TIDAK_DISETUJUI") return "DITOLAK";
+    if (u === "DITOLAK" || u === "TIDAK_DISETUJUI" || leg === "DITOLAK" || leg === "TIDAK_DISETUJUI") return "DITOLAK";
     return "BELUM_DISETUJUI";
   };
 

@@ -932,17 +932,28 @@ export async function calculateGroupPoints(
 
     for (const p of prokers) {
       const legacySt = String(p.status || "").toUpperCase();
-      let u = (p as any).statusUsulan;
-      if (!u) {
-        if (
-          legacySt === "DITERIMA" ||
-          legacySt === "DISETUJUI" ||
-          legacySt === "SEDANG_BERJALAN" ||
-          legacySt === "SELESAI"
-        )
-          u = "DISETUJUI";
-        else if (legacySt === "DITOLAK" || legacySt === "TIDAK_DISETUJUI") u = "DITOLAK";
-        else u = "BELUM_DISETUJUI";
+      const rawU = String((p as any).statusUsulan || "").toUpperCase();
+      let u = rawU;
+      if (
+        rawU === "DISETUJUI" ||
+        rawU === "DITERIMA" ||
+        legacySt === "DITERIMA" ||
+        legacySt === "DISETUJUI" ||
+        legacySt === "SEDANG_BERJALAN" ||
+        legacySt === "SELESAI"
+      ) {
+        u = "DISETUJUI";
+      } else if (
+        rawU === "DITOLAK" ||
+        rawU === "TIDAK_DISETUJUI" ||
+        rawU === "KADALUARSA" ||
+        rawU === "KADALUARSA_OTOMATIS" ||
+        legacySt === "DITOLAK" ||
+        legacySt === "TIDAK_DISETUJUI"
+      ) {
+        u = "DITOLAK";
+      } else {
+        u = "BELUM_DISETUJUI";
       }
 
       // Dalam Kalkulasi Bertahap, seluruh proker aktif/diajukan (selama tidak ditolak)
@@ -1670,17 +1681,28 @@ export const dplService = {
           let judul = parsed.judul;
           let deskripsiDetail = parsed.deskripsi;
           const legacySt = String(p.status || "").toUpperCase();
-          let u = (p as any).statusUsulan;
-          if (!u) {
-            if (
-              legacySt === "DITERIMA" ||
-              legacySt === "DISETUJUI" ||
-              legacySt === "SEDANG_BERJALAN" ||
-              legacySt === "SELESAI"
-            )
-              u = "DISETUJUI";
-            else if (legacySt === "DITOLAK" || legacySt === "TIDAK_DISETUJUI") u = "DITOLAK";
-            else u = "BELUM_DISETUJUI";
+          const rawU = String((p as any).statusUsulan || "").toUpperCase();
+          let u = rawU;
+          if (
+            rawU === "DISETUJUI" ||
+            rawU === "DITERIMA" ||
+            legacySt === "DITERIMA" ||
+            legacySt === "DISETUJUI" ||
+            legacySt === "SEDANG_BERJALAN" ||
+            legacySt === "SELESAI"
+          ) {
+            u = "DISETUJUI";
+          } else if (
+            rawU === "DITOLAK" ||
+            rawU === "TIDAK_DISETUJUI" ||
+            rawU === "KADALUARSA" ||
+            rawU === "KADALUARSA_OTOMATIS" ||
+            legacySt === "DITOLAK" ||
+            legacySt === "TIDAK_DISETUJUI"
+          ) {
+            u = "DITOLAK";
+          } else {
+            u = "BELUM_DISETUJUI";
           }
           let pl = (p as any).statusPelaksanaan;
           if (!pl) {
@@ -3099,8 +3121,10 @@ export const dplService = {
         });
       } else if (u === "BELUM_DISETUJUI" || u === "MENUNGGU" || u === "PENDING") {
         andConditions.push({
+          status: { notIn: ["DITERIMA", "SEDANG_BERJALAN", "SELESAI", "DITOLAK"] },
           OR: [
             { statusUsulan: { in: ["BELUM_DISETUJUI", "MENUNGGU", "PENDING"] } },
+            { statusUsulan: null },
             { status: "BELUM_DISETUJUI" },
           ],
         });
@@ -3207,21 +3231,30 @@ export const dplService = {
         }
 
         // Standarisasi Status Usulan (DISETUJUI / DITOLAK / BELUM_DISETUJUI)
-        let resolvedStatusUsulan = (p as any).statusUsulan;
         const legacySt = String(p.status || "").toUpperCase();
-        if (!resolvedStatusUsulan) {
-          if (
-            legacySt === "DITERIMA" ||
-            legacySt === "DISETUJUI" ||
-            legacySt === "SEDANG_BERJALAN" ||
-            legacySt === "SELESAI"
-          ) {
-            resolvedStatusUsulan = "DISETUJUI";
-          } else if (legacySt === "DITOLAK" || legacySt === "TIDAK_DISETUJUI") {
-            resolvedStatusUsulan = "DITOLAK";
-          } else {
-            resolvedStatusUsulan = "BELUM_DISETUJUI";
-          }
+        const rawStatusUsulan = String((p as any).statusUsulan || "").toUpperCase();
+        let resolvedStatusUsulan = rawStatusUsulan;
+
+        if (
+          rawStatusUsulan === "DISETUJUI" ||
+          rawStatusUsulan === "DITERIMA" ||
+          legacySt === "DITERIMA" ||
+          legacySt === "DISETUJUI" ||
+          legacySt === "SEDANG_BERJALAN" ||
+          legacySt === "SELESAI"
+        ) {
+          resolvedStatusUsulan = "DISETUJUI";
+        } else if (
+          rawStatusUsulan === "DITOLAK" ||
+          rawStatusUsulan === "TIDAK_DISETUJUI" ||
+          rawStatusUsulan === "KADALUARSA" ||
+          rawStatusUsulan === "KADALUARSA_OTOMATIS" ||
+          legacySt === "DITOLAK" ||
+          legacySt === "TIDAK_DISETUJUI"
+        ) {
+          resolvedStatusUsulan = "DITOLAK";
+        } else {
+          resolvedStatusUsulan = "BELUM_DISETUJUI";
         }
 
         // Standarisasi Status Pelaksanaan (BELUM_MULAI / SEDANG_BERJALAN / SELESAI)
@@ -4422,17 +4455,28 @@ export const dplService = {
     // Helper resolver status usulan & pelaksanaan
     const resolveProkerStatus = (p: any) => {
       const legacySt = String(p.status || "").toUpperCase();
-      let u = p.statusUsulan;
-      if (!u) {
-        if (
-          legacySt === "DITERIMA" ||
-          legacySt === "DISETUJUI" ||
-          legacySt === "SEDANG_BERJALAN" ||
-          legacySt === "SELESAI"
-        )
-          u = "DISETUJUI";
-        else if (legacySt === "DITOLAK" || legacySt === "TIDAK_DISETUJUI") u = "DITOLAK";
-        else u = "BELUM_DISETUJUI";
+      const rawU = String(p.statusUsulan || "").toUpperCase();
+      let u = rawU;
+      if (
+        rawU === "DISETUJUI" ||
+        rawU === "DITERIMA" ||
+        legacySt === "DITERIMA" ||
+        legacySt === "DISETUJUI" ||
+        legacySt === "SEDANG_BERJALAN" ||
+        legacySt === "SELESAI"
+      ) {
+        u = "DISETUJUI";
+      } else if (
+        rawU === "DITOLAK" ||
+        rawU === "TIDAK_DISETUJUI" ||
+        rawU === "KADALUARSA" ||
+        rawU === "KADALUARSA_OTOMATIS" ||
+        legacySt === "DITOLAK" ||
+        legacySt === "TIDAK_DISETUJUI"
+      ) {
+        u = "DITOLAK";
+      } else {
+        u = "BELUM_DISETUJUI";
       }
       let pl = p.statusPelaksanaan;
       if (!pl) {

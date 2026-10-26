@@ -1,9 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { execSync } from 'child_process'
+
+let lastCommitDate = ''
+try {
+  lastCommitDate = execSync('git log -1 --format=%cI', { encoding: 'utf-8' }).trim()
+} catch (e) {
+  lastCommitDate = new Date().toISOString()
+}
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_LAST_COMMIT_DATE__: JSON.stringify(lastCommitDate),
+  },
   plugins: [
     tailwindcss(),
     react(),

@@ -811,22 +811,23 @@ export const ProgramKerjaKkn: React.FC = () => {
     statusUsulan?: string,
     legacyStatus?: string
   ): "BELUM_DISETUJUI" | "DISETUJUI" | "DITOLAK" | "KADALUARSA" => {
-    let u = String(statusUsulan || "").toUpperCase();
+    const u = String(statusUsulan || "").toUpperCase();
     const leg = String(legacyStatus || "").toUpperCase();
-    if (!u) {
-      if (
-        leg === "DITERIMA" ||
-        leg === "DISETUJUI" ||
-        leg === "SEDANG_BERJALAN" ||
-        leg === "SELESAI"
-      )
-        u = "DISETUJUI";
-      else if (leg === "DITOLAK" || leg === "TIDAK_DISETUJUI") u = "DITOLAK";
-      else u = "BELUM_DISETUJUI";
+
+    // Jika proker sudah berjalan/selesai atau berstatus diterima/disetujui, maka otomatis diakui sebagai DISETUJUI
+    if (
+      u === "DISETUJUI" ||
+      u === "DITERIMA" ||
+      leg === "DITERIMA" ||
+      leg === "DISETUJUI" ||
+      leg === "SEDANG_BERJALAN" ||
+      leg === "SELESAI"
+    ) {
+      return "DISETUJUI";
     }
-    if (u === "DISETUJUI" || u === "DITERIMA") return "DISETUJUI";
+
     if (u === "KADALUARSA_OTOMATIS" || u === "KADALUARSA") return "KADALUARSA";
-    if (u === "DITOLAK" || u === "TIDAK_DISETUJUI") return "DITOLAK";
+    if (u === "DITOLAK" || u === "TIDAK_DISETUJUI" || leg === "DITOLAK" || leg === "TIDAK_DISETUJUI") return "DITOLAK";
     return "BELUM_DISETUJUI";
   };
 
@@ -1361,165 +1362,6 @@ export const ProgramKerjaKkn: React.FC = () => {
         </div>
       </div>
 
-      {/* 5 Stat Cards Metrik Lengkap Program Kerja KKN */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
-        {/* Card 1: Total Program Kerja */}
-        <div
-          onClick={() => {
-            setStatusUsulanFilter("ALL");
-            setStatusPelaksanaanFilter("ALL");
-          }}
-          className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md ${
-            statusUsulanFilter === "ALL" && statusPelaksanaanFilter === "ALL"
-              ? "border-slate-300 dark:border-slate-700 ring-2 ring-slate-400/30"
-              : "border-slate-200/80 dark:border-slate-800"
-          }`}
-          title="Klik untuk melihat seluruh usulan kegiatan KKN"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">
-              Total Program Kerja
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">
-              <FileSpreadsheet size={17} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100">{totalCount}</h3>
-            <span className="text-[11px] text-slate-400 font-medium">
-              Semua usulan kegiatan KKN
-            </span>
-          </div>
-        </div>
-
-        {/* Card 2: Menunggu Persetujuan */}
-        <div
-          onClick={() =>
-            setStatusUsulanFilter((prev) => (prev === "BELUM_DISETUJUI" ? "ALL" : "BELUM_DISETUJUI"))
-          }
-          className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md ${
-            statusUsulanFilter === "BELUM_DISETUJUI"
-              ? "border-amber-400 dark:border-amber-600 ring-2 ring-amber-500/40 bg-amber-50/20 dark:bg-amber-950/20"
-              : "border-amber-200/80 dark:border-amber-900/40"
-          }`}
-          title="Klik untuk menyaring proker yang menunggu persetujuan DPL"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-amber-700 dark:text-amber-400 font-bold">
-              Menunggu Persetujuan
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200/60 dark:border-amber-800/40">
-              <Clock size={17} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400">
-              {pendingCount}
-            </h3>
-            <span className="text-[11px] text-amber-700/80 dark:text-amber-400/80 font-medium">
-              {pendingPct}% dari total
-            </span>
-          </div>
-        </div>
-
-        {/* Card 3: Disetujui (ACC DPL) */}
-        <div
-          onClick={() =>
-            setStatusUsulanFilter((prev) => (prev === "DISETUJUI" ? "ALL" : "DISETUJUI"))
-          }
-          className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md ${
-            statusUsulanFilter === "DISETUJUI"
-              ? "border-emerald-400 dark:border-emerald-600 ring-2 ring-emerald-500/40 bg-emerald-50/20 dark:bg-emerald-950/20"
-              : "border-emerald-200/80 dark:border-emerald-900/40"
-          }`}
-          title="Klik untuk menyaring proker yang telah disetujui DPL"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold">
-              Disetujui (ACC DPL)
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200/60 dark:border-emerald-800/40">
-              <CheckCircle2 size={17} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-              {disetujuiCount}
-            </h3>
-            <span className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 font-medium">
-              {disetujuiPct}% dari total
-            </span>
-          </div>
-        </div>
-
-        {/* Card 4: Ditolak / Kadaluarsa */}
-        <div
-          onClick={() =>
-            setStatusUsulanFilter((prev) => (prev === "DITOLAK" ? "ALL" : "DITOLAK"))
-          }
-          className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md ${
-            statusUsulanFilter === "DITOLAK"
-              ? "border-rose-400 dark:border-rose-600 ring-2 ring-rose-500/40 bg-rose-50/20 dark:bg-rose-950/20"
-              : "border-rose-200/80 dark:border-rose-900/40"
-          }`}
-          title="Klik untuk menyaring proker yang ditolak / kadaluarsa"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-rose-700 dark:text-rose-400 font-bold">
-              Ditolak / Kadaluarsa
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-200/60 dark:border-rose-800/40">
-              <XCircle size={17} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400">
-              {ditolakCount}
-            </h3>
-            <span className="text-[11px] text-rose-700/80 dark:text-rose-400/80 font-medium">
-              {ditolakPct}% dari total
-            </span>
-          </div>
-        </div>
-
-        {/* Card 5: Pelaksanaan Kegiatan */}
-        <div
-          onClick={() =>
-            setStatusPelaksanaanFilter((prev) =>
-              prev === "SEDANG_BERJALAN" ? "SELESAI" : prev === "SELESAI" ? "ALL" : "SEDANG_BERJALAN"
-            )
-          }
-          className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md ${
-            statusPelaksanaanFilter !== "ALL"
-              ? "border-blue-400 dark:border-blue-600 ring-2 ring-blue-500/40 bg-blue-50/20 dark:bg-blue-950/20"
-              : "border-blue-200/80 dark:border-blue-900/40"
-          }`}
-          title="Klik untuk beralih filter status pelaksanaan"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-blue-700 dark:text-blue-400 font-bold">
-              Pelaksanaan
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/60 dark:border-blue-800/40">
-              <ListFilter size={17} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                {sedangBerjalanCount}
-              </span>
-              <span className="text-[10.5px] font-bold text-slate-500">Berjalan</span>
-            </div>
-            <div className="flex items-center gap-2 text-[10.5px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
-              <span>{belumMulaiCount} Belum</span>
-              <span>•</span>
-              <span className="text-emerald-600 dark:text-emerald-400">{selesaiCount} Selesai</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Widget Visual Analitik: Status Program Kerja & Status Pelaksanaan (Diadaptasi dari Dashboard, 100% Sinkron Dinamis) */}
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -2008,7 +1850,6 @@ export const ProgramKerjaKkn: React.FC = () => {
               <option value="BELUM_DISETUJUI">Menunggu Persetujuan</option>
               <option value="DISETUJUI">Disetujui</option>
               <option value="DITOLAK">Ditolak</option>
-              <option value="KADALUARSA">Kadaluarsa (H+5)</option>
             </select>
           </div>
 

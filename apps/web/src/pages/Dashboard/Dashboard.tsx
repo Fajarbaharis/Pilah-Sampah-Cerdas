@@ -1894,10 +1894,18 @@ const Dashboard: React.FC = () => {
   const [selectedBinForDetail, setSelectedBinForDetail] = useState<any | null>(null);
   const [deleteBinConfirm, setDeleteBinConfirm] = useState<any | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
+  const [lastUpdated] = useState<Date>(() => {
+    try {
+      return typeof __APP_LAST_COMMIT_DATE__ !== "undefined" && __APP_LAST_COMMIT_DATE__
+        ? new Date(__APP_LAST_COMMIT_DATE__)
+        : new Date();
+    } catch {
+      return new Date();
+    }
+  });
 
   const formattedLastUpdated = useMemo(() => {
-    const d = lastUpdated || new Date();
+    const d = lastUpdated;
     const months = [
       "Januari", "Februari", "Maret", "April", "Mei", "Juni",
       "Juli", "Agustus", "September", "Oktober", "November", "Desember"
@@ -2147,8 +2155,6 @@ const Dashboard: React.FC = () => {
       if (locSettled.status === "fulfilled" && locSettled.value.data?.success) {
         setLocations(locSettled.value.data.data);
       }
-
-      setLastUpdated(new Date());
     } catch (err) {
       console.error("Dashboard KPI error", err);
       setError("Gagal memuat data dashboard dari server.");

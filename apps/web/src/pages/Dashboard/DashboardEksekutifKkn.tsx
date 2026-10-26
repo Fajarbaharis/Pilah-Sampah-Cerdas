@@ -763,11 +763,11 @@ export const DashboardEksekutifKkn: React.FC = () => {
   const [prokerFilter, setProkerFilter] = useState<"ALL" | "UNDER_60" | "GE_60">("ALL");
   const [selectedDplFilter, setSelectedDplFilter] = useState<string>("ALL");
 
-  // Mode tampilan kelompok KKN: "table" (default eksekutif) atau "cards"
-  const [groupViewMode, setGroupViewMode] = useState<"table" | "cards">("table");
+  // Mode tampilan kelompok KKN: "cards" (default ringkas) atau "table"
+  const [groupViewMode, setGroupViewMode] = useState<"table" | "cards">("cards");
   const [groupSortBy, setGroupSortBy] = useState<"name" | "att_desc" | "att_asc" | "proker_desc" | "proker_asc">("name");
   const [groupCurrentPage, setGroupCurrentPage] = useState<number>(1);
-  const [groupsPerPage, setGroupsPerPage] = useState<number>(10);
+  const [groupsPerPage, setGroupsPerPage] = useState<number>(12);
 
   // Leaderboard data & state
   const [leaderboardData, setLeaderboardData] = useState<{
@@ -1034,12 +1034,16 @@ export const DashboardEksekutifKkn: React.FC = () => {
     }
   };
 
-  // Format date WIB
+  // Format date WIB based on last Git commit / release date
   const formattedLastUpdated = useMemo(() => {
-    if (!data?.lastUpdated) {
-      return "8 September 2026 • 10.30 WIB";
+    let d: Date;
+    try {
+      d = typeof __APP_LAST_COMMIT_DATE__ !== "undefined" && __APP_LAST_COMMIT_DATE__
+        ? new Date(__APP_LAST_COMMIT_DATE__)
+        : (data?.lastUpdated ? new Date(data.lastUpdated) : new Date());
+    } catch {
+      d = new Date();
     }
-    const d = new Date(data.lastUpdated);
     const months = [
       "Januari", "Februari", "Maret", "April", "Mei", "Juni",
       "Juli", "Agustus", "September", "Oktober", "November", "Desember"
@@ -3022,7 +3026,11 @@ export const DashboardEksekutifKkn: React.FC = () => {
             <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
               <button
                 type="button"
-                onClick={() => setGroupViewMode("table")}
+                onClick={() => {
+                  setGroupViewMode("table");
+                  setGroupsPerPage(10);
+                  setGroupCurrentPage(1);
+                }}
                 className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
                   groupViewMode === "table"
                     ? "bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs"
@@ -3035,7 +3043,11 @@ export const DashboardEksekutifKkn: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setGroupViewMode("cards")}
+                onClick={() => {
+                  setGroupViewMode("cards");
+                  setGroupsPerPage(12);
+                  setGroupCurrentPage(1);
+                }}
                 className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition cursor-pointer ${
                   groupViewMode === "cards"
                     ? "bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs"
@@ -3365,10 +3377,21 @@ export const DashboardEksekutifKkn: React.FC = () => {
                   aria-label="Jumlah per halaman"
                   className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 outline-none font-bold cursor-pointer"
                 >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={0}>Semua</option>
+                  {groupViewMode === "cards" ? (
+                    <>
+                      <option value={12}>12</option>
+                      <option value={24}>24</option>
+                      <option value={48}>48</option>
+                      <option value={0}>Semua</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                      <option value={0}>Semua</option>
+                    </>
+                  )}
                 </select>
               </div>
             </div>
