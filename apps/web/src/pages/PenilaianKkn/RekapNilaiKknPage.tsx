@@ -44,6 +44,7 @@ import {
 } from "../../utils/textFormatter";
 import { sortKelompokList } from "../../utils/sortUtils";
 import { isTestStudent, isTestKelompok } from "../../utils/filterTestingUtils";
+import { isStagingEnv } from "../../utils/envUtils";
 
 export const RekapNilaiKknPage: React.FC = () => {
   const isStaging = isStagingEnv();
