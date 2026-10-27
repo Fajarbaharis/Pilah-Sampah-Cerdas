@@ -78,11 +78,14 @@ function buildStudentHtml(s) {
     s.nilai.predikat !== "Belum Dinilai"
   );
 
-  const nomorSert = s.nomorSertifikat || (isGraded 
-    ? `KKNT/${String(s.noUrut).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`
-    : `KKNT/DRAFT/${String(s.noUrut).padStart(3, '0')}/UNIKOM/2026`);
+  const rawNomor = s.nomorSertifikat || "";
+  const nomorSert = rawNomor && !rawNomor.includes('DRAFT')
+    ? rawNomor
+    : `KKNT/${String(s.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`;
 
-  const tanggalTerbit = s.tanggalTerbit || (isGraded ? "10 November 2026" : "Menunggu Penilaian");
+  const tanggalTerbit = s.tanggalTerbit && s.tanggalTerbit !== "Menunggu Penilaian"
+    ? s.tanggalTerbit
+    : "10 November 2026";
 
   return `<!DOCTYPE html>
 <html lang="id">
@@ -93,7 +96,7 @@ function buildStudentHtml(s) {
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
 
     @page {
-      size: 297mm 210mm;
+      size: 297mm 210mm landscape;
       margin: 0;
     }
 
@@ -576,7 +579,6 @@ function buildStudentHtml(s) {
       <div class="title-sub1">PESERTA KKN TEMATIK BATCH I</div>
       <div class="title-sub2">TAHUN AKADEMIK 2026/2027</div>
       <div class="cert-number">Nomor: ${nomorSert}</div>
-      ${!isGraded ? '<div class="draft-ribbon">DRAFT &bull; MENUNGGU PENILAIAN DPL</div>' : ''}
 
       <div class="given-to">Diberikan kepada:</div>
 
@@ -636,10 +638,8 @@ function buildStudentHtml(s) {
           <div class="sig-qr-text">
             <strong style="color:#005AA9; display:block; font-size:7pt;">TANDA TANGAN ELEKTRONIK</strong>
             <span>${s.idSertifikat.slice(0, 18)}</span><br>
-            ${isGraded 
-              ? '<span style="color:#059669; font-weight:700;">VERIFIKASI SAH LPPM</span>'
-              : '<span style="color:#d97706; font-weight:700;">DRAFT KKN</span>'}
-          </div>
+            <span style="color:#059669; font-weight:700;">VERIFIKASI SAH LPPM</span>
+            </div>
         </div>
 
         <div class="sig-name">Prof. Dr. Hj. Umi Narimawati, Dra., S.E., M.Si.</div>
@@ -667,7 +667,6 @@ function buildStudentHtml(s) {
 
       <div class="title-sub1" style="font-size: 13.5pt;">KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026</div>
       <div class="cert-number">Nomor sertifikat: ${nomorSert}</div>
-      ${!isGraded ? '<div class="draft-ribbon">DRAFT &bull; MENUNGGU PENILAIAN DPL</div>' : ''}
 
       <div class="student-card-4col">
         <div class="card-col">
@@ -728,11 +727,7 @@ function buildStudentHtml(s) {
         </tbody>
       </table>
 
-      ${isGraded ? `
-        <div style="margin-top: 15px; background: #ECFDF5; border: 1.5px solid #10B981; border-radius: 8px; padding: 6px 18px; font-size: 9.5pt; color: #065F46; font-weight: 700;">
-          Nilai Akhir: ${s.nilai.total.toFixed(2)} &bull; Predikat: ${s.nilai.predikat}
-        </div>
-      ` : ''}
+      
     </div>
 
     <div class="page2-bottom">
