@@ -29,6 +29,7 @@ async function main() {
     console.log('=== 5. Ensure Template Images & Certificates Directory ===');
     runRemote('sudo mkdir -p /var/www/staging-web/dist/image/serti /var/www/staging-web/dist/certificates');
     runRemote('sudo cp -r /home/maker/Pilah-Sampah-Cerdas-staging/apps/web/public/image/serti/* /var/www/staging-web/dist/image/serti/');
+    runRemote('sudo cp -r /home/maker/Pilah-Sampah-Cerdas-staging/apps/web/public/certificates/* /var/www/staging-web/dist/certificates/');
     runRemote('sudo chown -R www-data:www-data /var/www/staging-web/dist/image/serti /var/www/staging-web/dist/certificates');
 
     console.log('=== 6. Test Backend API and Verify Staging ===');

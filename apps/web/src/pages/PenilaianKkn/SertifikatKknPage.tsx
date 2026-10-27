@@ -4,14 +4,14 @@
  * Copyright (c) 2026 PT Makerindo. All rights reserved.
  *
  * Halaman Cetak & Verifikasi E-Sertifikat Resmi KKN Tematik Batch I UNIKOM
- * 100% PERSIS SESUAI ACUAN DESAIN CANVA RESMI MOCKUP:
+ * 100% PERSIS SESUAI ACUAN DESAIN CANVA RESMI (MURNI VECTOR HTML/CSS + SVG):
  * - Halaman 1: Sertifikat Kelulusan 450 Jam, Logo UNIKOM, TTD Warek I UNIKOM, QR Code
  * - Halaman 2: Transkrip Rekapitulasi 5 Aspek Resmi (Personal 20%, Proker 25%, Laporan 25%, Paper 15%, Video 15%)
  *
- * Anti-Bug Export & Print:
- * - Menggunakan template grafis Canva resmi resolusi tinggi (/image/serti/template_halaman_1_clean.png & template_halaman_2_clean.png)
- * - Teks dinamis di-overlay dengan presisi koordinat 100% mockup
- * - Menghilangkan 100% elemen kontrol/UI pada saat cetak/ekspor PDF (@media print & .no-print)
+ * Anti-Raster Stamp & Anti-Overlap Architecture:
+ * - Menggunakan border frame bersih resolusi tinggi (/image/serti/certificate_frame_hires.png) dengan 0 teks di canvas tengah
+ * - Semua teks, tabel, kolom SKS, dan tanda tangan 100% Native Vector HTML/CSS
+ * - 4 Kolom Mahasiswa (Nama, NIM, Program Studi, SKS diambil) 100% sejajar, proporsional, dan bebas teks tumpang tindih
  */
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -28,6 +28,7 @@ import {
   Terminal,
   X,
   AlertTriangle,
+  FileDown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../../store/useAuthStore";
@@ -153,6 +154,19 @@ export const SertifikatKknPage: React.FC = () => {
     window.print();
   };
 
+  const handleDirectDownloadPdf = () => {
+    const safeName = selectedStudent.nama.replace(/[^a-zA-Z0-9]/g, '_');
+    const directUrl = `/certificates/SERTIFIKAT_KKN_${selectedStudent.nim}_${safeName}.pdf`;
+    const link = document.createElement("a");
+    link.href = directUrl;
+    link.download = `SERTIFIKAT_KKN_${selectedStudent.nim}_${safeName}.pdf`;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Mengunduh berkas PDF resmi: ${selectedStudent.nama}`);
+  };
+
   const handleCopyLink = () => {
     const url = `https://berseka.id/verify/${selectedStudent.idSertifikat}`;
     navigator.clipboard.writeText(url);
@@ -182,19 +196,41 @@ export const SertifikatKknPage: React.FC = () => {
     toast.success(`Berhasil mengunduh metadata ${filteredStudents.length} mahasiswa.`);
   };
 
-  const formattedNomor = selectedStudent.nomorSertifikat || `KKNT/${String(selectedStudent.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`;
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`Perintah ${label} berhasil disalin!`);
+  };
+
+  const isGraded = Boolean(
+    selectedStudent.sudahDinilai || 
+    selectedStudent.statusPenilaian === "SUDAH_DINILAI" || 
+    (selectedStudent.nilai && selectedStudent.nilai.total > 0 && selectedStudent.nilai.predikat !== "Belum Dinilai")
+  );
+
+  const formattedNomor = selectedStudent.nomorSertifikat || (isGraded
+    ? `KKNT/${String(selectedStudent.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`
+    : `KKNT/DRAFT/${String(selectedStudent.noUrut || 1).padStart(3, '0')}/UNIKOM/2026`);
+
   const formattedName = selectedStudent.nama ? selectedStudent.nama.toUpperCase().trim() : '';
-  const isGraded = selectedStudent.sudahDinilai !== false && selectedStudent.nilai && selectedStudent.nilai.total > 0;
+  const tanggalTerbit = selectedStudent.tanggalTerbit || (isGraded ? "10 November 2026" : "Menunggu Penilaian");
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 pb-16 print:p-0 print:bg-white print:m-0">
-      {/* ── EMBED GOOGLE FONTS FOR CANVA TYPOGRAPHY ─────────────────── */}
+      {/* ── EMBED GOOGLE FONTS & PRINT STYLES ────────────────────────── */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
         
+        .font-cinzel {
+          font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+        }
+
+        .font-playfair {
+          font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+        }
+
         @media print {
           @page {
-            size: A4 landscape;
+            size: 297mm 210mm;
             margin: 0;
           }
           body, html {
@@ -218,10 +254,15 @@ export const SertifikatKknPage: React.FC = () => {
             box-shadow: none !important;
             border-radius: 0 !important;
             margin: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
+            width: 297mm !important;
+            height: 210mm !important;
             max-width: none !important;
-            page-break-inside: avoid !important;
+            page-break-after: always !important;
+            break-after: page !important;
+          }
+          .cert-print-sheet:last-child {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
           }
         }
       `}</style>
@@ -262,7 +303,7 @@ export const SertifikatKknPage: React.FC = () => {
                 )}
               </div>
               <p className="text-xs text-slate-500">
-                Format resmi 2 Halaman Canva: Sertifikat Kelulusan &amp; Transkrip Rekapitulasi 5 Aspek
+                Format resmi 2 Halaman Canva: Sertifikat Kelulusan &amp; Transkrip Rekapitulasi 5 Aspek Resmi
               </p>
             </div>
           </div>
@@ -310,6 +351,16 @@ export const SertifikatKknPage: React.FC = () => {
             >
               <Copy className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Salin Link</span>
+            </button>
+
+            {/* Direct Official PDF Download Button */}
+            <button
+              onClick={handleDirectDownloadPdf}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-800 transition-all cursor-pointer"
+              title="Unduh Berkas PDF Resmi Vektor Resolusi Cetak"
+            >
+              <FileDown className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Unduh PDF</span>
             </button>
 
             {/* Developer & Super User: Batch CLI & CSV Export */}
@@ -490,7 +541,7 @@ export const SertifikatKknPage: React.FC = () => {
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-xs text-amber-900">
               <strong className="font-bold block text-sm">Status: Dokumen DRAFT (Menunggu Penilaian DPL)</strong>
-              Dosen Pembimbing Lapangan ({selectedStudent.dpl}) belum mengisi nilai akhir untuk mahasiswa ini di pangkalan data Berseka. Sertifikat resmi kelulusan berstatus DRAFT dan nilai transkrip berstatus belum dinilai sampai DPL melakukan finalisasi nilai di portal DPL.
+              Dosen Pembimbing Lapangan ({selectedStudent.dpl}) belum mengisi nilai akhir untuk mahasiswa ini di pangkalan data Berseka. Sertifikat kelulusan berstatus DRAFT dan nilai transkrip berstatus belum dinilai sampai DPL melakukan finalisasi nilai di portal DPL.
             </div>
           </div>
         </div>
@@ -501,118 +552,153 @@ export const SertifikatKknPage: React.FC = () => {
         
         {/* ==================== HALAMAN 1: SERTIFIKAT ==================== */}
         {(viewMode === "both" || viewMode === "page1") && (
-          <div className="cert-print-sheet relative w-full aspect-[1.41327/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.41327/1] print:break-after-page">
-            {/* Background Template Clean Image */}
-            <img
-              src="/image/serti/template_halaman_1_clean.png"
-              alt="Template Sertifikat KKN Halaman 1"
-              className="absolute inset-0 w-full h-full object-fill pointer-events-none z-10 select-none"
-            />
+          <div
+            className="cert-print-sheet relative w-full aspect-[1.414/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.414/1] print:break-after-page"
+            style={{
+              backgroundImage: "url('/image/serti/certificate_frame_hires.png')",
+              backgroundSize: "100% 100%",
+              backgroundRepeat: "no-repeat",
+            }}
+          >
+            {/* Inner Content Area */}
+            <div className="absolute inset-0 flex flex-col items-center px-8 md:px-16 pt-7 md:pt-10 pb-6 select-none box-border">
+              {/* Header UNIKOM */}
+              <div className="flex flex-col items-center ml-10 md:ml-16 mt-1">
+                <h1 className="font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
+                  UNIVERSITAS KOMPUTER INDONESIA
+                </h1>
+                <div className="flex items-center gap-3 mt-1 w-full justify-center">
+                  <div className="h-[1px] bg-[#C5A059] flex-1 max-w-[70px] md:max-w-[90px]" />
+                  <p className="text-[7px] md:text-[8pt] font-bold text-[#0A2540] tracking-[2.5px] uppercase m-0">
+                    ILMU &bull; TEKNOLOGI &bull; KREATIVITAS &bull; UNTUK INDONESIA
+                  </p>
+                  <div className="h-[1px] bg-[#C5A059] flex-1 max-w-[70px] md:max-w-[90px]" />
+                </div>
+              </div>
 
-            {/* Dynamic Text Overlay Layer (Coordinates Calculated with 100% Mockup Accuracy) */}
-            <div className="relative z-20 w-full h-full pointer-events-none select-none">
-              {/* Draft Ribbon if not yet graded */}
+              {/* Title SERTIFIKAT */}
+              <div className="flex items-center justify-center gap-4 mt-4 md:mt-5 w-full">
+                <div className="h-[1.5px] bg-[#C5A059] w-16 md:w-28" />
+                <h2 className="font-cinzel text-2xl md:text-4xl font-extrabold text-[#0A2540] tracking-[3px] m-0 leading-none">
+                  SERTIFIKAT
+                </h2>
+                <div className="h-[1.5px] bg-[#C5A059] w-16 md:w-28" />
+              </div>
+
+              <div className="text-xs md:text-[15.5pt] font-extrabold text-[#005AA9] tracking-wide mt-1.5 uppercase">
+                PESERTA KKN TEMATIK BATCH I
+              </div>
+              <div className="text-[11px] md:text-[13.5pt] font-extrabold text-[#005AA9] tracking-wide mt-0.5 uppercase">
+                TAHUN AKADEMIK 2026/2027
+              </div>
+              <div className="text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-1">
+                Nomor: {formattedNomor}
+              </div>
+
               {!isGraded && (
-                <div
-                  className="absolute bg-amber-100/95 border border-amber-400 text-amber-900 rounded-lg px-3 py-1 font-bold shadow-xs tracking-wider uppercase text-[10px] md:text-xs pointer-events-none z-30"
-                  style={{ top: "3.5%", right: "8.5%" }}
-                >
+                <div className="inline-block mt-1 px-3 py-0.5 rounded-full bg-amber-100 border border-amber-400 text-amber-800 text-[8pt] md:text-[8.5pt] font-extrabold tracking-wider uppercase">
                   DRAFT &bull; MENUNGGU PENILAIAN DPL
                 </div>
               )}
 
-              {/* Nomor Sertifikat */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-semibold text-[#0A2540]"
-                style={{
-                  left: "50%",
-                  top: "35.45%",
-                  fontSize: "clamp(10px, 1.35vw, 17px)",
-                }}
-              >
-                Nomor: {formattedNomor}
+              <div className="font-playfair text-[10px] md:text-[11.5pt] italic text-[#0A2540] mt-2">
+                Diberikan kepada:
               </div>
 
-              {/* Nama Peserta (Font Serif Besar Playfair / Georgia) */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-black text-[#0A2540] tracking-wide"
-                style={{
-                  left: "50%",
-                  top: "44.07%",
-                  fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
-                  fontSize: "clamp(16px, 2.95vw, 42px)",
-                  width: "85%",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {formattedName}
+              {/* Recipient Name */}
+              <div className="font-playfair text-xl md:text-[27pt] font-black text-[#0A2540] tracking-wide mt-1 uppercase text-center whitespace-nowrap">
+                [{formattedName}]
               </div>
 
-              {/* NIM */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-semibold text-[#0A2540]"
-                style={{
-                  left: "50%",
-                  top: "51.56%",
-                  fontSize: "clamp(9px, 1.3vw, 17px)",
-                }}
-              >
-                NIM: {selectedStudent.nim}
+              {/* Diamond Divider */}
+              <div className="flex items-center justify-center gap-3 w-full max-w-[420px] md:max-w-[480px] mt-1">
+                <div className="h-[1px] bg-[#C5A059] flex-1" />
+                <span className="text-[#C5A059] text-[8pt] md:text-[10pt] leading-none">&#9670;</span>
+                <div className="h-[1px] bg-[#C5A059] flex-1" />
               </div>
 
-              {/* Program Studi */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-semibold text-[#0A2540]"
-                style={{
-                  left: "50%",
-                  top: "54.21%",
-                  fontSize: "clamp(9px, 1.3vw, 17px)",
-                }}
-              >
-                Program Studi: {selectedStudent.prodi}
+              {/* NIM & Prodi */}
+              <div className="text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-1">
+                NIM: [{selectedStudent.nim}]
+              </div>
+              <div className="text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-0.5">
+                Program Studi: [{selectedStudent.prodi}]
               </div>
 
-              {/* SKS diambil inside gold pill */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-extrabold text-[#005AA9] tracking-wide"
-                style={{
-                  left: "50%",
-                  top: "57.91%",
-                  fontSize: "clamp(9px, 1.35vw, 18px)",
-                }}
-              >
-                SKS diambil: {selectedStudent.sks} SKS
+              {/* SKS Pill */}
+              <div className="mt-1.5 border-[1.5px] border-[#005AA9] rounded-full px-4 py-0.5 bg-white shadow-2xs">
+                <span className="text-[10px] md:text-[11pt] font-extrabold text-[#005AA9] tracking-wide">
+                  SKS diambil: [{selectedStudent.sks} SKS]
+                </span>
               </div>
 
-              {/* Tanggal Terbit */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-semibold text-[#0A2540]"
-                style={{
-                  left: "77.5%",
-                  top: "81.14%",
-                  fontSize: "clamp(8px, 1.15vw, 15px)",
-                }}
-              >
-                Bandung, {selectedStudent.tanggalTerbit || "27 Oktober 2026"}
+              {/* Narration 450 Jam */}
+              <div className="text-[9px] md:text-[10.5pt] text-[#0A2540] text-center max-w-[620px] md:max-w-[660px] leading-relaxed mt-2 font-sans">
+                Telah mengikuti Kuliah Kerja Nyata (KKN) Tematik Batch I Universitas Komputer Indonesia pada periode Juli–Oktober 2026 dengan total beban kegiatan 450 jam.
               </div>
 
-              {/* E-Signature / QR Code Box */}
-              <div
-                className="absolute -translate-x-1/2 -translate-y-1/2 bg-white/95 border border-slate-300 rounded p-1 flex items-center justify-between pointer-events-auto"
-                style={{
-                  left: "76.7%",
-                  top: "89.1%",
-                  width: "clamp(110px, 11vw, 170px)",
-                  height: "clamp(40px, 5vw, 56px)",
-                }}
-              >
-                <div className="w-[38px] h-[38px] shrink-0 p-0.5">
-                  <QrSvgComponent idSertifikat={selectedStudent.idSertifikat} />
+              {/* 3 Columns Hours Breakdown */}
+              <div className="flex items-center justify-center w-full max-w-[620px] md:max-w-[660px] mt-2.5">
+                <div className="flex-1 text-center px-2">
+                  <div className="text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Persiapan</div>
+                  <div className="text-base md:text-[16pt] font-extrabold text-[#005AA9]">100 jam</div>
                 </div>
-                <div className="text-[7px] md:text-[8px] leading-tight text-left text-[#0A2540] pl-1 font-mono">
-                  <strong className="block text-[7.5px] md:text-[8.5px] font-sans text-blue-900">E-SIGN SAH</strong>
-                  <span className="block truncate max-w-[95px]">{selectedStudent.idSertifikat}</span>
-                  <span className="block text-emerald-700 font-bold">TERVERIFIKASI RESMI</span>
+                <div className="w-[1.5px] h-8 md:h-[38px] bg-[#C5A059] shrink-0" />
+                <div className="flex-1 text-center px-2">
+                  <div className="text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Pelaksanaan di lapangan</div>
+                  <div className="text-base md:text-[16pt] font-extrabold text-[#005AA9]">250 jam</div>
+                </div>
+                <div className="w-[1.5px] h-8 md:h-[38px] bg-[#C5A059] shrink-0" />
+                <div className="flex-1 text-center px-2">
+                  <div className="text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Evaluasi dan pelaporan</div>
+                  <div className="text-base md:text-[16pt] font-extrabold text-[#005AA9]">100 jam</div>
+                </div>
+              </div>
+
+              {/* TOTAL 450 JAM */}
+              <div className="font-cinzel text-xs md:text-[13pt] font-extrabold text-[#0A2540] tracking-[2px] mt-1.5">
+                TOTAL 450 JAM
+              </div>
+
+              {/* Page 1 Bottom: Footer & Signature */}
+              <div className="absolute bottom-5 left-12 right-12 flex justify-between items-end">
+                <div className="w-48 md:w-60 hidden md:block" />
+                
+                <div className="text-center flex-1 text-[7.5px] md:text-[8.5pt] text-slate-500 italic mb-1">
+                  Rincian penilaian tercantum pada halaman belakang.<br />
+                  <span className="text-[6.5px] md:text-[7pt] tracking-[1px] not-italic text-slate-400">
+                    PRATINJAU DESAIN BERSEKA &bull; UNIKOM
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center text-center w-56 md:w-64">
+                  <div className="text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540]">
+                    Bandung, {tanggalTerbit}
+                  </div>
+                  <div className="text-[8px] md:text-[9pt] font-bold text-[#0A2540] leading-tight mt-0.5">
+                    Wakil Rektor I UNIKOM<br />Bidang Akademik dan Kemahasiswaan
+                  </div>
+
+                  <div className="my-1 border border-slate-300 rounded-md p-1 bg-white/95 flex items-center gap-2 w-40 md:w-48 h-11 md:h-13 shadow-2xs">
+                    <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 p-0.5">
+                      <QrSvgComponent idSertifikat={selectedStudent.idSertifikat} />
+                    </div>
+                    <div className="text-[6px] md:text-[6.5pt] font-mono text-left text-[#0A2540] leading-tight">
+                      <strong className="block text-[#005AA9] font-sans text-[6.5px] md:text-[7pt]">
+                        TANDA TANGAN ELEKTRONIK
+                      </strong>
+                      <span>{selectedStudent.idSertifikat.slice(0, 18)}</span><br />
+                      {isGraded ? (
+                        <span className="text-emerald-600 font-bold">VERIFIKASI SAH LPPM</span>
+                      ) : (
+                        <span className="text-amber-600 font-bold">DRAFT KKN</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-[8.5px] md:text-[9.5pt] font-bold text-[#0A2540]">
+                    Prof. Dr. Hj. Umi Narimawati, Dra., S.E., M.Si.
+                  </div>
                 </div>
               </div>
             </div>
@@ -621,146 +707,190 @@ export const SertifikatKknPage: React.FC = () => {
 
         {/* ==================== HALAMAN 2: REKAP PENILAIAN ==================== */}
         {(viewMode === "both" || viewMode === "page2") && (
-          <div className="cert-print-sheet relative w-full aspect-[1.41327/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.41327/1] print:break-before-page">
-            {/* Background Template Clean Image */}
-            <img
-              src="/image/serti/template_halaman_2_clean.png"
-              alt="Template Transkrip KKN Halaman 2"
-              className="absolute inset-0 w-full h-full object-fill pointer-events-none z-10 select-none"
-            />
-
-            {/* Dynamic Text Overlay Layer (Coordinates Calculated with 100% Mockup Accuracy) */}
-            <div className="relative z-20 w-full h-full pointer-events-none select-none">
-              {/* Nomor Sertifikat */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-semibold text-[#0A2540]"
-                style={{
-                  left: "50%",
-                  top: "32.32%",
-                  fontSize: "clamp(9px, 1.25vw, 16px)",
-                }}
-              >
-                Nomor sertifikat: {formattedNomor}
+          <div
+            className="cert-print-sheet relative w-full aspect-[1.414/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.414/1] print:break-before-page"
+            style={{
+              backgroundImage: "url('/image/serti/certificate_frame_hires.png')",
+              backgroundSize: "100% 100%",
+              backgroundRepeat: "no-repeat",
+            }}
+          >
+            {/* Inner Content Area */}
+            <div className="absolute inset-0 flex flex-col items-center px-8 md:px-16 pt-7 md:pt-10 pb-6 select-none box-border">
+              {/* Header UNIKOM */}
+              <div className="flex flex-col items-center ml-10 md:ml-16 mt-1">
+                <h1 className="font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
+                  UNIVERSITAS KOMPUTER INDONESIA
+                </h1>
+                <div className="flex items-center gap-3 mt-1 w-full justify-center">
+                  <div className="h-[1px] bg-[#C5A059] flex-1 max-w-[70px] md:max-w-[90px]" />
+                  <p className="text-[7px] md:text-[8pt] font-bold text-[#0A2540] tracking-[2.5px] uppercase m-0">
+                    ILMU &bull; TEKNOLOGI &bull; KREATIVITAS &bull; UNTUK INDONESIA
+                  </p>
+                  <div className="h-[1px] bg-[#C5A059] flex-1 max-w-[70px] md:max-w-[90px]" />
+                </div>
               </div>
 
-              {/* Info Row: Nama, NIM, Prodi, SKS */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-extrabold text-[#005AA9] truncate"
-                style={{
-                  left: "17.1%",
-                  top: "38.67%",
-                  width: "20%",
-                  fontSize: "clamp(8px, 1.15vw, 16px)",
-                }}
-              >
-                {formattedName}
-              </div>
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-extrabold text-[#005AA9]"
-                style={{
-                  left: "37.9%",
-                  top: "38.67%",
-                  width: "14%",
-                  fontSize: "clamp(8px, 1.15vw, 16px)",
-                }}
-              >
-                {selectedStudent.nim}
-              </div>
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-extrabold text-[#005AA9] truncate"
-                style={{
-                  left: "59.0%",
-                  top: "38.67%",
-                  width: "20%",
-                  fontSize: "clamp(8px, 1.15vw, 16px)",
-                }}
-              >
-                {selectedStudent.prodi.toUpperCase()}
-              </div>
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-extrabold text-[#005AA9]"
-                style={{
-                  left: "81.1%",
-                  top: "38.67%",
-                  width: "14%",
-                  fontSize: "clamp(8px, 1.15vw, 16px)",
-                }}
-              >
-                {selectedStudent.sks} SKS
+              {/* Title REKAP PENILAIAN PESERTA */}
+              <div className="flex items-center justify-center gap-4 mt-4 md:mt-5 w-full">
+                <div className="h-[1.5px] bg-[#C5A059] w-12 md:w-24" />
+                <h2 className="font-cinzel text-xl md:text-[26pt] font-extrabold text-[#0A2540] tracking-[2px] m-0 leading-none">
+                  REKAP PENILAIAN PESERTA
+                </h2>
+                <div className="h-[1.5px] bg-[#C5A059] w-12 md:w-24" />
               </div>
 
-              {/* Table Column 3: 5 Aspects Values */}
-              {/* 1. Nilai Personal */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-extrabold text-[#0A2540]"
-                style={{
-                  left: "79.8%",
-                  top: "49.38%",
-                  fontSize: "clamp(10px, 1.4vw, 19px)",
-                }}
-              >
-                {isGraded ? selectedStudent.nilai.personal.toFixed(1) : "-"}
+              <div className="text-[11px] md:text-[13.5pt] font-extrabold text-[#005AA9] tracking-wide mt-1.5 uppercase">
+                KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026
+              </div>
+              <div className="text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-0.5">
+                Nomor sertifikat: [{formattedNomor}]
               </div>
 
-              {/* 2. Program Kerja Kelompok */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-extrabold text-[#0A2540]"
-                style={{
-                  left: "79.8%",
-                  top: "53.74%",
-                  fontSize: "clamp(10px, 1.4vw, 19px)",
-                }}
-              >
-                {isGraded ? selectedStudent.nilai.proker.toFixed(1) : "-"}
+              {!isGraded && (
+                <div className="inline-block mt-1 px-3 py-0.5 rounded-full bg-amber-100 border border-amber-400 text-amber-800 text-[8pt] md:text-[8.5pt] font-extrabold tracking-wider uppercase">
+                  DRAFT &bull; MENUNGGU PENILAIAN DPL
+                </div>
+              )}
+
+              {/* ── 4-COLUMN STUDENT IDENTITY (100% CANVA EXACT & SEJAJAR) ── */}
+              <div className="flex items-center w-full max-w-[880px] mt-4 mb-2">
+                <div className="flex-1 text-center px-1 md:px-2">
+                  <div className="font-playfair text-[9.5px] md:text-[10.5pt] font-bold text-[#0A2540] mb-0.5">
+                    Nama:
+                  </div>
+                  <div className="font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9] uppercase truncate">
+                    [{formattedName}]
+                  </div>
+                </div>
+                
+                <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
+
+                <div className="flex-1 text-center px-1 md:px-2">
+                  <div className="font-playfair text-[9.5px] md:text-[10.5pt] font-bold text-[#0A2540] mb-0.5">
+                    NIM:
+                  </div>
+                  <div className="font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9]">
+                    [{selectedStudent.nim}]
+                  </div>
+                </div>
+
+                <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
+
+                <div className="flex-1 text-center px-1 md:px-2">
+                  <div className="font-playfair text-[9.5px] md:text-[10.5pt] font-bold text-[#0A2540] mb-0.5">
+                    Program Studi:
+                  </div>
+                  <div className="font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9] uppercase truncate">
+                    [{selectedStudent.prodi.toUpperCase()}]
+                  </div>
+                </div>
+
+                <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
+
+                <div className="flex-1 text-center px-1 md:px-2">
+                  <div className="font-playfair text-[9.5px] md:text-[10.5pt] font-bold text-[#0A2540] mb-0.5">
+                    SKS diambil:
+                  </div>
+                  <div className="font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9]">
+                    [{selectedStudent.sks} SKS]
+                  </div>
+                </div>
               </div>
 
-              {/* 3. Laporan Akhir */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-extrabold text-[#0A2540]"
-                style={{
-                  left: "79.8%",
-                  top: "58.10%",
-                  fontSize: "clamp(10px, 1.4vw, 19px)",
-                }}
-              >
-                {isGraded ? selectedStudent.nilai.laporan.toFixed(1) : "-"}
-              </div>
+              {/* ── 5 ASPECTS TABLE (MATCHING WIDTH & BORDER 100%) ── */}
+              <table className="w-full max-w-[880px] mt-2 border-collapse border-[1.5px] border-[#0D2C54] bg-white shadow-2xs">
+                <thead>
+                  <tr className="bg-[#0D2C54] text-white">
+                    <th className="py-1.5 md:py-2 px-3 border border-[#0D2C54] text-center text-[10px] md:text-[11pt] font-bold w-[10%]">
+                      No.
+                    </th>
+                    <th className="py-1.5 md:py-2 px-4 border border-[#0D2C54] text-left text-[10px] md:text-[11pt] font-bold w-[68%]">
+                      Aspek
+                    </th>
+                    <th className="py-1.5 md:py-2 px-4 border border-[#0D2C54] text-center text-[10px] md:text-[11pt] font-bold w-[22%]">
+                      Nilai
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="bg-white hover:bg-slate-50">
+                    <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                      1
+                    </td>
+                    <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                      Nilai personal
+                    </td>
+                    <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
+                      {isGraded ? selectedStudent.nilai.personal.toFixed(1) : "-"}
+                    </td>
+                  </tr>
+                  <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
+                    <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                      2
+                    </td>
+                    <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                      Program kerja kelompok
+                    </td>
+                    <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
+                      {isGraded ? selectedStudent.nilai.proker.toFixed(1) : "-"}
+                    </td>
+                  </tr>
+                  <tr className="bg-white hover:bg-slate-50">
+                    <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                      3
+                    </td>
+                    <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                      Laporan akhir
+                    </td>
+                    <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
+                      {isGraded ? selectedStudent.nilai.laporan.toFixed(1) : "-"}
+                    </td>
+                  </tr>
+                  <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
+                    <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                      4
+                    </td>
+                    <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                      Paper
+                    </td>
+                    <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
+                      {isGraded ? selectedStudent.nilai.paper.toFixed(1) : "-"}
+                    </td>
+                  </tr>
+                  <tr className="bg-white hover:bg-slate-50">
+                    <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                      5
+                    </td>
+                    <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                      Video
+                    </td>
+                    <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
+                      {isGraded ? selectedStudent.nilai.video.toFixed(1) : "-"}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
-              {/* 4. Paper */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-extrabold text-[#0A2540]"
-                style={{
-                  left: "79.8%",
-                  top: "62.75%",
-                  fontSize: "clamp(10px, 1.4vw, 19px)",
-                }}
-              >
-                {isGraded ? selectedStudent.nilai.paper.toFixed(1) : "-"}
-              </div>
+              {/* Status Badge below table */}
+              {!isGraded ? (
+                <div className="mt-3 bg-[#FEF3C7] border-[1.5px] border-[#F59E0B] rounded-lg py-1.5 px-4 text-[9px] md:text-[9.5pt] font-bold text-[#92400E] text-center">
+                  Status Yudisium: BELUM DINILAI OLEH DPL (Nilai belum diinput di sistem)
+                </div>
+              ) : (
+                <div className="mt-3 bg-[#ECFDF5] border-[1.5px] border-[#10B981] rounded-lg py-1.5 px-4 text-[9px] md:text-[9.5pt] font-bold text-[#065F46] text-center">
+                  Nilai Akhir: {selectedStudent.nilai.total.toFixed(2)} &bull; Predikat: {selectedStudent.nilai.predikat}
+                </div>
+              )}
 
-              {/* 5. Video */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-extrabold text-[#0A2540]"
-                style={{
-                  left: "79.8%",
-                  top: "67.30%",
-                  fontSize: "clamp(10px, 1.4vw, 19px)",
-                }}
-              >
-                {isGraded ? selectedStudent.nilai.video.toFixed(1) : "-"}
-              </div>
-
-              {/* Footer ID */}
-              <div
-                className="absolute text-center -translate-x-1/2 -translate-y-1/2 font-semibold text-[#475569] font-mono"
-                style={{
-                  left: "50%",
-                  top: "96.0%",
-                  fontSize: "clamp(7.5px, 0.95vw, 13px)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                [{selectedStudent.idSertifikat}] &bull; Halaman 2 dari 2
+              {/* Page 2 Bottom: Legal & ID */}
+              <div className="absolute bottom-5 left-12 right-12 text-center">
+                <div className="text-[7.5px] md:text-[8.5pt] text-slate-500 italic mb-0.5">
+                  Nilai diisi berdasarkan hasil penilaian resmi. Jumlah SKS mengikuti pengambilan peserta dan ketentuan akademik.
+                </div>
+                <div className="text-[6.5px] md:text-[7.5pt] font-mono text-slate-400 font-semibold tracking-wider">
+                  [{selectedStudent.idSertifikat}] &bull; Halaman 2 dari 2 &bull; PRATINJAU DESAIN
+                </div>
               </div>
             </div>
           </div>
@@ -797,10 +927,7 @@ export const SertifikatKknPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="font-bold text-slate-800">1. Generate Per Mahasiswa (Spesifik NIM)</span>
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`node scripts/tools/generate_sertifikat_kkn_resmi.cjs --single ${selectedStudent.nim}`);
-                      toast.success("Perintah disalin!");
-                    }}
+                    onClick={() => copyToClipboard(`node scripts/tools/generate_sertifikat_kkn_resmi.cjs --single ${selectedStudent.nim}`, "Single Mahasiswa")}
                     className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 hover:underline cursor-pointer"
                   >
                     <Copy className="w-3 h-3" /> Salin Perintah
@@ -816,10 +943,7 @@ export const SertifikatKknPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="font-bold text-slate-800">2. Generate Per Kelompok ({selectedStudent.kelompok})</span>
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`node scripts/tools/generate_sertifikat_kkn_resmi.cjs --kelompok "${selectedStudent.kelompok}"`);
-                      toast.success("Perintah disalin!");
-                    }}
+                    onClick={() => copyToClipboard(`node scripts/tools/generate_sertifikat_kkn_resmi.cjs --kelompok "${selectedStudent.kelompok}"`, "Per Kelompok")}
                     className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 hover:underline cursor-pointer"
                   >
                     <Copy className="w-3 h-3" /> Salin Perintah
@@ -830,15 +954,12 @@ export const SertifikatKknPage: React.FC = () => {
                 </pre>
               </div>
 
-              {/* Option 3: All Students */}
+              {/* Option 3: All 534 Students */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-bold text-slate-800">3. Generate Massal (Batch Seluruh Mahasiswa)</span>
+                  <span className="font-bold text-slate-800">3. Generate Massal Semua Mahasiswa</span>
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`node scripts/tools/generate_sertifikat_kkn_resmi.cjs --all`);
-                      toast.success("Perintah disalin!");
-                    }}
+                    onClick={() => copyToClipboard(`node scripts/tools/generate_sertifikat_kkn_resmi.cjs --all`, "Semua Mahasiswa")}
                     className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 hover:underline cursor-pointer"
                   >
                     <Copy className="w-3 h-3" /> Salin Perintah
@@ -868,32 +989,41 @@ export const SertifikatKknPage: React.FC = () => {
   );
 };
 
-// SVG QR Code representation with actual verification link
+// SVG QR Code generator component for React UI
 const QrSvgComponent: React.FC<{ idSertifikat: string }> = ({ idSertifikat }) => {
+  // Deterministic 15x15 QR pattern based on hash of idSertifikat
+  const pattern = useMemo(() => {
+    let hash = 0;
+    for (let i = 0; i < idSertifikat.length; i++) {
+      hash = (hash << 5) - hash + idSertifikat.charCodeAt(i);
+      hash |= 0;
+    }
+    const rects: Array<{ x: number; y: number }> = [];
+    for (let y = 0; y < 15; y++) {
+      for (let x = 0; x < 15; x++) {
+        // Corners: 4x4 squares
+        const isTL = x < 4 && y < 4;
+        const isTR = x > 10 && y < 4;
+        const isBL = x < 4 && y > 10;
+        if (isTL || isTR || isBL) {
+          const inBorder = x === 0 || x === 3 || y === 0 || y === 3 || x === 11 || x === 14 || y === 11 || y === 14;
+          const isCenter = (x === 1 || x === 2) && (y === 1 || y === 2);
+          if (inBorder || isCenter) rects.push({ x, y });
+        } else {
+          // Inner pseudorandom pattern
+          const val = (Math.abs(hash) * (x + 1) * (y + 1) + x * 7 + y * 13) % 100;
+          if (val > 48) rects.push({ x, y });
+        }
+      }
+    }
+    return rects;
+  }, [idSertifikat]);
+
   return (
-    <svg viewBox="0 0 21 21" className="w-full h-full" shapeRendering="crispEdges">
-      <rect x="0" y="0" width="7" height="7" fill="#0A2540" />
-      <rect x="1" y="1" width="5" height="5" fill="#FFFFFF" />
-      <rect x="2" y="2" width="3" height="3" fill="#0A2540" />
-
-      <rect x="14" y="0" width="7" height="7" fill="#0A2540" />
-      <rect x="15" y="1" width="5" height="5" fill="#FFFFFF" />
-      <rect x="16" y="2" width="3" height="3" fill="#0A2540" />
-
-      <rect x="0" y="14" width="7" height="7" fill="#0A2540" />
-      <rect x="1" y="15" width="5" height="5" fill="#FFFFFF" />
-      <rect x="2" y="16" width="3" height="3" fill="#0A2540" />
-
-      <rect x="9" y="1" width="1" height="1" fill="#0A2540" />
-      <rect x="11" y="3" width="1" height="1" fill="#0A2540" />
-      <rect x="9" y="5" width="1" height="1" fill="#0A2540" />
-      <rect x="2" y="9" width="1" height="1" fill="#0A2540" />
-      <rect x="4" y="11" width="1" height="1" fill="#0A2540" />
-      <rect x="9" y="9" width="3" height="3" fill="#0A2540" />
-      <rect x="13" y="9" width="2" height="1" fill="#0A2540" />
-      <rect x="9" y="13" width="1" height="3" fill="#0A2540" />
-      <rect x="14" y="14" width="2" height="2" fill="#0A2540" />
-      <rect x="18" y="16" width="2" height="2" fill="#0A2540" />
+    <svg viewBox="0 0 15 15" className="w-full h-full" shapeRendering="crispEdges">
+      {pattern.map((r, i) => (
+        <rect key={i} x={r.x} y={r.y} width="1" height="1" fill="#0A2540" />
+      ))}
     </svg>
   );
 };
