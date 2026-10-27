@@ -343,9 +343,9 @@ function buildStudentHtml(s) {
 
     .page1-bottom {
       position: absolute;
-      bottom: 22px;
+      bottom: 26px;
       left: 75px;
-      right: 75px;
+      right: 95px;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
@@ -365,7 +365,7 @@ function buildStudentHtml(s) {
       flex-direction: column;
       align-items: center;
       text-align: center;
-      width: 250px;
+      width: 290px;
     }
 
     .sig-date {
@@ -414,6 +414,7 @@ function buildStudentHtml(s) {
       font-weight: 800;
       color: #0A2540;
       margin-top: 2px;
+      white-space: nowrap;
     }
 
     .page2-title {

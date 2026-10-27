@@ -661,7 +661,7 @@ export const SertifikatKknPage: React.FC = () => {
               </div>
 
               {/* Page 1 Bottom: Footer & Signature */}
-              <div className="absolute bottom-5 left-12 right-12 flex justify-between items-end">
+              <div className="absolute bottom-6 md:bottom-7 left-10 md:left-14 right-14 md:right-20 flex justify-between items-end">
                 <div className="w-48 md:w-60 hidden md:block" />
                 
                 <div className="text-center flex-1 text-[7.5px] md:text-[8.5pt] text-slate-500 italic mb-1">
@@ -671,7 +671,7 @@ export const SertifikatKknPage: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="flex flex-col items-center text-center w-56 md:w-64">
+                <div className="flex flex-col items-center text-center w-64 md:w-80">
                   <div className="text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540]">
                     Bandung, {tanggalTerbit}
                   </div>
@@ -679,7 +679,7 @@ export const SertifikatKknPage: React.FC = () => {
                     Wakil Rektor I UNIKOM<br />Bidang Akademik dan Kemahasiswaan
                   </div>
 
-                  <div className="my-1 border border-slate-300 rounded-md p-1 bg-white/95 flex items-center gap-2 w-40 md:w-48 h-11 md:h-13 shadow-2xs">
+                  <div className="my-1 border border-slate-300 rounded-md p-1 bg-white/95 flex items-center gap-2 w-44 md:w-52 h-11 md:h-13 shadow-2xs">
                     <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 p-0.5">
                       <QrSvgComponent idSertifikat={selectedStudent.idSertifikat} />
                     </div>
@@ -696,7 +696,7 @@ export const SertifikatKknPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="text-[8.5px] md:text-[9.5pt] font-bold text-[#0A2540]">
+                  <div className="text-[8px] md:text-[9.5pt] font-bold text-[#0A2540] whitespace-nowrap">
                     Prof. Dr. Hj. Umi Narimawati, Dra., S.E., M.Si.
                   </div>
                 </div>
@@ -884,7 +884,7 @@ export const SertifikatKknPage: React.FC = () => {
               )}
 
               {/* Page 2 Bottom: Legal & ID */}
-              <div className="absolute bottom-5 left-12 right-12 text-center">
+              <div className="absolute bottom-6 md:bottom-7 left-12 right-12 text-center">
                 <div className="text-[7.5px] md:text-[8.5pt] text-slate-500 italic mb-0.5">
                   Nilai diisi berdasarkan hasil penilaian resmi. Jumlah SKS mengikuti pengambilan peserta dan ketentuan akademik.
                 </div>
