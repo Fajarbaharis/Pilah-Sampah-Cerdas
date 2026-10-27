@@ -262,6 +262,8 @@ const checkRouteActive = (
     if (nilaiLaporanAliases.includes(tPath) && nilaiLaporanAliases.includes(cPath)) return true;
 
     const nilaiRekapAliases = ["/penilaian/rekapitulasi-nilai-akhir", "/penilaian-kkn/rekap"];
+    const sertifikatAliases = ["/sertifikat-kkn", "/penilaian-kkn/sertifikat", "/penilaian/sertifikat"];
+    if (sertifikatAliases.includes(tPath) && sertifikatAliases.includes(cPath)) return true;
     if (nilaiRekapAliases.includes(tPath) && nilaiRekapAliases.includes(cPath)) return true;
 
     const baselineAliases = [
@@ -1441,6 +1443,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
                 "SUPER_USER",
                 "PANITIA_TASKFORCE",
                 "PIMPINAN",
+              ] as UserRole[],
+            },
+            {
+              to: "/sertifikat-kkn",
+              label: "E-Sertifikat KKN",
+              allowed: [
+                "DEVELOPER",
+                "DPL",
+                "DOSEN_PEMBIMBING",
+                "MPL",
+                "ADMIN_DLH",
+                "LURAH",
+                "CAMAT",
+                "RW",
+                "SUPER_USER",
+                "PANITIA_TASKFORCE",
+                "PIMPINAN",
+                "MAHASISWA_KKN",
               ] as UserRole[],
             },
           ],
