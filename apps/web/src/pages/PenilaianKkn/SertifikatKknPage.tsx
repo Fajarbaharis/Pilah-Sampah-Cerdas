@@ -118,6 +118,24 @@ export const SertifikatKknPage: React.FC = () => {
     }
   }, [searchParams, isMahasiswa, selectedStudent.nim, studentsData]);
 
+  // Keep selectedStudent in sync with studentsData updates (zero-dummy guarantee)
+  useEffect(() => {
+    if (studentsData.length > 0 && selectedStudent) {
+      const match = studentsData.find((s) => s.nim === selectedStudent.nim);
+      if (match && (
+        match.statusPenilaian !== selectedStudent.statusPenilaian ||
+        match.sudahDinilai !== selectedStudent.sudahDinilai ||
+        match.nilai?.total !== selectedStudent.nilai?.total ||
+        match.nilai?.proker !== selectedStudent.nilai?.proker ||
+        match.nama !== selectedStudent.nama ||
+        match.rw !== selectedStudent.rw ||
+        match.dpl !== selectedStudent.dpl
+      )) {
+        setSelectedStudent(match);
+      }
+    }
+  }, [studentsData, selectedStudent]);
+
   const handleSelectStudent = (s: StudentCertData) => {
     if (isMahasiswa) return;
     setSelectedStudent(s);
@@ -180,10 +198,12 @@ export const SertifikatKknPage: React.FC = () => {
     }
     const header = "NIM,Nama,Program Studi,Kelompok,SKS,Nilai Akhir,Predikat,Nomor Sertifikat,ID Sertifikat\n";
     const rows = filteredStudents
-      .map(
-        (s) =>
-          `"${s.nim}","${s.nama}","${s.prodi}","${s.kelompok}","${s.sks}","${s.nilai.total.toFixed(2)}","${s.nilai.predikat}","${s.nomorSertifikat}","${s.idSertifikat}"`
-      )
+      .map((s) => {
+        const isStudentGraded = Boolean(s.sudahDinilai && s.statusPenilaian === "SUDAH_DINILAI" && s.nilai && s.nilai.total > 0);
+        const scoreStr = isStudentGraded ? s.nilai.total.toFixed(2) : "-";
+        const predikatStr = isStudentGraded ? s.nilai.predikat : "Belum Dinilai";
+        return `"${s.nim}","${s.nama}","${s.prodi}","${s.kelompok}","${s.sks}","${scoreStr}","${predikatStr}","${s.nomorSertifikat}","${s.idSertifikat}"`;
+      })
       .join("\n");
     const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -202,9 +222,11 @@ export const SertifikatKknPage: React.FC = () => {
   };
 
   const isGraded = Boolean(
-    selectedStudent.sudahDinilai || 
-    selectedStudent.statusPenilaian === "SUDAH_DINILAI" || 
-    (selectedStudent.nilai && selectedStudent.nilai.total > 0 && selectedStudent.nilai.predikat !== "Belum Dinilai")
+    selectedStudent.sudahDinilai &&
+    selectedStudent.statusPenilaian === "SUDAH_DINILAI" &&
+    selectedStudent.nilai &&
+    selectedStudent.nilai.total > 0 &&
+    selectedStudent.nilai.predikat !== "Belum Dinilai"
   );
 
   const formattedNomor = selectedStudent.nomorSertifikat || (isGraded
@@ -822,7 +844,9 @@ export const SertifikatKknPage: React.FC = () => {
                       Nilai personal
                     </td>
                     <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
-                      {isGraded ? selectedStudent.nilai.personal.toFixed(1) : "-"}
+                      {selectedStudent.nilai.personal !== null && selectedStudent.nilai.personal > 0
+                        ? selectedStudent.nilai.personal.toFixed(1)
+                        : "-"}
                     </td>
                   </tr>
                   <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
@@ -833,7 +857,9 @@ export const SertifikatKknPage: React.FC = () => {
                       Program kerja kelompok
                     </td>
                     <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
-                      {isGraded ? selectedStudent.nilai.proker.toFixed(1) : "-"}
+                      {selectedStudent.nilai.proker !== null && selectedStudent.nilai.proker > 0
+                        ? selectedStudent.nilai.proker.toFixed(1)
+                        : "-"}
                     </td>
                   </tr>
                   <tr className="bg-white hover:bg-slate-50">
@@ -844,7 +870,9 @@ export const SertifikatKknPage: React.FC = () => {
                       Laporan akhir
                     </td>
                     <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
-                      {isGraded ? selectedStudent.nilai.laporan.toFixed(1) : "-"}
+                      {selectedStudent.nilai.laporan !== null && selectedStudent.nilai.laporan > 0
+                        ? selectedStudent.nilai.laporan.toFixed(1)
+                        : "-"}
                     </td>
                   </tr>
                   <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
@@ -855,7 +883,9 @@ export const SertifikatKknPage: React.FC = () => {
                       Paper
                     </td>
                     <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
-                      {isGraded ? selectedStudent.nilai.paper.toFixed(1) : "-"}
+                      {selectedStudent.nilai.paper !== null && selectedStudent.nilai.paper > 0
+                        ? selectedStudent.nilai.paper.toFixed(1)
+                        : "-"}
                     </td>
                   </tr>
                   <tr className="bg-white hover:bg-slate-50">
@@ -866,7 +896,9 @@ export const SertifikatKknPage: React.FC = () => {
                       Video
                     </td>
                     <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
-                      {isGraded ? selectedStudent.nilai.video.toFixed(1) : "-"}
+                      {selectedStudent.nilai.video !== null && selectedStudent.nilai.video > 0
+                        ? selectedStudent.nilai.video.toFixed(1)
+                        : "-"}
                     </td>
                   </tr>
                 </tbody>

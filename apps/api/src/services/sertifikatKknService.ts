@@ -9,12 +9,15 @@
  * - pengguna (User)
  * - kelompok_kkn (KelompokKkn)
  * - rw (Rw) & kelurahan (Kelurahan)
+ * - program_kerja_kkn (ProgramKerjaKkn)
  * - penilaian_kkn_mahasiswa (PenilaianKknMahasiswa)
  *
- * Aturan Ketat Integritas Data:
- * - Jika DPL BELUM mengisi nilai (sudah_dinilai = false atau penilaian_kkn_mahasiswa kosong),
- *   maka nilai 100% KOSONG (0 / Belum Dinilai), status = BELUM_DINILAI, tidak ada angka rekayasa.
- * - Jika DPL SUDAH mengisi nilai, maka nilai murni ditarik dari hasil penilaian riil.
+ * Aturan Ketat Integritas Data (Zero-Dummy):
+ * - Jika DPL BELUM mengisi nilai lengkap atau memfinalisasi yudisium:
+ *   statusPenilaian = "BELUM_DINILAI", sudahDinilai = false, nilai.total = 0, predikat = "Belum Dinilai".
+ * - Program Kerja Kelompok: jika proker kelompok sudah dinilai oleh DPL, tampilkan nilai riil reratanya.
+ *   Jika belum dinilai, bernilai null (tampil '-' di transkrip).
+ * - Aspek lain (personal, laporan, paper, video) jika belum dinilai bernilai null (tampil '-' di transkrip).
  */
 
 import { prisma } from "../lib/prisma.js";
@@ -34,11 +37,11 @@ export interface StudentCertData {
   statusPenilaian: "SUDAH_DINILAI" | "BELUM_DINILAI";
   sudahDinilai: boolean;
   nilai: {
-    personal: number;
-    proker: number;
-    laporan: number;
-    paper: number;
-    video: number;
+    personal: number | null;
+    proker: number | null;
+    laporan: number | null;
+    paper: number | null;
+    video: number | null;
     total: number;
     predikat: string;
   };
@@ -50,6 +53,18 @@ function calculatePredikat(score: number): string {
   if (score >= 65) return "C (Cukup)";
   if (score >= 50) return "D (Kurang)";
   return "E (Tidak Lulus)";
+}
+
+function formatRwList(cakupanRw: string[] | any, kelurahan?: string | null): string {
+  if (Array.isArray(cakupanRw) && cakupanRw.length > 0) {
+    if (cakupanRw.length === 1) {
+      return `RW ${cakupanRw[0]} Kelurahan ${kelurahan || "Coblong"}`;
+    }
+    const last = cakupanRw[cakupanRw.length - 1];
+    const prev = cakupanRw.slice(0, -1).join(", ");
+    return `RW ${prev}, dan ${last} Kelurahan ${kelurahan || "Coblong"}`;
+  }
+  return `Kelurahan ${kelurahan || "Coblong"}`;
 }
 
 export const sertifikatKknService = {
@@ -99,7 +114,38 @@ export const sertifikatKknService = {
       return [];
     }
 
-    // Ambil seluruh penilaian KKN yang ada di DB
+    // 3. Ambil seluruh penilaian program kerja kelompok yang ada di DB
+    const prokerGroupScores = new Map<string, number[]>();
+    const prokerAvgMap = new Map<string, number>();
+    try {
+      const allProkers = await prisma.programKerjaKkn.findMany({
+        where: {
+          skorPenilaian: { not: null },
+        },
+        select: {
+          kelompokId: true,
+          skorPenilaian: true,
+        },
+      });
+      for (const p of allProkers) {
+        if (p.kelompokId && p.skorPenilaian !== null && Number(p.skorPenilaian) > 0) {
+          if (!prokerGroupScores.has(p.kelompokId)) {
+            prokerGroupScores.set(p.kelompokId, []);
+          }
+          prokerGroupScores.get(p.kelompokId)!.push(Number(p.skorPenilaian));
+        }
+      }
+      for (const [kId, scores] of prokerGroupScores.entries()) {
+        if (scores.length > 0) {
+          const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+          prokerAvgMap.set(kId, Number(avg.toFixed(1)));
+        }
+      }
+    } catch (e) {
+      console.warn("[sertifikatKknService] Warning querying program_kerja_kkn:", e);
+    }
+
+    // 4. Ambil seluruh penilaian KKN yang ada di DB
     let penilaianMap = new Map<string, any>();
     try {
       const allPenilaian = await prisma.penilaianKknMahasiswa.findMany();
@@ -110,75 +156,93 @@ export const sertifikatKknService = {
       console.warn("[sertifikatKknService] Warning querying penilaian_kkn_mahasiswa:", e);
     }
 
-    // 3. Mapping data live database ke format sertifikat TANPA NILAI FIKTIF
+    // 5. Mapping data live database ke format sertifikat TANPA NILAI FIKTIF
     const results: StudentCertData[] = [];
     let counter = 1;
 
     for (const s of dbStudents) {
       const nim = String(s.nim || "").trim();
-      const nama = s.user?.nama || "Mahasiswa KKN";
+      const nama = s.user?.name || s.user?.nama || "Mahasiswa KKN";
       let prodi = s.jurusan || "S1 Manajemen";
       if (!prodi.toLowerCase().startsWith("s1") && !prodi.toLowerCase().startsWith("d3")) {
         prodi = `S1 ${prodi}`;
       }
       const sks = s.sks && s.sks > 0 ? s.sks : 11;
       const kelompok = s.kelompok?.name || "Kelompok KKN";
-      const dpl = s.kelompok?.dpl?.nama || s.kelompok?.dplNamaMentah || "Dosen Pembimbing Lapangan";
+      const dpl = s.kelompok?.dpl?.name || s.kelompok?.dpl?.nama || s.kelompok?.dplNamaMentah || "Dosen Pembimbing Lapangan";
 
       // Format Wilayah RW
       let rw = "Kelurahan Dago";
       if (s.assignedRw) {
         rw = `RW ${String(s.assignedRw.nomorRw).padStart(2, "0")} Kelurahan ${s.assignedRw.kelurahan?.namaKelurahan || "Coblong"}`;
+      } else if (s.kelompok?.cakupanRw && s.kelompok.cakupanRw.length > 0) {
+        rw = formatRwList(s.kelompok.cakupanRw, s.kelompok.kelurahan);
       } else if (s.kelompok?.kelurahan) {
         rw = `Kelurahan ${s.kelompok.kelurahan}`;
       }
 
-      // Resolusi Nilai Riil Database (NO DUMMY / NO HARDCODE FALLBACK)
       const pDb = s.userId ? penilaianMap.get(s.userId) : null;
-      const finalScore = Number(pDb?.nilaiAkhir || s.assessmentScore || 0);
-      const isGraded = (pDb && finalScore > 0) || (s.isAssessed && finalScore > 0);
+      const kelompokId = s.kelompokId;
+      const prokerScore = kelompokId && prokerAvgMap.has(kelompokId) ? prokerAvgMap.get(kelompokId)! : null;
+
+      const personalScore = pDb?.subtotalDpl && Number(pDb.subtotalDpl) > 0 
+        ? Number(pDb.subtotalDpl) 
+        : (s.assessmentScore && Number(s.assessmentScore) > 0 ? Number(s.assessmentScore) : null);
+      
+      const laporanScore = pDb?.skorDplLaporanAkhir && Number(pDb.skorDplLaporanAkhir) > 0 
+        ? Number(pDb.skorDplLaporanAkhir) 
+        : null;
+
+      const paperScore = pDb?.skorDplOutput && Number(pDb.skorDplOutput) > 0 
+        ? Number(pDb.skorDplOutput) 
+        : null;
+
+      const videoScore = pDb?.skorMitraBuktiKegiatan && Number(pDb.skorMitraBuktiKegiatan) > 0 
+        ? Number(pDb.skorMitraBuktiKegiatan) 
+        : null;
+
+      // Mahasiswa HANYA dianggap sudah dinilai secara sah dan tuntas jika DPL telah memfinalisasi atau seluruh komponen lengkap & isAssessed true
+      const isFullyGraded = Boolean(
+        (pDb && (pDb.isFinalized || pDb.status === "FINAL" || pDb.status === "SELESAI") && Number(pDb.nilaiAkhir) > 0) ||
+        (s.isAssessed === true && Number(s.assessmentScore) > 0 && personalScore !== null && prokerScore !== null && laporanScore !== null && paperScore !== null && videoScore !== null)
+      );
 
       let nilai: StudentCertData["nilai"];
       let statusPenilaian: "SUDAH_DINILAI" | "BELUM_DINILAI";
       let sudahDinilai: boolean;
       let nomorSertifikat: string;
+      let tanggalTerbit: string;
 
-      if (isGraded) {
+      if (isFullyGraded) {
         statusPenilaian = "SUDAH_DINILAI";
         sudahDinilai = true;
-        const subDpl = Number(pDb?.subtotalDpl || s.assessmentScore || 0);
-        const subMitra = Number(pDb?.subtotalMitra || 0);
-
-        const personal = subDpl > 0 ? subDpl : finalScore;
-        const proker = subMitra > 0 ? subMitra : finalScore;
-        const laporan = Number(pDb?.skorDplLaporanAkhir) > 0 ? Number(pDb.skorDplLaporanAkhir) * 25 : finalScore;
-        const paper = Number(pDb?.skorDplOutput) > 0 ? Number(pDb.skorDplOutput) * 25 : finalScore;
-        const video = Number(pDb?.skorMitraBuktiKegiatan) > 0 ? Number(pDb.skorMitraBuktiKegiatan) * 25 : finalScore;
-
+        const totalScore = Number(pDb?.nilaiAkhir || s.assessmentScore || 0);
         nilai = {
-          personal: Number(personal.toFixed(1)),
-          proker: Number(proker.toFixed(1)),
-          laporan: Number(laporan.toFixed(1)),
-          paper: Number(paper.toFixed(1)),
-          video: Number(video.toFixed(1)),
-          total: Number(finalScore.toFixed(2)),
-          predikat: calculatePredikat(finalScore),
+          personal: personalScore !== null ? Number(personalScore.toFixed(1)) : null,
+          proker: prokerScore !== null ? Number(prokerScore.toFixed(1)) : null,
+          laporan: laporanScore !== null ? Number(laporanScore.toFixed(1)) : null,
+          paper: paperScore !== null ? Number(paperScore.toFixed(1)) : null,
+          video: videoScore !== null ? Number(videoScore.toFixed(1)) : null,
+          total: Number(totalScore.toFixed(2)),
+          predikat: calculatePredikat(totalScore),
         };
         nomorSertifikat = `KKNT/${String(counter).padStart(3, "0")}/UNIKOM/BATCH-1/XI/2026`;
+        tanggalTerbit = "10 November 2026";
       } else {
-        // REAL KONDISI: DPL BELUM INPUT NILAI -> SEMUA NILAI KOSONG / 0.00
+        // REAL KONDISI: Belum selesai dinilai/difinalisasi oleh DPL
         statusPenilaian = "BELUM_DINILAI";
         sudahDinilai = false;
         nilai = {
-          personal: 0,
-          proker: 0,
-          laporan: 0,
-          paper: 0,
-          video: 0,
+          personal: personalScore !== null ? Number(personalScore.toFixed(1)) : null,
+          proker: prokerScore !== null ? Number(prokerScore.toFixed(1)) : null,
+          laporan: laporanScore !== null ? Number(laporanScore.toFixed(1)) : null,
+          paper: paperScore !== null ? Number(paperScore.toFixed(1)) : null,
+          video: videoScore !== null ? Number(videoScore.toFixed(1)) : null,
           total: 0,
           predikat: "Belum Dinilai",
         };
         nomorSertifikat = `KKNT/DRAFT/${String(counter).padStart(3, "0")}/UNIKOM/2026`;
+        tanggalTerbit = "Menunggu Penilaian";
       }
 
       const idSertifikat = `BRSK-2026-KKN-${nim}`;
@@ -194,7 +258,7 @@ export const sertifikatKknService = {
         dpl,
         nomorSertifikat,
         idSertifikat,
-        tanggalTerbit: isGraded ? "10 November 2026" : "Menunggu Penilaian",
+        tanggalTerbit,
         statusPenilaian,
         sudahDinilai,
         nilai,
@@ -255,7 +319,7 @@ export const sertifikatKknService = {
     }
 
     // Jika mahasiswa terdaftar tapi belum dinilai oleh DPL
-    if (found.statusPenilaian === "BELUM_DINILAI" || found.nilai.total === 0) {
+    if (found.statusPenilaian === "BELUM_DINILAI" || found.nilai.total === 0 || !found.sudahDinilai) {
       return {
         isValid: false,
         verifikasiStatus: "MENUNGGU_PENILAIAN_DPL",

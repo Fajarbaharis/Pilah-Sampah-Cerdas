@@ -28,11 +28,11 @@ export interface StudentCertData {
   statusPenilaian?: "SUDAH_DINILAI" | "BELUM_DINILAI";
   sudahDinilai?: boolean;
   nilai: {
-    personal: number;
-    proker: number;
-    laporan: number;
-    paper: number;
-    video: number;
+    personal: number | null;
+    proker: number | null;
+    laporan: number | null;
+    paper: number | null;
+    video: number | null;
     total: number;
     predikat: string;
   };
@@ -68,7 +68,7 @@ export const sertifikatKknService = {
       console.warn("[sertifikatKknService.getSertifikatList] Live API query failed, fallback to local data:", err);
     }
     // Fallback data jika API offline
-    return fallbackStudentsRaw as StudentCertData[];
+    return fallbackStudentsRaw as unknown as StudentCertData[];
   },
 
   /**
@@ -84,7 +84,7 @@ export const sertifikatKknService = {
       console.warn(`[sertifikatKknService.getSertifikatByNim] Failed to fetch NIM ${nim} from API:`, err);
     }
     // Fallback
-    const local = (fallbackStudentsRaw as StudentCertData[]).find((s) => s.nim === nim || s.idSertifikat === nim);
+    const local = (fallbackStudentsRaw as unknown as StudentCertData[]).find((s) => s.nim === nim || s.idSertifikat === nim);
     return local || null;
   },
 
@@ -103,12 +103,12 @@ export const sertifikatKknService = {
     }
 
     // Fallback verifikasi lokal jika server unreachable
-    const found = (fallbackStudentsRaw as StudentCertData[]).find(
+    const found = (fallbackStudentsRaw as unknown as StudentCertData[]).find(
       (s) => s.idSertifikat.toLowerCase() === idSertifikat.toLowerCase() || s.nim === idSertifikat
     );
 
     if (found) {
-      const isGraded = found.statusPenilaian === "SUDAH_DINILAI" || (found.nilai && found.nilai.total > 0 && found.sudahDinilai);
+      const isGraded = found.statusPenilaian === "SUDAH_DINILAI" && Boolean(found.sudahDinilai) && found.nilai && found.nilai.total > 0;
       if (!isGraded) {
         return {
           isValid: false,
