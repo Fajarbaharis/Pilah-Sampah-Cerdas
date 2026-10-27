@@ -13,6 +13,7 @@ import { useParams, Link } from "react-router-dom";
 import {
   ShieldCheck,
   CheckCircle2,
+  AlertTriangle,
   Award,
   Calendar,
   Building,
@@ -36,7 +37,6 @@ import {
 const fallbackStudents = studentsDataRaw as StudentCertData[];
 
 export const VerifikasiSertifikatPage: React.FC = () => {
-  const isStaging = isStagingEnv();
   const { idSertifikat } = useParams<{ idSertifikat: string }>();
 
   const [verifResult, setVerifResult] = useState<VerificationResult | null>(null);
@@ -81,7 +81,10 @@ export const VerifikasiSertifikatPage: React.FC = () => {
   }, [idSertifikat]);
 
   const student = verifResult?.mahasiswa || fallbackStudent;
-  const isVerified = verifResult ? verifResult.isValid : Boolean(fallbackStudent);
+  const isPendingDpl = verifResult?.verifikasiStatus === "MENUNGGU_PENILAIAN_DPL" || 
+    (student && (student.statusPenilaian === "BELUM_DINILAI" || (!student.sudahDinilai && student.nilai?.total === 0)));
+  const isVerified = Boolean(verifResult?.isValid && !isPendingDpl);
+
   const penerbit = verifResult?.penerbit || {
     institusi: "Universitas Komputer Indonesia (UNIKOM)",
     lembaga: "Direktorat Riset & Pengabdian Masyarakat (LPPM)",
@@ -89,7 +92,7 @@ export const VerifikasiSertifikatPage: React.FC = () => {
     tahunAkademik: "2026/2027",
     penandatangan: "Prof. Dr. Hj. Aelina Surya, Dra.",
     jabatan: "Wakil Rektor Bidang Akademik dan Kemahasiswaan UNIKOM",
-    tanggalTerbit: student?.tanggalTerbit || "10 November 2026",
+    tanggalTerbit: student?.tanggalTerbit || (isPendingDpl ? "Menunggu Penilaian" : "10 November 2026"),
   };
 
   return (
@@ -110,7 +113,7 @@ export const VerifikasiSertifikatPage: React.FC = () => {
             </div>
           </div>
           <Link
-            to={isStaging ? "/sertifikat-kkn" : "/"}
+            to="/sertifikat-kkn"
             className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-all"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -122,6 +125,78 @@ export const VerifikasiSertifikatPage: React.FC = () => {
           <div className="bg-slate-800/90 backdrop-blur-md rounded-2xl border border-slate-700 p-12 text-center space-y-3">
             <Loader2 className="w-8 h-8 text-blue-400 animate-spin mx-auto" />
             <p className="text-sm text-slate-300">Memeriksa keabsahan sertifikat pada database server...</p>
+          </div>
+        ) : isPendingDpl && student ? (
+          /* Card Status: DRAFT / MENUNGGU PENILAIAN DPL */
+          <div className="bg-slate-800/90 backdrop-blur-md rounded-2xl border border-amber-500/40 p-6 md:p-8 shadow-2xl space-y-6">
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-7 h-7 text-amber-400" />
+              </div>
+              <div>
+                <span className="text-[11px] font-bold tracking-wider text-amber-400 uppercase block">
+                  Status: DRAFT &bull; Menunggu Penilaian DPL
+                </span>
+                <h2 className="text-base font-bold text-white">
+                  E-Sertifikat Belum Disahkan (Nilai Yudisium Belum Diinput)
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  ID Verifikasi: <code className="text-amber-400 font-mono font-bold">{student.idSertifikat}</code>
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-4 text-xs text-amber-200/90 leading-relaxed">
+              Mahasiswa terdaftar resmi pada program KKN Tematik UNIKOM Batch I. Namun sertifikat kelulusan saat ini berstatus <strong>DRAFT</strong> karena Dosen Pembimbing Lapangan ({student.dpl}) belum selesai menginput nilai yudisium di portal Berseka. Sertifikat resmi dan tanda tangan digital baru akan disahkan setelah nilai difinalisasi.
+            </div>
+
+            {/* Student Biodata Summary */}
+            <div className="bg-slate-900/60 rounded-xl p-5 border border-slate-700/60 space-y-3">
+              <span className="text-[11px] font-bold tracking-wider text-slate-400 uppercase block border-b border-slate-800 pb-2">
+                Informasi Peserta KKN
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Nama Lengkap:</span>
+                  <span className="font-bold text-slate-100 text-sm">{student.nama}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">NIM:</span>
+                  <span className="font-mono font-bold text-amber-400 text-sm">{student.nim}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Program Studi:</span>
+                  <span className="font-semibold text-slate-200">{student.prodi}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Beban Kegiatan:</span>
+                  <span className="font-semibold text-blue-400">{student.sks} SKS &bull; 450 Jam</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Kelompok & Wilayah:</span>
+                  <span className="font-semibold text-slate-200">{student.kelompok} ({student.rw})</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Dosen Pembimbing (DPL):</span>
+                  <span className="font-semibold text-slate-200">{student.dpl}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-700/80">
+              <Link
+                to={`/sertifikat-kkn?nim=${student.nim}`}
+                className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md"
+              >
+                <FileText className="w-4 h-4" />
+                Lihat Pratinjau Sertifikat (DRAFT)
+              </Link>
+              <span className="text-[11px] text-slate-500 font-mono">
+                No. Registrasi: {student.nomorSertifikat}
+              </span>
+            </div>
           </div>
         ) : isVerified && student ? (
           /* Card Verifikasi Berhasil */
@@ -232,15 +307,13 @@ export const VerifikasiSertifikatPage: React.FC = () => {
 
             {/* Action buttons */}
             <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-700/80">
-              {isStaging && (
-                <Link
-                  to={`/sertifikat-kkn?nim=${student.nim}`}
-                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md"
-                >
-                  <FileText className="w-4 h-4" />
-                  Lihat Lembar Sertifikat Asli
-                </Link>
-              )}
+              <Link
+                to={`/sertifikat-kkn?nim=${student.nim}`}
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md"
+              >
+                <FileText className="w-4 h-4" />
+                Lihat Lembar Sertifikat Asli
+              </Link>
               <span className="text-[11px] text-slate-500 font-mono">
                 No. Reg: {student.nomorSertifikat}
               </span>
@@ -260,10 +333,10 @@ export const VerifikasiSertifikatPage: React.FC = () => {
               </p>
             </div>
             <Link
-              to={isStaging ? "/sertifikat-kkn" : "/"}
+              to="/sertifikat-kkn"
               className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:underline pt-2"
             >
-              {isStaging ? "Kembali ke Halaman Pencarian Sertifikat" : "Kembali ke Beranda"}
+              Kembali ke Halaman Pencarian Sertifikat
             </Link>
           </div>
         )}

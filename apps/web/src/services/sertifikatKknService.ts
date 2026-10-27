@@ -25,6 +25,8 @@ export interface StudentCertData {
   nomorSertifikat: string;
   idSertifikat: string;
   tanggalTerbit: string;
+  statusPenilaian?: "SUDAH_DINILAI" | "BELUM_DINILAI";
+  sudahDinilai?: boolean;
   nilai: {
     personal: number;
     proker: number;
@@ -106,6 +108,25 @@ export const sertifikatKknService = {
     );
 
     if (found) {
+      const isGraded = found.statusPenilaian === "SUDAH_DINILAI" || (found.nilai && found.nilai.total > 0 && found.sudahDinilai);
+      if (!isGraded) {
+        return {
+          isValid: false,
+          verifikasiStatus: "MENUNGGU_PENILAIAN_DPL",
+          message: "Mahasiswa terdaftar resmi pada KKN Tematik Batch I, namun proses penilaian yudisium oleh DPL belum selesai diinput. Sertifikat kelulusan belum disahkan.",
+          penerbit: {
+            institusi: "Universitas Komputer Indonesia (UNIKOM)",
+            lembaga: "Direktorat Riset & Pengabdian Masyarakat (LPPM)",
+            kegiatan: "KKN Tematik Berseka - Pengelolaan Sampah Berkelanjutan Batch I",
+            tahunAkademik: "2026/2027",
+            penandatangan: "Prof. Dr. Hj. Aelina Surya, Dra.",
+            jabatan: "Wakil Rektor Bidang Akademik dan Kemahasiswaan UNIKOM",
+            tanggalTerbit: "Menunggu Penilaian",
+          },
+          mahasiswa: found,
+        };
+      }
+
       return {
         isValid: true,
         verifikasiStatus: "TERVERIFIKASI_SAH",
