@@ -252,6 +252,21 @@ Setiap pengembang maupun asisten AI wajib mematuhi 3 pilar perlindungan sistem b
 - **Alur Integrasi Git-Flow**:
   - Merge PR #361 (`feat/pasar-berseka` -> `development`) dan diteruskan (*release candidate*) ke branch `staging` sesuai protokol 3-Tier Git-Flow Berseka.
 
+### G. 27 Oktober 2026 - Audit Perbaikan Skala Grade Akademik UNIKOM, Rekonsiliasi Field SKS, dan Isolasi Unit Test Eksekutif
+- **Konteks & Latar Belakang**:
+  1. Penyelarasan standarisasi huruf mutu akademik UNIKOM pada `apps/api/src/services/laporanKknService.ts` di mana skor 40 - 54 dipetakan ke Grade D, dan skor di bawah 40 dipetakan ke Grade E (bukan status prematur "Belum Lengkap"), dengan threshold nilai lulus minimum KKN tetap konsisten $\ge 65$ (Passing Grade C).
+  2. Sinkronisasi assertion test pada `apps/api/src/services/userService.test.ts` untuk mengantisipasi penambahan atribut `sks` (default 0) pasca implementasi konversi SKS mahasiswa.
+  3. Penguatan isolasi unit test pada `apps/api/src/services/wasteExecutiveReportService.test.ts` melalui parsial mocking method `dashboardService.getKpi` dan penyesuaian ekspektasi infrastruktur wadah sampah berbasis GIS SSOT 769 unit.
+- **Validasi Mutu & Quality Gate**:
+  - `npm run build --prefix apps/api`: 0 error (100% Pass).
+  - `cd apps/web && npx tsc --noEmit`: 0 error (100% Pass).
+  - `cd mobile && dart analyze`: 0 issues found (100% Pass).
+  - Vitest Test Suite DPL (30 tests): 100% Green (`dplApproval.test.ts`, `logbookVerifikasi.test.ts`, `penilaianKknRoleGuard.test.ts`).
+  - Vitest Test Suite Unit Test (`laporanKknService.test.ts`, `userService.test.ts`, `wasteExecutiveReportService.test.ts`): 100% Pass.
+  - Skema Database Prisma (`schema.prisma`): 0 perubahan (100% aman bagi integritas database VPS).
+- **Alur Integrasi Git-Flow**:
+  - Dikerjakan pada branch `fix/audit-grade-scale-dan-integrasi-mobile` (bercabang dari `development`) sebelum diajukan Pull Request, tanpa menyentuh branch `main` atau `staging` secara prematur.
+
 ---
 
 ## 5. Direktori & Arsip Dokumen
