@@ -3,22 +3,21 @@
  * Developed by: PT Makerindo & Universitas Komputer Indonesia
  * Copyright (c) 2026 PT Makerindo. All rights reserved.
  *
- * Service E-Sertifikat KKN Tematik UNIKOM (Live Database Query with Realtime Integration)
+ * Service E-Sertifikat KKN Tematik UNIKOM (MURNI DATA RIIL DATABASE TANPA DUMMY/FALLBACK SIMULASI)
  * Menghubungkan langsung ke tabel:
  * - mahasiswa_kkn (StudentKkn)
  * - pengguna (User)
  * - kelompok_kkn (KelompokKkn)
  * - rw (Rw) & kelurahan (Kelurahan)
  * - penilaian_kkn_mahasiswa (PenilaianKknMahasiswa)
+ *
+ * Aturan Ketat Integritas Data:
+ * - Jika DPL BELUM mengisi nilai (sudah_dinilai = false atau penilaian_kkn_mahasiswa kosong),
+ *   maka nilai 100% KOSONG (0 / Belum Dinilai), status = BELUM_DINILAI, tidak ada angka rekayasa.
+ * - Jika DPL SUDAH mengisi nilai, maka nilai murni ditarik dari hasil penilaian riil.
  */
 
 import { prisma } from "../lib/prisma.js";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export interface StudentCertData {
   noUrut: number;
@@ -32,6 +31,8 @@ export interface StudentCertData {
   nomorSertifikat: string;
   idSertifikat: string;
   tanggalTerbit: string;
+  statusPenilaian: "SUDAH_DINILAI" | "BELUM_DINILAI";
+  sudahDinilai: boolean;
   nilai: {
     personal: number;
     proker: number;
@@ -41,22 +42,6 @@ export interface StudentCertData {
     total: number;
     predikat: string;
   };
-}
-
-// Muat data snapshot sebagai referensi normalisasi nilai yudisium baku
-let snapshotMap = new Map<string, StudentCertData>();
-try {
-  const jsonPath = path.join(__dirname, "../data/students_certificates_data.json");
-  if (fs.existsSync(jsonPath)) {
-    const raw = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
-    if (Array.isArray(raw)) {
-      raw.forEach((s: StudentCertData) => {
-        if (s.nim) snapshotMap.set(String(s.nim).trim(), s);
-      });
-    }
-  }
-} catch (e) {
-  console.warn("[sertifikatKknService] Warning: Failed to load fallback snapshot:", e);
 }
 
 function calculatePredikat(score: number): string {
@@ -70,7 +55,7 @@ function calculatePredikat(score: number): string {
 export const sertifikatKknService = {
   /**
    * Mengambil daftar seluruh e-sertifikat mahasiswa dari database live
-   * Dilengkapi Role Scoping (Mahasiswa, DPL, Pimpinan, Super User, Developer)
+   * Murni mencerminkan status riil penilaian mahasiswa di lapangan
    */
   getSertifikatList: async (user?: any, filters?: { kelompok?: string; prodi?: string; search?: string }) => {
     const userRole = String(user?.peran || user?.role || "").toUpperCase();
@@ -111,7 +96,7 @@ export const sertifikatKknService = {
       });
     } catch (err) {
       console.error("[sertifikatKknService.getSertifikatList] Database query error:", err);
-      return Array.from(snapshotMap.values());
+      return [];
     }
 
     // Ambil seluruh penilaian KKN yang ada di DB
@@ -125,7 +110,7 @@ export const sertifikatKknService = {
       console.warn("[sertifikatKknService] Warning querying penilaian_kkn_mahasiswa:", e);
     }
 
-    // 3. Mapping data live database ke format sertifikat
+    // 3. Mapping data live database ke format sertifikat TANPA NILAI FIKTIF
     const results: StudentCertData[] = [];
     let counter = 1;
 
@@ -138,7 +123,7 @@ export const sertifikatKknService = {
       }
       const sks = s.sks && s.sks > 0 ? s.sks : 11;
       const kelompok = s.kelompok?.name || "Kelompok KKN";
-      let dpl = s.kelompok?.dpl?.nama || s.kelompok?.dplNamaMentah || "Dosen Pembimbing Lapangan";
+      const dpl = s.kelompok?.dpl?.nama || s.kelompok?.dplNamaMentah || "Dosen Pembimbing Lapangan";
 
       // Format Wilayah RW
       let rw = "Kelurahan Dago";
@@ -148,43 +133,58 @@ export const sertifikatKknService = {
         rw = `Kelurahan ${s.kelompok.kelurahan}`;
       }
 
-      // Resolusi Nilai 5 Aspek
-      let nilai: StudentCertData["nilai"] = {
-        personal: 88.0,
-        proker: 92.0,
-        laporan: 92.0,
-        paper: 90.0,
-        video: 92.0,
-        total: 90.8,
-        predikat: "A (Sangat Memuaskan)",
-      };
-
-      const snap = snapshotMap.get(nim);
+      // Resolusi Nilai Riil Database (NO DUMMY / NO HARDCODE FALLBACK)
       const pDb = s.userId ? penilaianMap.get(s.userId) : null;
+      const finalScore = Number(pDb?.nilaiAkhir || s.assessmentScore || 0);
+      const isGraded = (pDb && finalScore > 0) || (s.isAssessed && finalScore > 0);
 
-      if (pDb && Number(pDb.nilaiAkhir) > 0) {
-        const finalScore = Number(pDb.nilaiAkhir);
+      let nilai: StudentCertData["nilai"];
+      let statusPenilaian: "SUDAH_DINILAI" | "BELUM_DINILAI";
+      let sudahDinilai: boolean;
+      let nomorSertifikat: string;
+
+      if (isGraded) {
+        statusPenilaian = "SUDAH_DINILAI";
+        sudahDinilai = true;
+        const subDpl = Number(pDb?.subtotalDpl || s.assessmentScore || 0);
+        const subMitra = Number(pDb?.subtotalMitra || 0);
+
+        const personal = subDpl > 0 ? subDpl : finalScore;
+        const proker = subMitra > 0 ? subMitra : finalScore;
+        const laporan = Number(pDb?.skorDplLaporanAkhir) > 0 ? Number(pDb.skorDplLaporanAkhir) * 25 : finalScore;
+        const paper = Number(pDb?.skorDplOutput) > 0 ? Number(pDb.skorDplOutput) * 25 : finalScore;
+        const video = Number(pDb?.skorMitraBuktiKegiatan) > 0 ? Number(pDb.skorMitraBuktiKegiatan) * 25 : finalScore;
+
         nilai = {
-          personal: Number(pDb.subtotalDpl) || 88.0,
-          proker: Number(pDb.subtotalMitra) || 92.0,
-          laporan: finalScore,
-          paper: finalScore,
-          video: finalScore,
-          total: finalScore,
+          personal: Number(personal.toFixed(1)),
+          proker: Number(proker.toFixed(1)),
+          laporan: Number(laporan.toFixed(1)),
+          paper: Number(paper.toFixed(1)),
+          video: Number(video.toFixed(1)),
+          total: Number(finalScore.toFixed(2)),
           predikat: calculatePredikat(finalScore),
         };
-      } else if (snap) {
-        nilai = snap.nilai;
-        if (snap.rw && snap.rw !== "RW") rw = snap.rw;
-        if (snap.dpl && snap.dpl !== "DPL") dpl = snap.dpl;
+        nomorSertifikat = `KKNT/${String(counter).padStart(3, "0")}/UNIKOM/BATCH-1/XI/2026`;
+      } else {
+        // REAL KONDISI: DPL BELUM INPUT NILAI -> SEMUA NILAI KOSONG / 0.00
+        statusPenilaian = "BELUM_DINILAI";
+        sudahDinilai = false;
+        nilai = {
+          personal: 0,
+          proker: 0,
+          laporan: 0,
+          paper: 0,
+          video: 0,
+          total: 0,
+          predikat: "Belum Dinilai",
+        };
+        nomorSertifikat = `KKNT/DRAFT/${String(counter).padStart(3, "0")}/UNIKOM/2026`;
       }
 
-      const noUrut = counter++;
-      const nomorSertifikat = `KKNT/${String(noUrut).padStart(3, "0")}/UNIKOM/BATCH-1/XI/2026`;
       const idSertifikat = `BRSK-2026-KKN-${nim}`;
 
       results.push({
-        noUrut,
+        noUrut: counter++,
         nim,
         nama,
         prodi,
@@ -194,14 +194,11 @@ export const sertifikatKknService = {
         dpl,
         nomorSertifikat,
         idSertifikat,
-        tanggalTerbit: "10 November 2026",
+        tanggalTerbit: isGraded ? "10 November 2026" : "Menunggu Penilaian",
+        statusPenilaian,
+        sudahDinilai,
         nilai,
       });
-    }
-
-    // Jika DB kosong atau lebih sedikit dari snapshot (misal di lokal), gabungkan dengan snapshot
-    if (results.length === 0 && snapshotMap.size > 0) {
-      return Array.from(snapshotMap.values());
     }
 
     // Filter tambahan dari query params jika ada
@@ -245,22 +242,34 @@ export const sertifikatKknService = {
    */
   verifySertifikat: async (idSertifikat: string) => {
     const cleanId = String(idSertifikat).trim();
-    // Cari di snapshot map atau db
-    let found = Array.from(snapshotMap.values()).find(
+    const list = await sertifikatKknService.getSertifikatList();
+    const found = list.find(
       (s) => s.idSertifikat.toLowerCase() === cleanId.toLowerCase() || s.nim === cleanId
     );
-
-    if (!found) {
-      const list = await sertifikatKknService.getSertifikatList();
-      found = list.find(
-        (s) => s.idSertifikat.toLowerCase() === cleanId.toLowerCase() || s.nim === cleanId
-      );
-    }
 
     if (!found) {
       return {
         isValid: false,
         message: "Sertifikat tidak ditemukan atau kode verifikasi tidak valid.",
+      };
+    }
+
+    // Jika mahasiswa terdaftar tapi belum dinilai oleh DPL
+    if (found.statusPenilaian === "BELUM_DINILAI" || found.nilai.total === 0) {
+      return {
+        isValid: false,
+        verifikasiStatus: "MENUNGGU_PENILAIAN_DPL",
+        message: "Mahasiswa terdaftar resmi pada KKN Tematik Batch I, namun proses penilaian yudisium oleh DPL belum selesai diinput. Sertifikat kelulusan belum disahkan.",
+        penerbit: {
+          institusi: "Universitas Komputer Indonesia (UNIKOM)",
+          lembaga: "Direktorat Riset & Pengabdian Masyarakat (LPPM)",
+          kegiatan: "KKN Tematik Berseka - Pengelolaan Sampah Berkelanjutan Batch I",
+          tahunAkademik: "2026/2027",
+          penandatangan: "Prof. Dr. Hj. Aelina Surya, Dra.",
+          jabatan: "Wakil Rektor Bidang Akademik dan Kemahasiswaan UNIKOM",
+          tanggalTerbit: "Menunggu Penilaian DPL",
+        },
+        mahasiswa: found,
       };
     }
 

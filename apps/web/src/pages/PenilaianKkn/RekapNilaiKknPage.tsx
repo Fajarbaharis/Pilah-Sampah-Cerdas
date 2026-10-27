@@ -46,6 +46,7 @@ import { sortKelompokList } from "../../utils/sortUtils";
 import { isTestStudent, isTestKelompok } from "../../utils/filterTestingUtils";
 
 export const RekapNilaiKknPage: React.FC = () => {
+  const isStaging = isStagingEnv();
   const { user } = useAuthStore();
   const userRole = String(user?.peran || (user as any)?.role || "").toUpperCase();
   const isPimpinan = ["PEMIMPIN", "PIMPINAN", "CAMAT", "LURAH", "KEPALA_DESA", "REKTOR"].includes(
@@ -518,15 +519,17 @@ export const RekapNilaiKknPage: React.FC = () => {
               </button>
             )}
 
-            {/* Tombol Akses E-Sertifikat KKN */}
-            <Link
-              to="/sertifikat-kkn"
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition shadow-2xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700/60 cursor-pointer"
-              title="Buka Generator & Verifikasi E-Sertifikat KKN"
-            >
-              <Award size={14} />
-              <span>E-Sertifikat</span>
-            </Link>
+            {/* Tombol Akses E-Sertifikat KKN (Khusus QC Staging) */}
+            {isStaging && (
+              <Link
+                to="/sertifikat-kkn"
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition shadow-2xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700/60 cursor-pointer"
+                title="Buka Generator & Verifikasi E-Sertifikat KKN (Staging QC)"
+              >
+                <Award size={14} />
+                <span>E-Sertifikat</span>
+              </Link>
+            )}
 
             {/* Standar 1 Tombol Ekspor XLSX */}
             <button
@@ -690,7 +693,9 @@ export const RekapNilaiKknPage: React.FC = () => {
 
                   {/* Status */}
                   <th className="py-3 px-4 w-36 font-bold border-r border-slate-200 dark:border-slate-800">Status</th>
-                  <th className="py-3 px-3 w-28 font-bold text-center">E-Sertifikat</th>
+                  {isStaging && (
+                    <th className="py-3 px-3 w-28 font-bold text-center">E-Sertifikat</th>
+                  )}
                 </tr>
               </thead>
 
@@ -810,17 +815,19 @@ export const RekapNilaiKknPage: React.FC = () => {
                         )}
                       </td>
 
-                      {/* E-Sertifikat */}
-                      <td className="py-3 px-3 text-center">
-                        <Link
-                          to={`/sertifikat-kkn?nim=${st.nim}`}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition-all whitespace-nowrap shadow-2xs hover:scale-105"
-                          title={`Lihat E-Sertifikat Resmi ${st.name}`}
-                        >
-                          <Award className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                          <span>Sertifikat</span>
-                        </Link>
-                      </td>
+                      {/* E-Sertifikat (Khusus QC Staging) */}
+                      {isStaging && (
+                        <td className="py-3 px-3 text-center">
+                          <Link
+                            to={`/sertifikat-kkn?nim=${st.nim}`}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition-all whitespace-nowrap shadow-2xs hover:scale-105"
+                            title={`Lihat E-Sertifikat Resmi ${st.name}`}
+                          >
+                            <Award className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                            <span>Sertifikat</span>
+                          </Link>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
