@@ -252,6 +252,40 @@ Setiap pengembang maupun asisten AI wajib mematuhi 3 pilar perlindungan sistem b
 - **Alur Integrasi Git-Flow**:
   - Merge PR #361 (`feat/pasar-berseka` -> `development`) dan diteruskan (*release candidate*) ke branch `staging` sesuai protokol 3-Tier Git-Flow Berseka.
 
+### G. 27 Oktober 2026 - Audit Perbaikan Skala Grade Akademik UNIKOM, Rekonsiliasi Field SKS, dan Isolasi Unit Test Eksekutif
+- **Konteks & Latar Belakang**:
+  1. Penyelarasan standarisasi huruf mutu akademik UNIKOM pada `apps/api/src/services/laporanKknService.ts` di mana skor 40 - 54 dipetakan ke Grade D, dan skor di bawah 40 dipetakan ke Grade E (bukan status prematur "Belum Lengkap"), dengan threshold nilai lulus minimum KKN tetap konsisten $\ge 65$ (Passing Grade C).
+  2. Sinkronisasi assertion test pada `apps/api/src/services/userService.test.ts` untuk mengantisipasi penambahan atribut `sks` (default 0) pasca implementasi konversi SKS mahasiswa.
+  3. Penguatan isolasi unit test pada `apps/api/src/services/wasteExecutiveReportService.test.ts` melalui parsial mocking method `dashboardService.getKpi` dan penyesuaian ekspektasi infrastruktur wadah sampah berbasis GIS SSOT 769 unit.
+- **Validasi Mutu & Quality Gate**:
+  - `npm run build --prefix apps/api`: 0 error (100% Pass).
+  - `cd apps/web && npx tsc --noEmit`: 0 error (100% Pass).
+  - `cd mobile && dart analyze`: 0 issues found (100% Pass).
+  - Vitest Test Suite DPL (30 tests): 100% Green (`dplApproval.test.ts`, `logbookVerifikasi.test.ts`, `penilaianKknRoleGuard.test.ts`).
+  - Vitest Test Suite Unit Test (`laporanKknService.test.ts`, `userService.test.ts`, `wasteExecutiveReportService.test.ts`): 100% Pass.
+  - Skema Database Prisma (`schema.prisma`): 0 perubahan (100% aman bagi integritas database VPS).
+- **Alur Integrasi Git-Flow**:
+  - Dikerjakan pada branch `fix/audit-grade-scale-dan-integrasi-mobile` (bercabang dari `development`) sebelum diajukan Pull Request, tanpa menyentuh branch `main` atau `staging` secara prematur.
+
+---
+
+### H. 27 Oktober 2026 - Penyelarasan Modul Laporan Akhir KKN Mahasiswa ke Tingkat Kelompok (Group-Level Submission & Visibility - 030/MEMO-ENG/BERSEKA-BACKEND/X/2026)
+- **Konteks & Kebutuhan Operasional**:
+  1. Penyelarasan tata kelola operasional KKN Tematik BERSEKA di mana dokumen Laporan Akhir KKN merupakan pertanggungjawaban komprehensif tingkat **KELOMPOK**.
+  2. Pengunggahan dapat diwakili oleh Ketua Kelompok ataupun salah satu anggota kelompok.
+  3. Seluruh rekan sekelompok kini dapat melihat berkas dokumen yang telah diajukan, nama pengunggah (`submittedBy`), NIM pengunggah (`submittedByNim`), status telaah DPL (`BELUM_UNGGAH`, `MENUNGGU_TELAAH`, `PERLU_REVISI`, `DISETUJUI`), catatan revisi, predikat, dan skor rubrik penilaian secara transparan.
+- **Implementasi Master Backend (`apps/api/src/services/laporanAkhirService.ts`)**:
+  1. `getLaporanAkhirMe(userId)`: Kueri diubah dari pencarian terisolasi `studentId` menjadi pencarian berbasis `kelompokId: student.kelompokId`. Mengembalikan atribut identifikasi pengunggah `submittedBy` dan `submittedByNim` dengan payload ganda (flat dan nested `laporan` & `data`) untuk kompatibilitas penuh klien Mobile Flutter & Web.
+  2. `getLaporanAkhirHistory(userId)`: Kueri riwayat revisi berbasis `kelompokId` sehingga histori berkas dan versi revisi kelompok tampil seragam bagi seluruh anggota kelompok.
+  3. `submitLaporanAkhirIndividu` / `submitLaporanAkhir(userId, payload, file)`: Mengunggah atau memperbarui record Laporan Akhir tingkat kelompok (`kelompokId`), mencatat `studentId` pengunggah versi terakhir, memperbarui status telaah ke `MENUNGGU_TELAAH`, serta meneruskan notifikasi otomatis ke DPL kelompok.
+- **Validasi Mutu & Quality Gate**:
+  - `npm run build --prefix apps/api`: 0 error (100% Pass).
+  - Vitest Test Suite DPL (30 tests): 100% Green (`dplApproval.test.ts`, `logbookVerifikasi.test.ts`, `penilaianKknRoleGuard.test.ts`).
+  - Vitest Test Suite Laporan Akhir (`laporanAkhirService.test.ts`): 7/7 tests 100% Green.
+  - Skema Database Prisma (`schema.prisma`): 0 perubahan (100% aman bagi integritas database VPS).
+- **Alur Integrasi Git-Flow**:
+  - Dikerjakan pada branch `feat/laporan-akhir-group-level` (bercabang dari `development`).
+
 ---
 
 ## 5. Direktori & Arsip Dokumen

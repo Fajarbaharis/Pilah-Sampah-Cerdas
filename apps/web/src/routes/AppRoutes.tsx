@@ -80,6 +80,8 @@ const PenilaianProkerPage = React.lazy(() => import("../pages/PenilaianKkn/Penil
 const RekapNilaiKknPage = React.lazy(() => import("../pages/PenilaianKkn/RekapNilaiKknPage"));
 const PenilaianKknMahasiswaPage = React.lazy(() => import("../pages/PenilaianKkn/PenilaianKknMahasiswaPage"));
 const PenilaianLaporanAkhirPage = React.lazy(() => import("../pages/PenilaianKkn/PenilaianLaporanAkhirPage"));
+const SertifikatKknPage = React.lazy(() => import("../pages/PenilaianKkn/SertifikatKknPage"));
+const VerifikasiSertifikatPage = React.lazy(() => import("../pages/PenilaianKkn/VerifikasiSertifikatPage"));
 const MasterPanduanPage = React.lazy(() => import("../pages/MasterData/MasterPanduanPage"));
 const MasterKegiatanSampahPage = React.lazy(() => import("../pages/MasterData/MasterKegiatanSampahPage"));
 const MasterPresetTempatSampahPage = React.lazy(() => import("../pages/MasterData/MasterPresetTempatSampahPage"));
@@ -299,6 +301,9 @@ const AppRoutes: React.FC = () => {
       <Route path="/download" element={<DownloadPage />} />
       <Route path="/register" element={<Register />} />
       <Route path="/register-mahasiswa" element={<MahasiswaRegistration />} />
+      <Route path="/verify/:idSertifikat" element={<VerifikasiSertifikatPage />} />
+      <Route path="/verify-sertifikat/:idSertifikat" element={<VerifikasiSertifikatPage />} />
+      <Route path="/sertifikat/verify/:idSertifikat" element={<VerifikasiSertifikatPage />} />
       <Route
         element={
           <ProtectedRoute>
@@ -984,6 +989,22 @@ const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute allowedRoles={["DEVELOPER", "DPL", "DOSEN_PEMBIMBING", "MPL", "ADMIN_DLH", "LURAH", "CAMAT", "RW", "SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN"]}>
               <RekapNilaiKknPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sertifikat-kkn"
+          element={
+            <ProtectedRoute allowedRoles={["DEVELOPER", "DPL", "DOSEN_PEMBIMBING", "MPL", "ADMIN_DLH", "LURAH", "CAMAT", "RW", "SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "MAHASISWA_KKN"]}>
+              <SertifikatKknPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/penilaian-kkn/sertifikat"
+          element={
+            <ProtectedRoute allowedRoles={["DEVELOPER", "DPL", "DOSEN_PEMBIMBING", "MPL", "ADMIN_DLH", "LURAH", "CAMAT", "RW", "SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "MAHASISWA_KKN"]}>
+              <SertifikatKknPage />
             </ProtectedRoute>
           }
         />

@@ -131,6 +131,7 @@ describe("UserService", () => {
         address: "Sekretariat RT 01 / RW 01, Dago, Kecamatan Coblong, Kota Bandung",
         wilayah: "RT 01 / RW 01, Dago",
         setoran: 4.0,
+        sks: 0,
         totalPoin: 150,
         studentProfile: null,
         dplKelompok: [],

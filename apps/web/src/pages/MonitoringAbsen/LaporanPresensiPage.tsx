@@ -142,6 +142,17 @@ export interface StudentAggregate {
   berlangsung: number;
   terjeda: number;
   izinSakit: number;
+  jamLapanganMinutes?: number;
+  jamLapanganHours?: number;
+  jamLapanganRemainingMinutes?: number;
+  jamLapanganFormatted?: string;
+  jamPraKegiatanHours?: number;
+  jamPraKegiatanMinutes?: number;
+  jamPraKegiatanFormatted?: string;
+  totalAkumulasiMinutes?: number;
+  totalAkumulasiHours?: number;
+  totalAkumulasiRemainingMinutes?: number;
+  totalAkumulasiFormatted?: string;
 }
 
 export interface LaporanSummary {
@@ -913,6 +924,9 @@ export const LaporanPresensiPage: React.FC = () => {
         "Kelompok KKN",
         "Dosen Pembimbing Lapangan (DPL)",
         "Total Hari/Sesi Hadir",
+        "Jam Lapangan",
+        "Total Pra-Kegiatan",
+        "Total Akumulasi KKN",
         "Total Menit Aktual (DA)",
         "Total Jam Aktual",
         `Target Jam Periode (${periodLabel})`,
@@ -944,6 +958,9 @@ export const LaporanPresensiPage: React.FC = () => {
           s.kelompok?.name ?? "-",
           s.kelompok?.dplName ?? "-",
           s.totalSessions,
+          s.jamLapanganFormatted || `${s.totalHours} jam ${s.totalMinutes % 60} menit`,
+          s.jamPraKegiatanFormatted || "100 jam",
+          s.totalAkumulasiFormatted || `${Math.floor(((s.totalMinutes || 0) + 6000) / 60)} jam ${((s.totalMinutes || 0) + 6000) % 60} menit`,
           s.totalMinutes,
           s.totalHours,
           periodTargetHours,
@@ -1693,11 +1710,16 @@ export const LaporanPresensiPage: React.FC = () => {
                         {/* Total Akumulasi Aktual */}
                         <td className="py-3.5 px-4 text-center">
                           <div className="font-mono font-black text-emerald-700 dark:text-emerald-400 text-sm">
-                            {student.totalFormatted}
+                            {student.totalAkumulasiFormatted || student.totalFormatted}
                           </div>
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            ({student.totalHours} Jam Total)
-                          </span>
+                          <div className="flex flex-col items-center gap-0.5 mt-0.5">
+                            <span className="text-[10px] text-slate-500 font-medium">
+                              Lapangan: {student.jamLapanganFormatted || student.totalFormatted}
+                            </span>
+                            <span className="text-[9px] text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
+                              + Pra-Kegiatan: {student.jamPraKegiatanFormatted || "100 jam"}
+                            </span>
+                          </div>
                         </td>
 
                         {/* Target & Capaian Periode */}

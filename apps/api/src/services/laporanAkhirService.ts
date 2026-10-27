@@ -11,7 +11,7 @@ import { notificationIntegrationService } from "./notificationIntegrationService
 
 export class LaporanAkhirService {
   /**
-   * Mengunggah / Memperbarui Laporan Akhir Individu oleh Mahasiswa
+   * Mengunggah / Memperbarui Laporan Akhir Tingkat Kelompok oleh Perwakilan Mahasiswa
    */
   async submitLaporanAkhirIndividu(userId: string, payload: any, file?: any) {
     const student = await prisma.studentKkn.findUnique({
@@ -33,14 +33,15 @@ export class LaporanAkhirService {
       throw new Error("Berkas PDF Laporan Akhir wajib diunggah.");
     }
 
-    const judulStr = (payload.judul || `Laporan Akhir KKN - ${student.user?.name || student.nim}`).trim();
+    const defaultJudul = `Laporan Akhir KKN ${student.kelompok?.name || student.user?.name || student.nim}`;
+    const judulStr = (payload.judul || defaultJudul).trim();
     const deskripsiStr = (payload.deskripsi || "").trim();
     const formattedDeskripsi = `**${judulStr}**\n\n${deskripsiStr}`;
 
-    // Cek apakah mahasiswa ini sudah pernah submit sebelumnya (Isolasi per studentId)
+    // Cek apakah kelompok ini sudah pernah submit sebelumnya (Tingkat Kelompok)
     const existing = await prisma.programKerjaKkn.findFirst({
       where: {
-        studentId: student.id,
+        kelompokId: student.kelompokId,
         kategori: "LAPORAN_AKHIR",
       },
     });
@@ -50,6 +51,7 @@ export class LaporanAkhirService {
       result = await prisma.programKerjaKkn.update({
         where: { id: existing.id },
         data: {
+          studentId: student.id, // Perbarui pencatat pengunggah versi terakhir
           deskripsi: formattedDeskripsi,
           attachmentFile: fileUrl,
           linkGoogleDrive: fileUrl,
@@ -83,8 +85,8 @@ export class LaporanAkhirService {
       try {
         await notificationIntegrationService.sendToUser({
           userId: student.kelompok.dplId,
-          title: "Laporan Akhir Mahasiswa Masuk 📄",
-          message: `${student.user?.name || "Mahasiswa"} (${student.kelompok.name}) telah mengunggah Laporan Akhir KKN. Silakan ditelaah.`,
+          title: "Laporan Akhir Kelompok Masuk 📄",
+          message: `${student.user?.name || "Mahasiswa"} (${student.kelompok.name || "Kelompok"}) telah mengunggah Laporan Akhir KKN. Silakan ditelaah.`,
           triggerType: "LAPORAN_AKHIR_SUBMITTED",
           dataPayload: {
             event: "REFRESH_LAPORAN_AKHIR_DPL",
@@ -103,7 +105,15 @@ export class LaporanAkhirService {
   }
 
   /**
-   * Mengambil Laporan Akhir Khusus Milik Mahasiswa yang Sedang Login (Per-Individu)
+   * Alias submitLaporanAkhir untuk kompatibilitas Controller/Client
+   */
+  async submitLaporanAkhir(userId: string, payload: any, file?: any) {
+    return this.submitLaporanAkhirIndividu(userId, payload, file);
+  }
+
+  /**
+   * Mengambil Laporan Akhir Tingkat Kelompok Milik Mahasiswa yang Sedang Login
+   * Seluruh anggota kelompok dapat melihat laporan yang diajukan oleh rekannya secara transparan.
    */
   async getLaporanAkhirMe(userId: string) {
     const student = await prisma.studentKkn.findUnique({
@@ -114,15 +124,22 @@ export class LaporanAkhirService {
       },
     });
 
-    if (!student) {
-      throw new Error("Mahasiswa tidak ditemukan");
+    if (!student || !student.kelompokId) {
+      throw new Error("Mahasiswa tidak ditemukan atau belum terdaftar dalam kelompok.");
     }
 
-    // Filter murni berbasis studentId mahasiswa ini
+    // 1. CARI LAPORAN AKHIR TINGKAT KELOMPOK (Bukan per studentId saja)
     const laporan = await prisma.programKerjaKkn.findFirst({
       where: {
-        studentId: student.id,
+        kelompokId: student.kelompokId,
         kategori: "LAPORAN_AKHIR",
+      },
+      include: {
+        student: {
+          include: {
+            user: { select: { id: true, name: true, phone: true } },
+          },
+        },
       },
       orderBy: { updatedAt: "desc" },
     });
@@ -169,13 +186,18 @@ export class LaporanAkhirService {
       else predikat = "D (Kurang)";
     }
 
+    // 2. IDENTIFIKASI PENGUNGGAH DOKUMEN KELOMPOK
+    const submittedByName =
+      laporan.student?.user?.name ||
+      (laporan.student?.nim ? `Mahasiswa NIM ${laporan.student.nim}` : "Perwakilan Kelompok");
+
     const payloadDetail = {
       id: laporan.id,
-      judul: parsed.judul || `Laporan Akhir KKN - ${student.user?.name || student.nim}`,
+      judul: parsed.judul || `Laporan Akhir KKN ${student.kelompok?.name || "Kelompok"}`,
       deskripsi: parsed.deskripsi || laporan.deskripsi,
       fileUrl,
       fileName: fileUrl
-        ? `Laporan_Akhir_${(student.user?.name || student.nim || "Mahasiswa").replace(/\s+/g, "_")}.pdf`
+        ? `Laporan_Akhir_${(student.kelompok?.name || "Kelompok").replace(/\s+/g, "_")}.pdf`
         : null,
       isGoogleDrive: Boolean(fileUrl && fileUrl.includes("drive.google.com")),
       statusTelaah,
@@ -186,8 +208,10 @@ export class LaporanAkhirService {
       catatanDpl: laporan.catatanDpl || laporan.evaluasiDpl || "",
       catatanRevisi: laporan.catatanDpl || laporan.evaluasiDpl || "",
       aspekPenilaian: laporan.aspekPenilaian || null,
-      submittedAt: laporan.createdAt.toISOString(),
-      updatedAt: laporan.updatedAt.toISOString(),
+      submittedBy: submittedByName,
+      submittedByNim: laporan.student?.nim || null,
+      submittedAt: laporan.createdAt ? (laporan.createdAt instanceof Date ? laporan.createdAt.toISOString() : new Date(laporan.createdAt).toISOString()) : new Date().toISOString(),
+      updatedAt: laporan.updatedAt ? (laporan.updatedAt instanceof Date ? laporan.updatedAt.toISOString() : new Date(laporan.updatedAt).toISOString()) : new Date().toISOString(),
     };
 
     return {
@@ -203,35 +227,78 @@ export class LaporanAkhirService {
   }
 
   /**
-   * Mengambil Riwayat Pengajuan Laporan Akhir Mahasiswa (Version History)
+   * Mengambil Riwayat Pengajuan Laporan Akhir Tingkat Kelompok (Version History)
+   * Seluruh anggota kelompok dapat melihat riwayat pengajuan dokumen kelompok secara seragam.
    */
   async getLaporanAkhirHistory(userId: string) {
     const student = await prisma.studentKkn.findUnique({
       where: { userId },
     });
 
-    if (!student) return [];
+    if (!student || !student.kelompokId) return [];
 
+    // Query berdasarkan kelompokId (agar riwayat kelompok tampil seragam)
     const list = await prisma.programKerjaKkn.findMany({
       where: {
-        studentId: student.id,
+        kelompokId: student.kelompokId,
         kategori: "LAPORAN_AKHIR",
+      },
+      include: {
+        student: {
+          include: {
+            user: { select: { id: true, name: true, phone: true } },
+          },
+        },
+        kelompok: {
+          include: { dpl: { select: { id: true, name: true, phone: true } } },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
 
     return list.map((item) => {
       const parsed = parseProkerDeskripsi(item.deskripsi);
+      const scoreVal =
+        item.skorPenilaian !== null && item.skorPenilaian !== undefined
+          ? Number(item.skorPenilaian)
+          : null;
+      const fileUrl = item.attachmentFile || item.linkGoogleDrive || null;
+      let statusTelaah = item.statusUsulan || "MENUNGGU_TELAAH";
+      if (!fileUrl) {
+        statusTelaah = "BELUM_UNGGAH";
+      } else if (item.statusPenilaian === "DISETUJUI" || scoreVal !== null) {
+        statusTelaah = "DISETUJUI";
+      } else if (item.statusPenilaian === "PERLU_REVISI") {
+        statusTelaah = "PERLU_REVISI";
+      }
+
+      let predikat = item.predikat || "Belum Dinilai";
+      if (scoreVal !== null && (!item.predikat || item.predikat === "Belum Dinilai")) {
+        if (scoreVal >= 85) predikat = "A (Sangat Baik)";
+        else if (scoreVal >= 75) predikat = "B (Baik)";
+        else if (scoreVal >= 65) predikat = "C (Cukup)";
+        else predikat = "D (Kurang)";
+      }
+
+      const submittedByName =
+        item.student?.user?.name ||
+        (item.student?.nim ? `Mahasiswa NIM ${item.student.nim}` : "Perwakilan Kelompok");
+
       return {
         id: item.id,
-        judul: parsed.judul,
-        deskripsi: parsed.deskripsi,
-        fileUrl: item.attachmentFile || item.linkGoogleDrive,
-        statusTelaah: item.statusUsulan || "MENUNGGU_TELAAH",
-        skorPenilaian: item.skorPenilaian ? Number(item.skorPenilaian) : null,
-        predikat: item.predikat || "Belum Dinilai",
+        judul: parsed.judul || `Laporan Akhir KKN ${item.kelompok?.name || ""}`,
+        deskripsi: parsed.deskripsi || item.deskripsi,
+        fileUrl,
+        fileName: fileUrl ? `Laporan_Akhir_${item.id.slice(-6)}.pdf` : null,
+        statusTelaah,
+        status: item.status || statusTelaah,
+        nilaiAkhir: scoreVal,
+        skorPenilaian: scoreVal,
+        predikat,
         catatanDpl: item.catatanDpl || item.evaluasiDpl || null,
-        aspekPenilaian: item.aspekPenilaian,
+        aspekPenilaian: item.aspekPenilaian || null,
+        submittedBy: submittedByName,
+        submittedByNim: item.student?.nim || null,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       };
