@@ -441,14 +441,17 @@ function buildStudentHtml(s) {
     }
 
     .card-label {
-      font-size: 9.5pt;
+      font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+      font-size: 10.5pt;
       color: #0A2540;
-      font-weight: 600;
-      margin-bottom: 2px;
+      font-weight: 700;
+      margin-bottom: 3px;
+      letter-spacing: 0.3px;
     }
 
     .card-val {
-      font-size: 11pt;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 11.5pt;
       font-weight: 800;
       color: #005AA9;
       white-space: nowrap;
@@ -460,6 +463,7 @@ function buildStudentHtml(s) {
       width: 1.5px;
       height: 32px;
       background-color: #C5A059;
+      flex-shrink: 0;
     }
 
     .aspects-table {
@@ -532,18 +536,17 @@ function buildStudentHtml(s) {
     }
 
     .draft-ribbon {
-      position: absolute;
-      top: 25px;
-      right: 75px;
+      display: inline-block;
+      margin-top: 4px;
+      margin-bottom: 2px;
       background: #FEF3C7;
       color: #92400E;
       border: 1.5px solid #F59E0B;
-      border-radius: 8px;
-      padding: 4px 12px;
-      font-size: 9pt;
+      border-radius: 9999px;
+      padding: 3px 14px;
+      font-size: 8.5pt;
       font-weight: 800;
-      letter-spacing: 0.5px;
-      z-index: 50;
+      letter-spacing: 0.8px;
     }
   </style>
 </head>
@@ -551,8 +554,6 @@ function buildStudentHtml(s) {
 
   <!-- ==================== HALAMAN 1 ==================== -->
   <div class="cert-sheet">
-    ${!isGraded ? '<div class="draft-ribbon">DRAFT &bull; MENUNGGU PENILAIAN DPL</div>' : ''}
-
     <div class="cert-inner">
       <div class="header-block">
         <h1 class="univ-title">UNIVERSITAS KOMPUTER INDONESIA</h1>
@@ -572,6 +573,7 @@ function buildStudentHtml(s) {
       <div class="title-sub1">PESERTA KKN TEMATIK BATCH I</div>
       <div class="title-sub2">TAHUN AKADEMIK 2026/2027</div>
       <div class="cert-number">Nomor: ${nomorSert}</div>
+      ${!isGraded ? '<div class="draft-ribbon">DRAFT &bull; MENUNGGU PENILAIAN DPL</div>' : ''}
 
       <div class="given-to">Diberikan kepada:</div>
 
@@ -662,6 +664,7 @@ function buildStudentHtml(s) {
 
       <div class="title-sub1" style="font-size: 13.5pt;">KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026</div>
       <div class="cert-number">Nomor sertifikat: [${nomorSert}]</div>
+      ${!isGraded ? '<div class="draft-ribbon">DRAFT &bull; MENUNGGU PENILAIAN DPL</div>' : ''}
 
       <div class="student-card-4col">
         <div class="card-col">
