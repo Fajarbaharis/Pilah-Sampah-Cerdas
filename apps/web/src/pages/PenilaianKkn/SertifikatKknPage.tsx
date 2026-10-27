@@ -607,7 +607,7 @@ export const SertifikatKknPage: React.FC = () => {
 
               {/* Recipient Name */}
               <div className="font-playfair text-xl md:text-[27pt] font-black text-[#0A2540] tracking-wide mt-1 uppercase text-center whitespace-nowrap">
-                [{formattedName}]
+                {formattedName}
               </div>
 
               {/* Diamond Divider */}
@@ -619,16 +619,16 @@ export const SertifikatKknPage: React.FC = () => {
 
               {/* NIM & Prodi */}
               <div className="text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-1">
-                NIM: [{selectedStudent.nim}]
+                NIM: {selectedStudent.nim}
               </div>
               <div className="text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-0.5">
-                Program Studi: [{selectedStudent.prodi}]
+                Program Studi: {selectedStudent.prodi}
               </div>
 
               {/* SKS Pill */}
-              <div className="mt-1.5 border-[1.5px] border-[#005AA9] rounded-full px-4 py-0.5 bg-white shadow-2xs">
+              <div className="mt-1.5 border-[1.2px] border-[#C5A059] rounded-full px-5 py-0.5 bg-white shadow-2xs">
                 <span className="text-[10px] md:text-[11pt] font-extrabold text-[#005AA9] tracking-wide">
-                  SKS diambil: [{selectedStudent.sks} SKS]
+                  SKS diambil: {selectedStudent.sks} SKS
                 </span>
               </div>
 
@@ -667,7 +667,7 @@ export const SertifikatKknPage: React.FC = () => {
                 <div className="text-center flex-1 text-[7.5px] md:text-[8.5pt] text-slate-500 italic mb-1">
                   Rincian penilaian tercantum pada halaman belakang.<br />
                   <span className="text-[6.5px] md:text-[7pt] tracking-[1px] not-italic text-slate-400">
-                    PRATINJAU DESAIN BERSEKA &bull; UNIKOM
+                    UNIVERSITAS KOMPUTER INDONESIA &bull; LPPM
                   </span>
                 </div>
 
@@ -744,7 +744,7 @@ export const SertifikatKknPage: React.FC = () => {
                 KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026
               </div>
               <div className="text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-0.5">
-                Nomor sertifikat: [{formattedNomor}]
+                Nomor sertifikat: {formattedNomor}
               </div>
 
               {!isGraded && (
@@ -756,44 +756,44 @@ export const SertifikatKknPage: React.FC = () => {
               {/* ── 4-COLUMN STUDENT IDENTITY (100% CANVA EXACT & SEJAJAR) ── */}
               <div className="flex items-center w-full max-w-[880px] mt-4 mb-2">
                 <div className="flex-1 text-center px-1 md:px-2">
-                  <div className="font-playfair text-[9.5px] md:text-[10.5pt] font-bold text-[#0A2540] mb-0.5">
+                  <div className="font-sans text-[9.5px] md:text-[10pt] font-bold text-[#0A2540] mb-0.5">
                     Nama:
                   </div>
                   <div className="font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9] uppercase truncate">
-                    [{formattedName}]
+                    {formattedName}
                   </div>
                 </div>
                 
                 <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
 
                 <div className="flex-1 text-center px-1 md:px-2">
-                  <div className="font-playfair text-[9.5px] md:text-[10.5pt] font-bold text-[#0A2540] mb-0.5">
+                  <div className="font-sans text-[9.5px] md:text-[10pt] font-bold text-[#0A2540] mb-0.5">
                     NIM:
                   </div>
                   <div className="font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9]">
-                    [{selectedStudent.nim}]
+                    {selectedStudent.nim}
                   </div>
                 </div>
 
                 <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
 
                 <div className="flex-1 text-center px-1 md:px-2">
-                  <div className="font-playfair text-[9.5px] md:text-[10.5pt] font-bold text-[#0A2540] mb-0.5">
+                  <div className="font-sans text-[9.5px] md:text-[10pt] font-bold text-[#0A2540] mb-0.5">
                     Program Studi:
                   </div>
                   <div className="font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9] uppercase truncate">
-                    [{selectedStudent.prodi.toUpperCase()}]
+                    {selectedStudent.prodi.toUpperCase()}
                   </div>
                 </div>
 
                 <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
 
                 <div className="flex-1 text-center px-1 md:px-2">
-                  <div className="font-playfair text-[9.5px] md:text-[10.5pt] font-bold text-[#0A2540] mb-0.5">
+                  <div className="font-sans text-[9.5px] md:text-[10pt] font-bold text-[#0A2540] mb-0.5">
                     SKS diambil:
                   </div>
                   <div className="font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9]">
-                    [{selectedStudent.sks} SKS]
+                    {selectedStudent.sks} SKS
                   </div>
                 </div>
               </div>
@@ -889,7 +889,7 @@ export const SertifikatKknPage: React.FC = () => {
                   Nilai diisi berdasarkan hasil penilaian resmi. Jumlah SKS mengikuti pengambilan peserta dan ketentuan akademik.
                 </div>
                 <div className="text-[6.5px] md:text-[7.5pt] font-mono text-slate-400 font-semibold tracking-wider">
-                  [{selectedStudent.idSertifikat}] &bull; Halaman 2 dari 2 &bull; PRATINJAU DESAIN
+                  {selectedStudent.idSertifikat} &bull; Halaman 2 dari 2
                 </div>
               </div>
             </div>

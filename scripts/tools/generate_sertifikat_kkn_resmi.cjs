@@ -577,7 +577,7 @@ function buildStudentHtml(s) {
 
       <div class="given-to">Diberikan kepada:</div>
 
-      <div class="recipient-name">[${formattedName}]</div>
+      <div class="recipient-name">${formattedName}</div>
 
       <div class="diamond-divider">
         <div class="diamond-line"></div>
@@ -585,11 +585,11 @@ function buildStudentHtml(s) {
         <div class="diamond-line"></div>
       </div>
 
-      <div class="bio-text">NIM: [${s.nim}]</div>
-      <div class="bio-text">Program Studi: [${s.prodi}]</div>
+      <div class="bio-text">NIM: ${s.nim}</div>
+      <div class="bio-text">Program Studi: ${s.prodi}</div>
 
       <div class="sks-pill">
-        SKS diambil: [${s.sks} SKS]
+        SKS diambil: ${s.sks} SKS
       </div>
 
       <div class="narration">
@@ -621,7 +621,7 @@ function buildStudentHtml(s) {
 
       <div class="footer-note">
         Rincian penilaian tercantum pada halaman belakang.<br>
-        <span style="font-size:7pt; letter-spacing:1px;">PRATINJAU DESAIN BERSEKA &bull; UNIKOM</span>
+        <span style="font-size:7pt; letter-spacing:1px;">UNIVERSITAS KOMPUTER INDONESIA &bull; LPPM</span>
       </div>
 
       <div class="sig-block">
@@ -663,28 +663,28 @@ function buildStudentHtml(s) {
       </div>
 
       <div class="title-sub1" style="font-size: 13.5pt;">KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026</div>
-      <div class="cert-number">Nomor sertifikat: [${nomorSert}]</div>
+      <div class="cert-number">Nomor sertifikat: ${nomorSert}</div>
       ${!isGraded ? '<div class="draft-ribbon">DRAFT &bull; MENUNGGU PENILAIAN DPL</div>' : ''}
 
       <div class="student-card-4col">
         <div class="card-col">
           <div class="card-label">Nama:</div>
-          <div class="card-val">[${formattedName}]</div>
+          <div class="card-val">${formattedName}</div>
         </div>
         <div class="card-divider"></div>
         <div class="card-col">
           <div class="card-label">NIM:</div>
-          <div class="card-val">[${s.nim}]</div>
+          <div class="card-val">${s.nim}</div>
         </div>
         <div class="card-divider"></div>
         <div class="card-col">
           <div class="card-label">Program Studi:</div>
-          <div class="card-val">[${s.prodi.toUpperCase()}]</div>
+          <div class="card-val">${s.prodi.toUpperCase()}</div>
         </div>
         <div class="card-divider"></div>
         <div class="card-col">
           <div class="card-label">SKS diambil:</div>
-          <div class="card-val">[${s.sks} SKS]</div>
+          <div class="card-val">${s.sks} SKS</div>
         </div>
       </div>
 
@@ -741,7 +741,7 @@ function buildStudentHtml(s) {
         Nilai diisi berdasarkan hasil penilaian resmi. Jumlah SKS mengikuti pengambilan peserta dan ketentuan akademik.
       </div>
       <div class="page2-footer-id">
-        [${s.idSertifikat}] &bull; Halaman 2 dari 2 &bull; PRATINJAU DESAIN
+        ${s.idSertifikat} &bull; Halaman 2 dari 2
       </div>
     </div>
   </div>
