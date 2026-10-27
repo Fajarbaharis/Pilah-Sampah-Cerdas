@@ -33,6 +33,7 @@ import {
 import toast from "react-hot-toast";
 import { useAuthStore } from "../../store/useAuthStore";
 import studentsDataRaw from "../../data/students_certificates_data.json";
+import { sertifikatKknService, type StudentCertData } from "../../services/sertifikatKknService";
 
 interface StudentCertData {
   noUrut: number;
@@ -57,10 +58,34 @@ interface StudentCertData {
   };
 }
 
-const studentsData = studentsDataRaw as StudentCertData[];
+// Base dataset loaded via live state below
 
 export const SertifikatKknPage: React.FC = () => {
   const { user } = useAuthStore();
+  const [studentsData, setStudentsData] = useState<StudentCertData[]>(studentsDataRaw as StudentCertData[]);
+  const [isLoadingLive, setIsLoadingLive] = useState<boolean>(true);
+  const [isLiveDatabase, setIsLiveDatabase] = useState<boolean>(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchLiveData = async () => {
+      try {
+        const liveList = await sertifikatKknService.getSertifikatList();
+        if (mounted && liveList && liveList.length > 0) {
+          setStudentsData(liveList);
+          setIsLiveDatabase(true);
+        }
+      } catch (err) {
+        console.warn("[SertifikatKknPage] Fallback to bundled dataset:", err);
+      } finally {
+        if (mounted) setIsLoadingLive(false);
+      }
+    };
+    fetchLiveData();
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
