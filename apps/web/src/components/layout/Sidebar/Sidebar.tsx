@@ -1445,24 +1445,29 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
                 "PIMPINAN",
               ] as UserRole[],
             },
-            {
-              to: "/sertifikat-kkn",
-              label: "E-Sertifikat KKN",
-              allowed: [
-                "DEVELOPER",
-                "DPL",
-                "DOSEN_PEMBIMBING",
-                "MPL",
-                "ADMIN_DLH",
-                "LURAH",
-                "CAMAT",
-                "RW",
-                "SUPER_USER",
-                "PANITIA_TASKFORCE",
-                "PIMPINAN",
-                "MAHASISWA_KKN",
-              ] as UserRole[],
-            },
+            ...(isStaging
+              ? [
+                  {
+                    to: "/sertifikat-kkn",
+                    label: "E-Sertifikat KKN",
+                    badge: "QC Staging",
+                    allowed: [
+                      "DEVELOPER",
+                      "DPL",
+                      "DOSEN_PEMBIMBING",
+                      "MPL",
+                      "ADMIN_DLH",
+                      "LURAH",
+                      "CAMAT",
+                      "RW",
+                      "SUPER_USER",
+                      "PANITIA_TASKFORCE",
+                      "PIMPINAN",
+                      "MAHASISWA_KKN",
+                    ] as UserRole[],
+                  },
+                ]
+              : []),
           ],
         },
         {

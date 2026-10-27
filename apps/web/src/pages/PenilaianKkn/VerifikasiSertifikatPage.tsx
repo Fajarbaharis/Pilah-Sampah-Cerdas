@@ -36,6 +36,7 @@ import {
 const fallbackStudents = studentsDataRaw as StudentCertData[];
 
 export const VerifikasiSertifikatPage: React.FC = () => {
+  const isStaging = isStagingEnv();
   const { idSertifikat } = useParams<{ idSertifikat: string }>();
 
   const [verifResult, setVerifResult] = useState<VerificationResult | null>(null);
@@ -109,7 +110,7 @@ export const VerifikasiSertifikatPage: React.FC = () => {
             </div>
           </div>
           <Link
-            to="/sertifikat-kkn"
+            to={isStaging ? "/sertifikat-kkn" : "/"}
             className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-all"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -231,13 +232,15 @@ export const VerifikasiSertifikatPage: React.FC = () => {
 
             {/* Action buttons */}
             <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-700/80">
-              <Link
-                to={`/sertifikat-kkn?nim=${student.nim}`}
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md"
-              >
-                <FileText className="w-4 h-4" />
-                Lihat Lembar Sertifikat Asli
-              </Link>
+              {isStaging && (
+                <Link
+                  to={`/sertifikat-kkn?nim=${student.nim}`}
+                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md"
+                >
+                  <FileText className="w-4 h-4" />
+                  Lihat Lembar Sertifikat Asli
+                </Link>
+              )}
               <span className="text-[11px] text-slate-500 font-mono">
                 No. Reg: {student.nomorSertifikat}
               </span>
@@ -257,10 +260,10 @@ export const VerifikasiSertifikatPage: React.FC = () => {
               </p>
             </div>
             <Link
-              to="/sertifikat-kkn"
+              to={isStaging ? "/sertifikat-kkn" : "/"}
               className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:underline pt-2"
             >
-              Kembali ke Halaman Pencarian Sertifikat
+              {isStaging ? "Kembali ke Halaman Pencarian Sertifikat" : "Kembali ke Beranda"}
             </Link>
           </div>
         )}

@@ -26,11 +26,28 @@ export const isStagingEnv = (): boolean => {
     // Ignore in non-vite contexts
   }
 
-  // Browser hostname inspection: Hanya aktif pada domain staging resmi (misal: staging.berseka.id)
+  // Browser hostname inspection: Hanya aktif pada domain staging resmi (misal: staging.berseka.id atau IP staging 157.10.160.93)
   if (typeof window !== "undefined" && window.location) {
     const host = (window.location.hostname || "").toLowerCase();
-    if (host.includes("staging.berseka.id") || host.startsWith("staging.")) {
+    if (
+      host.includes("staging.berseka.id") ||
+      host.startsWith("staging.") ||
+      host.includes("157.10.160.93")
+    ) {
       return true;
+    }
+
+    // Local storage toggle untuk fleksibilitas developer dan QA tester lokal
+    try {
+      if (
+        window.localStorage &&
+        (window.localStorage.getItem("ENABLE_STAGING_MENU") === "true" ||
+          window.localStorage.getItem("BERSEKA_STAGING_MENU") === "true")
+      ) {
+        return true;
+      }
+    } catch {
+      // Ignore storage errors
     }
   }
 
