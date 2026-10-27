@@ -3,7 +3,7 @@
  * Developed by: PT Makerindo
  * Copyright (c) 2026 PT Makerindo. All rights reserved.
  * 
- * Unit Test: Laporan Akhir KKN Sub-Modul Mandiri (Per-Individu)
+ * Unit Test: Laporan Akhir KKN Sub-Modul Tingkat Kelompok (Group-Level Submission & Visibility)
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -36,12 +36,12 @@ vi.mock("./notificationIntegrationService.js", () => ({
   },
 }));
 
-describe("LaporanAkhirService - Modul Mandiri Per-Individu", () => {
+describe("LaporanAkhirService - Modul Tingkat Kelompok (Group-Level)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("submitLaporanAkhirIndividu", () => {
+  describe("submitLaporanAkhirIndividu / submitLaporanAkhir", () => {
     it("harus menolak jika mahasiswa belum terdaftar dalam kelompok KKN", async () => {
       vi.mocked(prisma.studentKkn.findUnique).mockResolvedValue(null);
 
@@ -52,7 +52,7 @@ describe("LaporanAkhirService - Modul Mandiri Per-Individu", () => {
       ).rejects.toThrow("Mahasiswa belum terdaftar dalam kelompok KKN.");
     });
 
-    it("harus berhasil create laporan akhir baru dengan studentId dan trigger notifikasi DPL", async () => {
+    it("harus berhasil create laporan akhir baru tingkat kelompok jika belum pernah ada", async () => {
       vi.mocked(prisma.studentKkn.findUnique).mockResolvedValue({
         id: "student-1",
         userId: "user-1",
@@ -87,6 +87,12 @@ describe("LaporanAkhirService - Modul Mandiri Per-Individu", () => {
       );
 
       expect(result.id).toBe("proker-laporan-1");
+      expect(prisma.programKerjaKkn.findFirst).toHaveBeenCalledWith({
+        where: {
+          kelompokId: "kelompok-10",
+          kategori: "LAPORAN_AKHIR",
+        },
+      });
       expect(prisma.programKerjaKkn.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           kelompokId: "kelompok-10",
@@ -108,10 +114,59 @@ describe("LaporanAkhirService - Modul Mandiri Per-Individu", () => {
         })
       );
     });
+
+    it("harus memperbarui (update) laporan tingkat kelompok jika sudah pernah diunggah sebelumnya", async () => {
+      vi.mocked(prisma.studentKkn.findUnique).mockResolvedValue({
+        id: "student-2",
+        userId: "user-2",
+        kelompokId: "kelompok-10",
+        nim: "10119002",
+        user: { name: "Siti Anggota" },
+        kelompok: {
+          id: "kelompok-10",
+          name: "Kelompok 10 Coblong",
+          dplId: "dpl-user-99",
+        },
+      } as any);
+
+      vi.mocked(prisma.programKerjaKkn.findFirst).mockResolvedValue({
+        id: "proker-laporan-existing",
+        kelompokId: "kelompok-10",
+        studentId: "student-1",
+        kategori: "LAPORAN_AKHIR",
+      } as any);
+
+      vi.mocked(prisma.programKerjaKkn.update).mockResolvedValue({
+        id: "proker-laporan-existing",
+        kelompokId: "kelompok-10",
+        studentId: "student-2", // Tercatat pengunggah versi revisi
+        attachmentFile: "/uploads/revisi-siti.pdf",
+        statusUsulan: "MENUNGGU_TELAAH",
+      } as any);
+
+      const result = await laporanAkhirService.submitLaporanAkhir(
+        "user-2",
+        {
+          judul: "Laporan Akhir KKN Kelompok 10 (Revisi)",
+          deskripsi: "Perbaikan Bab 4",
+        },
+        { filename: "revisi-siti.pdf" } as any
+      );
+
+      expect(result.id).toBe("proker-laporan-existing");
+      expect(prisma.programKerjaKkn.update).toHaveBeenCalledWith({
+        where: { id: "proker-laporan-existing" },
+        data: expect.objectContaining({
+          studentId: "student-2",
+          attachmentFile: "/uploads/revisi-siti.pdf",
+          statusUsulan: "MENUNGGU_TELAAH",
+        }),
+      });
+    });
   });
 
   describe("getLaporanAkhirMe", () => {
-    it("harus mengembalikan data null jika mahasiswa belum mengunggah laporan", async () => {
+    it("harus mengembalikan data null jika kelompok belum mengunggah laporan", async () => {
       vi.mocked(prisma.studentKkn.findUnique).mockResolvedValue({
         id: "student-1",
         userId: "user-1",
@@ -125,9 +180,24 @@ describe("LaporanAkhirService - Modul Mandiri Per-Individu", () => {
 
       expect(res.hasSubmitted).toBe(false);
       expect(res.data).toBeNull();
+      expect(prisma.programKerjaKkn.findFirst).toHaveBeenCalledWith({
+        where: {
+          kelompokId: "kelompok-10",
+          kategori: "LAPORAN_AKHIR",
+        },
+        include: {
+          student: {
+            include: {
+              user: { select: { id: true, name: true, phone: true } },
+            },
+          },
+        },
+        orderBy: { updatedAt: "desc" },
+      });
     });
 
-    it("harus mengembalikan laporan spesifik milik studentId login (isolasi individu)", async () => {
+    it("harus mengembalikan laporan tingkat kelompok dan mengidentifikasi pengunggah (submittedBy) untuk rekan sekelompok", async () => {
+      // Mahasiswa B (Siti) login, melihat dokumen yang diunggah oleh Mahasiswa A (Budi)
       vi.mocked(prisma.studentKkn.findUnique).mockResolvedValue({
         id: "student-2",
         userId: "user-2",
@@ -135,40 +205,98 @@ describe("LaporanAkhirService - Modul Mandiri Per-Individu", () => {
         user: { name: "Siti Mahasiswa" },
         kelompokId: "kelompok-10",
         kelompok: {
-          name: "Kelompok 10",
+          name: "Kelompok 10 Coblong",
           dpl: { id: "dpl-1", name: "Dr. Dosen", phone: "0812345" },
         },
       } as any);
 
       vi.mocked(prisma.programKerjaKkn.findFirst).mockResolvedValue({
-        id: "laporan-siti",
-        studentId: "student-2",
+        id: "laporan-kelompok-10",
+        kelompokId: "kelompok-10",
+        studentId: "student-1", // Diunggah oleh Budi
         kategori: "LAPORAN_AKHIR",
-        deskripsi: "**Laporan Akhir KKN - Siti**\n\nIsi abstrak laporan",
-        attachmentFile: "/uploads/laporan-siti.pdf",
+        deskripsi: "**Laporan Akhir KKN Kelompok 10**\n\nIsi abstrak laporan kelompok",
+        attachmentFile: "/uploads/laporan-kelompok-10.pdf",
         statusUsulan: "DISETUJUI",
         statusPenilaian: "DISETUJUI",
         skorPenilaian: 90,
         predikat: "A (Sangat Baik)",
         createdAt: new Date("2026-10-01T10:00:00Z"),
         updatedAt: new Date("2026-10-02T10:00:00Z"),
+        student: {
+          nim: "10119001",
+          user: { id: "user-1", name: "Budi Ketua Kelompok", phone: "08111" },
+        },
       } as any);
 
       const res = await laporanAkhirService.getLaporanAkhirMe("user-2");
 
       expect(prisma.programKerjaKkn.findFirst).toHaveBeenCalledWith({
         where: {
-          studentId: "student-2",
+          kelompokId: "kelompok-10",
           kategori: "LAPORAN_AKHIR",
+        },
+        include: {
+          student: {
+            include: {
+              user: { select: { id: true, name: true, phone: true } },
+            },
+          },
         },
         orderBy: { updatedAt: "desc" },
       });
 
       expect(res.hasSubmitted).toBe(true);
-      expect(res.id).toBe("laporan-siti");
+      expect(res.id).toBe("laporan-kelompok-10");
       expect(res.nilaiAkhir).toBe(90);
       expect(res.statusTelaah).toBe("DISETUJUI");
+      expect(res.submittedBy).toBe("Budi Ketua Kelompok");
+      expect(res.submittedByNim).toBe("10119001");
       expect(res.dpl?.name).toBe("Dr. Dosen");
+      expect(res.laporan.submittedBy).toBe("Budi Ketua Kelompok");
+      expect(res.data.submittedBy).toBe("Budi Ketua Kelompok");
+    });
+  });
+
+  describe("getLaporanAkhirHistory", () => {
+    it("harus mengembalikan riwayat versi laporan tingkat kelompok", async () => {
+      vi.mocked(prisma.studentKkn.findUnique).mockResolvedValue({
+        id: "student-1",
+        userId: "user-1",
+        kelompokId: "kelompok-10",
+      } as any);
+
+      vi.mocked(prisma.programKerjaKkn.findMany).mockResolvedValue([
+        {
+          id: "lap-rev-2",
+          kelompokId: "kelompok-10",
+          studentId: "student-2",
+          deskripsi: "**Laporan Akhir KKN (Rev 2)**\n\nPerbaikan Bab 3",
+          attachmentFile: "/uploads/lap-rev2.pdf",
+          skorPenilaian: 88,
+          statusUsulan: "DISETUJUI",
+          statusPenilaian: "DISETUJUI",
+          predikat: "A (Sangat Baik)",
+          createdAt: new Date("2026-10-03T10:00:00Z"),
+          updatedAt: new Date("2026-10-03T10:00:00Z"),
+          student: {
+            nim: "10119002",
+            user: { id: "u-2", name: "Siti", phone: "082" },
+          },
+          kelompok: {
+            name: "Kelompok 10 Coblong",
+            dpl: { id: "d-1", name: "Dr. Dosen", phone: "081" },
+          },
+        } as any,
+      ]);
+
+      const history = await laporanAkhirService.getLaporanAkhirHistory("user-1");
+
+      expect(history.length).toBe(1);
+      expect(history[0].id).toBe("lap-rev-2");
+      expect(history[0].submittedBy).toBe("Siti");
+      expect(history[0].submittedByNim).toBe("10119002");
+      expect(history[0].statusTelaah).toBe("DISETUJUI");
     });
   });
 
