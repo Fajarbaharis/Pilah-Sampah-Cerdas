@@ -269,6 +269,25 @@ Setiap pengembang maupun asisten AI wajib mematuhi 3 pilar perlindungan sistem b
 
 ---
 
+### H. 27 Oktober 2026 - Penyelarasan Modul Laporan Akhir KKN Mahasiswa ke Tingkat Kelompok (Group-Level Submission & Visibility - 030/MEMO-ENG/BERSEKA-BACKEND/X/2026)
+- **Konteks & Kebutuhan Operasional**:
+  1. Penyelarasan tata kelola operasional KKN Tematik BERSEKA di mana dokumen Laporan Akhir KKN merupakan pertanggungjawaban komprehensif tingkat **KELOMPOK**.
+  2. Pengunggahan dapat diwakili oleh Ketua Kelompok ataupun salah satu anggota kelompok.
+  3. Seluruh rekan sekelompok kini dapat melihat berkas dokumen yang telah diajukan, nama pengunggah (`submittedBy`), NIM pengunggah (`submittedByNim`), status telaah DPL (`BELUM_UNGGAH`, `MENUNGGU_TELAAH`, `PERLU_REVISI`, `DISETUJUI`), catatan revisi, predikat, dan skor rubrik penilaian secara transparan.
+- **Implementasi Master Backend (`apps/api/src/services/laporanAkhirService.ts`)**:
+  1. `getLaporanAkhirMe(userId)`: Kueri diubah dari pencarian terisolasi `studentId` menjadi pencarian berbasis `kelompokId: student.kelompokId`. Mengembalikan atribut identifikasi pengunggah `submittedBy` dan `submittedByNim` dengan payload ganda (flat dan nested `laporan` & `data`) untuk kompatibilitas penuh klien Mobile Flutter & Web.
+  2. `getLaporanAkhirHistory(userId)`: Kueri riwayat revisi berbasis `kelompokId` sehingga histori berkas dan versi revisi kelompok tampil seragam bagi seluruh anggota kelompok.
+  3. `submitLaporanAkhirIndividu` / `submitLaporanAkhir(userId, payload, file)`: Mengunggah atau memperbarui record Laporan Akhir tingkat kelompok (`kelompokId`), mencatat `studentId` pengunggah versi terakhir, memperbarui status telaah ke `MENUNGGU_TELAAH`, serta meneruskan notifikasi otomatis ke DPL kelompok.
+- **Validasi Mutu & Quality Gate**:
+  - `npm run build --prefix apps/api`: 0 error (100% Pass).
+  - Vitest Test Suite DPL (30 tests): 100% Green (`dplApproval.test.ts`, `logbookVerifikasi.test.ts`, `penilaianKknRoleGuard.test.ts`).
+  - Vitest Test Suite Laporan Akhir (`laporanAkhirService.test.ts`): 7/7 tests 100% Green.
+  - Skema Database Prisma (`schema.prisma`): 0 perubahan (100% aman bagi integritas database VPS).
+- **Alur Integrasi Git-Flow**:
+  - Dikerjakan pada branch `feat/laporan-akhir-group-level` (bercabang dari `development`).
+
+---
+
 ## 5. Direktori & Arsip Dokumen
 
 Semua laporan audit berkala, investigasi teknis perorangan, dan dokumen historis telah dirapikan ke dalam folder:
