@@ -1,6 +1,8 @@
 import { prisma } from "../lib/prisma.js";
 import { configService } from "./configService.js";
 import { notificationIntegrationService } from "./notificationIntegrationService.js";
+import { parseProkerDeskripsi } from "./dplService.js";
+import { cleanLaporanTitle } from "./laporanAkhirService.js";
 import { isTestUser, isTestKelompok, isTestStudent } from "../utils/filterTestingUtils.js";
 /**
  * Project: BERSEKA
@@ -1363,9 +1365,11 @@ export const penilaianKknService = {
           : null;
 
       const groupName = k.name || `Kelompok ${index + 1}`;
-      const judulLaporan = primaryProker?.deskripsi
-        ? `Laporan Akhir KKN: ${primaryProker.deskripsi}`
-        : `Laporan Akhir KKN Tematik Coblong - ${groupName}`;
+      const parsed = primaryProker ? parseProkerDeskripsi(primaryProker.deskripsi) : null;
+      const judulLaporan = cleanLaporanTitle(
+        parsed?.judul || primaryProker?.deskripsi,
+        groupName
+      );
 
       const fileUrl = primaryProker?.linkGoogleDrive || primaryProker?.attachmentFile || null;
       const fileName = fileUrl ? `Laporan_Akhir_${groupName.replace(/\s+/g, "_")}.pdf` : null;
