@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { laporanAkhirService } from "./laporanAkhirService.js";
+import { laporanAkhirService, cleanLaporanTitle } from "./laporanAkhirService.js";
 import { prisma } from "../lib/prisma.js";
 import { notificationIntegrationService } from "./notificationIntegrationService.js";
 
@@ -92,6 +92,7 @@ describe("LaporanAkhirService - Modul Tingkat Kelompok (Group-Level)", () => {
           kelompokId: "kelompok-10",
           kategori: "LAPORAN_AKHIR",
         },
+        orderBy: { updatedAt: "desc" },
       });
       expect(prisma.programKerjaKkn.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -134,6 +135,7 @@ describe("LaporanAkhirService - Modul Tingkat Kelompok (Group-Level)", () => {
         kelompokId: "kelompok-10",
         studentId: "student-1",
         kategori: "LAPORAN_AKHIR",
+        statusUsulan: "PERLU_REVISI",
       } as any);
 
       vi.mocked(prisma.programKerjaKkn.update).mockResolvedValue({
@@ -164,6 +166,54 @@ describe("LaporanAkhirService - Modul Tingkat Kelompok (Group-Level)", () => {
       });
     });
   });
+
+
+    it("harus menolak pengajuan baru jika kelompok sudah mengajukan dan status belum revisi/ditolak", async () => {
+      vi.mocked(prisma.studentKkn.findUnique).mockResolvedValue({
+        id: "student-2",
+        userId: "user-2",
+        kelompokId: "kelompok-10",
+        user: { name: "Siti" },
+        kelompok: { id: "kelompok-10", name: "Kelompok 10" },
+      } as any);
+
+      vi.mocked(prisma.programKerjaKkn.findFirst).mockResolvedValue({
+        id: "proker-laporan-1",
+        kelompokId: "kelompok-10",
+        statusUsulan: "MENUNGGU_TELAAH",
+        statusPenilaian: "BELUM_DINILAI",
+      } as any);
+
+      await expect(
+        laporanAkhirService.submitLaporanAkhir("user-2", {
+          linkGoogleDrive: "https://drive.google.com/file/d/123",
+          judul: "Laporan Akhir Kelompok 10",
+        })
+      ).rejects.toThrow(
+        "Kelompok Anda sudah mengajukan Laporan Akhir KKN. Pengajuan hanya dapat dilakukan 1 kali kecuali jika DPL meminta revisi."
+      );
+    });
+
+    it("harus menolak jika tautan Google Drive / berkas kosong", async () => {
+      vi.mocked(prisma.studentKkn.findUnique).mockResolvedValue({
+        id: "student-1",
+        userId: "user-1",
+        kelompokId: "kelompok-10",
+      } as any);
+
+      await expect(
+        laporanAkhirService.submitLaporanAkhir("user-1", {
+          judul: "Laporan Akhir KKN",
+        })
+      ).rejects.toThrow("Tautan Google Drive Laporan Akhir wajib dicantumkan.");
+    });
+
+    it("cleanLaporanTitle harus menormalkan asterisks markdown dan duplicate prefixes", () => {
+      expect(cleanLaporanTitle("Laporan Akhir KKN: Laporan Akhir KKN: **[wulan mahasiswa] laporan akhir yy**")).toBe("Laporan Akhir KKN: [wulan mahasiswa] laporan akhir yy");
+      expect(cleanLaporanTitle("Laporan Akhir KKN Kelompok 10 Coblong")).toBe("Laporan Akhir KKN Kelompok 10 Coblong");
+      expect(cleanLaporanTitle("**Judul Proyek Inovasi**")).toBe("Laporan Akhir KKN: Judul Proyek Inovasi");
+      expect(cleanLaporanTitle("", "Kelompok 10")).toBe("Laporan Akhir KKN Kelompok 10");
+    });
 
   describe("getLaporanAkhirMe", () => {
     it("harus mengembalikan data null jika kelompok belum mengunggah laporan", async () => {

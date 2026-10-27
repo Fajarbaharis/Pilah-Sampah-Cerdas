@@ -9,6 +9,27 @@ import { prisma } from "../lib/prisma.js";
 import { parseProkerDeskripsi } from "./dplService.js";
 import { notificationIntegrationService } from "./notificationIntegrationService.js";
 
+/**
+ * Helper untuk menormalisasi dan membersihkan judul Laporan Akhir
+ * Menghilangkan artefak markdown asterisks (**), backticks, dan mencegah penumpukan prefix 'Laporan Akhir KKN:'
+ */
+export function cleanLaporanTitle(rawTitle?: string | null, fallbackGroup?: string): string {
+  if (!rawTitle || !rawTitle.trim()) {
+    return fallbackGroup ? ("Laporan Akhir KKN " + fallbackGroup) : "Laporan Akhir KKN";
+  }
+  let clean = rawTitle.trim().replace(/^[*`_]+|[*`_]+$/g, "").trim();
+  while (/^laporan\s+akhir(\s+kkn)?\s*:\s*/i.test(clean)) {
+    clean = clean.replace(/^laporan\s+akhir(\s+kkn)?\s*:\s*/i, "").trim();
+  }
+  clean = clean.replace(/^[*`_]+|[*`_]+$/g, "").trim();
+  if (!clean) {
+    return fallbackGroup ? ("Laporan Akhir KKN " + fallbackGroup) : "Laporan Akhir KKN";
+  }
+  return clean.toLowerCase().startsWith("laporan akhir")
+    ? clean
+    : ("Laporan Akhir KKN: " + clean);
+}
+
 export class LaporanAkhirService {
   /**
    * Mengunggah / Memperbarui Laporan Akhir Tingkat Kelompok oleh Perwakilan Mahasiswa
@@ -28,30 +49,52 @@ export class LaporanAkhirService {
       throw new Error("Mahasiswa belum terdaftar dalam kelompok KKN.");
     }
 
-    const fileUrl = file ? `/uploads/${file.filename}` : payload.fileUrl;
+    // 1. Ekstraksi dan Validasi URL Tautan Google Drive / Dokumen
+    const fileUrl = (payload.linkGoogleDrive || payload.fileUrl || (file ? ("/uploads/" + file.filename) : "") || "").trim();
     if (!fileUrl) {
-      throw new Error("Berkas PDF Laporan Akhir wajib diunggah.");
+      throw new Error("Tautan Google Drive Laporan Akhir wajib dicantumkan.");
     }
 
-    const defaultJudul = `Laporan Akhir KKN ${student.kelompok?.name || student.user?.name || student.nim}`;
-    const judulStr = (payload.judul || defaultJudul).trim();
-    const deskripsiStr = (payload.deskripsi || "").trim();
-    const formattedDeskripsi = `**${judulStr}**\n\n${deskripsiStr}`;
+    // 2. Normalisasi Judul & Deskripsi (Pembersihan Artefak Markdown & Duplikasi Awalan)
+    const defaultJudul = "Laporan Akhir KKN " + (student.kelompok?.name || student.user?.name || student.nim);
+    const rawJudul = (payload.judul || defaultJudul).trim();
+    const cleanTitle = cleanLaporanTitle(rawJudul, student.kelompok?.name || "Kelompok");
+    const deskripsiMurni = (payload.deskripsi || "").trim().replace(/^[*`_]+|[*`_]+$/g, "").trim();
+    const formattedDeskripsi = "**" + cleanTitle + "**\n\n" + deskripsiMurni;
 
-    // Cek apakah kelompok ini sudah pernah submit sebelumnya (Tingkat Kelompok)
+    // 3. Cari rekam jejak Laporan Akhir milik KELOMPOK ini (Tingkat Kelompok)
     const existing = await prisma.programKerjaKkn.findFirst({
       where: {
         kelompokId: student.kelompokId,
         kategori: "LAPORAN_AKHIR",
       },
+      orderBy: { updatedAt: "desc" },
     });
+
+    // 4. VALIDATION GUARD (Single-Submission Lock): Cegah duplikasi submit jika belum ditolak/diminta revisi DPL
+    if (existing) {
+      const statusSaatIni = existing.statusUsulan || existing.status;
+      const statusNilai = existing.statusPenilaian;
+      const isDitolakAtauRevisi =
+        statusSaatIni === "PERLU_REVISI" ||
+        statusSaatIni === "DITOLAK" ||
+        statusNilai === "PERLU_REVISI" ||
+        statusNilai === "DITOLAK";
+
+      if (!isDitolakAtauRevisi) {
+        throw new Error(
+          "Kelompok Anda sudah mengajukan Laporan Akhir KKN. Pengajuan hanya dapat dilakukan 1 kali kecuali jika DPL meminta revisi."
+        );
+      }
+    }
 
     let result;
     if (existing) {
+      // Mode Revisi Kelompok: Perbarui data laporan yang ada
       result = await prisma.programKerjaKkn.update({
         where: { id: existing.id },
         data: {
-          studentId: student.id, // Perbarui pencatat pengunggah versi terakhir
+          studentId: student.id, // Perbarui pencatat pengunggah revisi terbaru
           deskripsi: formattedDeskripsi,
           attachmentFile: fileUrl,
           linkGoogleDrive: fileUrl,
@@ -63,6 +106,7 @@ export class LaporanAkhirService {
         },
       });
     } else {
+      // Mode Pengajuan Pertama Kali oleh Kelompok
       result = await prisma.programKerjaKkn.create({
         data: {
           kelompokId: student.kelompokId,
@@ -193,7 +237,7 @@ export class LaporanAkhirService {
 
     const payloadDetail = {
       id: laporan.id,
-      judul: parsed.judul || `Laporan Akhir KKN ${student.kelompok?.name || "Kelompok"}`,
+      judul: cleanLaporanTitle(parsed.judul, student.kelompok?.name || "Kelompok"),
       deskripsi: parsed.deskripsi || laporan.deskripsi,
       fileUrl,
       fileName: fileUrl
@@ -286,7 +330,7 @@ export class LaporanAkhirService {
 
       return {
         id: item.id,
-        judul: parsed.judul || `Laporan Akhir KKN ${item.kelompok?.name || ""}`,
+        judul: cleanLaporanTitle(parsed.judul, item.kelompok?.name || "Kelompok"),
         deskripsi: parsed.deskripsi || item.deskripsi,
         fileUrl,
         fileName: fileUrl ? `Laporan_Akhir_${item.id.slice(-6)}.pdf` : null,
@@ -374,7 +418,7 @@ export class LaporanAkhirService {
         isKetua: Boolean(st.isKetua),
         hasSubmitted,
         laporanId: laporan?.id || null,
-        judulLaporan: parsed.judul || null,
+        judulLaporan: cleanLaporanTitle(parsed.judul, kelompok.name),
         fileUrl,
         fileName: fileUrl ? `Laporan_Akhir_${(st.user?.name || st.nim).replace(/\s+/g, "_")}.pdf` : null,
         statusTelaah,
