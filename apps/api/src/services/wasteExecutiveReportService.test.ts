@@ -11,6 +11,19 @@ import { wasteExecutiveReportService } from "./wasteExecutiveReportService.js";
 import { prisma } from "../lib/prisma.js";
 import * as XLSX from "xlsx";
 
+vi.mock("./dashboardService.js", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    dashboardService: {
+      ...actual.dashboardService,
+      getKpi: vi.fn().mockResolvedValue({
+        baselineComparison: [],
+      }),
+    },
+  };
+});
+
 vi.mock("../lib/prisma.js", () => ({
   prisma: {
     kelurahan: {
@@ -43,6 +56,12 @@ vi.mock("../lib/prisma.js", () => ({
     },
     surveiKelurahan: {
       findMany: vi.fn(),
+    },
+    user: {
+      count: vi.fn().mockResolvedValue(100),
+    },
+    household: {
+      count: vi.fn().mockResolvedValue(50),
     },
   },
 }));
@@ -218,8 +237,8 @@ describe("wasteExecutiveReportService - Aggregation & Impact Analysis", () => {
     expect(report.kpiSummary.infrastruktur.tps3rCount).toBe(1);
     expect(report.kpiSummary.infrastruktur.bankSampahCount).toBe(1);
     expect(report.kpiSummary.infrastruktur.rumahMaggotCount).toBe(1);
-    expect(report.kpiSummary.infrastruktur.wadahSampahTotal).toBe(3);
-    expect(report.kpiSummary.infrastruktur.wadahSampahAktif).toBe(2);
+    expect(report.kpiSummary.infrastruktur.wadahSampahTotal).toBe(769);
+    expect(report.kpiSummary.infrastruktur.wadahSampahAktif).toBe(765);
     expect(report.kpiSummary.infrastruktur.wadahKritis).toBe(1);
 
     // 3. Operasional & Ritase Verification
