@@ -74,8 +74,8 @@ export const laporanKknService = {
     if (score >= 65) return "B-";
     if (score >= 60) return "C+";
     if (score >= 55) return "C";
-    if (score >= 50) return "D";
-    if (score > 0) return "Belum Lengkap";
+    if (score >= 40) return "D";
+    if (score > 0) return "E";
     return "Belum Dinilai";
   },
 
