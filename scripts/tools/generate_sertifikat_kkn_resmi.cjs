@@ -728,15 +728,11 @@ function buildStudentHtml(s) {
         </tbody>
       </table>
 
-      ${!isGraded ? `
-        <div style="margin-top: 15px; background: #FEF3C7; border: 1.5px solid #F59E0B; border-radius: 8px; padding: 6px 18px; font-size: 9.5pt; color: #92400E; font-weight: 700;">
-          Status Yudisium: BELUM DINILAI OLEH DPL (Nilai belum diinput di sistem)
-        </div>
-      ` : `
+      ${isGraded ? `
         <div style="margin-top: 15px; background: #ECFDF5; border: 1.5px solid #10B981; border-radius: 8px; padding: 6px 18px; font-size: 9.5pt; color: #065F46; font-weight: 700;">
           Nilai Akhir: ${s.nilai.total.toFixed(2)} &bull; Predikat: ${s.nilai.predikat}
         </div>
-      `}
+      ` : ''}
     </div>
 
     <div class="page2-bottom">

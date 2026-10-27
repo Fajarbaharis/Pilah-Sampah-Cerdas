@@ -904,12 +904,8 @@ export const SertifikatKknPage: React.FC = () => {
                 </tbody>
               </table>
 
-              {/* Status Badge below table */}
-              {!isGraded ? (
-                <div className="mt-3 bg-[#FEF3C7] border-[1.5px] border-[#F59E0B] rounded-lg py-1.5 px-4 text-[9px] md:text-[9.5pt] font-bold text-[#92400E] text-center">
-                  Status Yudisium: BELUM DINILAI OLEH DPL (Nilai belum diinput di sistem)
-                </div>
-              ) : (
+              {/* Status Badge below table - hanya muncul jika sudah lulus & dinilai resmi */}
+              {isGraded && (
                 <div className="mt-3 bg-[#ECFDF5] border-[1.5px] border-[#10B981] rounded-lg py-1.5 px-4 text-[9px] md:text-[9.5pt] font-bold text-[#065F46] text-center">
                   Nilai Akhir: {selectedStudent.nilai.total.toFixed(2)} &bull; Predikat: {selectedStudent.nilai.predikat}
                 </div>
