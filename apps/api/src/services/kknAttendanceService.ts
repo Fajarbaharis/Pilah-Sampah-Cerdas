@@ -4209,6 +4209,19 @@ export class KknAttendanceService {
       const progressPercentage =
         Math.round((totalMinutes / (TARGET_TOTAL_MINUTES || 1)) * 1000) / 10;
 
+      // ── VIRTUAL FORMULAIC AGGREGATION: PRA-KEGIATAN KKN (100 Jam Flat) ──
+      // Berdasarkan SK Universitas / Simulasi Durasi Pra-Kegiatan No. 6-12 (Total 100 Jam Flat)
+      const PRA_KEGIATAN_HOURS = 100;
+      const PRA_KEGIATAN_MINUTES = PRA_KEGIATAN_HOURS * 60; // 6000 menit
+
+      const fieldMinutes = totalMinutes;
+      const fieldHours = hours;
+      const fieldMins = mins;
+
+      const accumulatedMinutes = fieldMinutes + PRA_KEGIATAN_MINUTES;
+      const accumulatedHours = Math.floor(accumulatedMinutes / 60);
+      const accumulatedMins = accumulatedMinutes % 60;
+
       return {
         studentId: s.userId,
         studentName: s.user.name,
@@ -4221,6 +4234,24 @@ export class KknAttendanceService {
         kelompokName: s.kelompok?.name || "Tanpa Kelompok",
         kelurahan: s.kelompok?.kelurahan || "-",
         assignedRwName: s.assignedRw?.name || "-",
+
+        // 1. Jam Lapangan Murni (Sesuai Kolom Excel Gambar 2: contoh "285 jam 10 menit")
+        jamLapanganMinutes: fieldMinutes,
+        jamLapanganHours: fieldHours,
+        jamLapanganRemainingMinutes: fieldMins,
+        jamLapanganFormatted: `${fieldHours} jam ${fieldMins} menit`,
+
+        // 2. Total Pra-Kegiatan (Sesuai Kolom Excel Gambar 2: "100 jam")
+        jamPraKegiatanHours: PRA_KEGIATAN_HOURS,
+        jamPraKegiatanMinutes: PRA_KEGIATAN_MINUTES,
+        jamPraKegiatanFormatted: `${PRA_KEGIATAN_HOURS} jam`,
+
+        // 3. Total Akumulasi KKN (Waktu Aktual = Jam Lapangan + 100 Jam Pra-Kegiatan)
+        totalAkumulasiMinutes: accumulatedMinutes,
+        totalAkumulasiHours: accumulatedHours,
+        totalAkumulasiRemainingMinutes: accumulatedMins,
+        totalAkumulasiFormatted: `${accumulatedHours} jam ${accumulatedMins} menit`,
+
         totalMinutes,
         totalHours: hours,
         remainingMinutes: mins,
@@ -6718,10 +6749,40 @@ export class KknAttendanceService {
               ? `${avgHours} Jam`
               : `${avgHours} Jam ${avgRemainderMins} Menit`;
 
+        // ── VIRTUAL FORMULAIC AGGREGATION: PRA-KEGIATAN KKN (100 Jam Flat) ──
+        const PRA_KEGIATAN_HOURS = 100;
+        const PRA_KEGIATAN_MINUTES = PRA_KEGIATAN_HOURS * 60; // 6000 menit
+
+        const fieldMinutes = agg.totalMinutes;
+        const fieldHours = Math.floor(fieldMinutes / 60);
+        const fieldMins = fieldMinutes % 60;
+
+        const accumulatedMinutes = fieldMinutes + PRA_KEGIATAN_MINUTES;
+        const accumulatedHours = Math.floor(accumulatedMinutes / 60);
+        const accumulatedMins = accumulatedMinutes % 60;
+
         return {
           ...agg,
           kelompokName: agg.kelompok?.name || agg.kelompokName || "-",
           dplName: agg.kelompok?.dplName || agg.dplName || "-",
+
+          // 1. Jam Lapangan Murni (Sesuai Kolom Excel Gambar 2: contoh "285 jam 10 menit")
+          jamLapanganMinutes: fieldMinutes,
+          jamLapanganHours: fieldHours,
+          jamLapanganRemainingMinutes: fieldMins,
+          jamLapanganFormatted: `${fieldHours} jam ${fieldMins} menit`,
+
+          // 2. Total Pra-Kegiatan (Sesuai Kolom Excel Gambar 2: "100 jam")
+          jamPraKegiatanHours: PRA_KEGIATAN_HOURS,
+          jamPraKegiatanMinutes: PRA_KEGIATAN_MINUTES,
+          jamPraKegiatanFormatted: `${PRA_KEGIATAN_HOURS} jam`,
+
+          // 3. Total Akumulasi KKN (Waktu Aktual = Jam Lapangan + 100 Jam Pra-Kegiatan)
+          totalAkumulasiMinutes: accumulatedMinutes,
+          totalAkumulasiHours: accumulatedHours,
+          totalAkumulasiRemainingMinutes: accumulatedMins,
+          totalAkumulasiFormatted: `${accumulatedHours} jam ${accumulatedMins} menit`,
+
           totalHours: Math.round((agg.totalMinutes / 60) * 10) / 10,
           totalFormatted,
           avgMinutesPerDay: avgMins,
