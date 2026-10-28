@@ -310,8 +310,8 @@ export const SertifikatKknPage: React.FC = () => {
 
   const rawNomor = selectedStudent.nomorSertifikat || "";
   const formattedNomor = rawNomor && !rawNomor.includes("DRAFT")
-    ? rawNomor
-    : `KKNT/${String(selectedStudent.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`;
+    ? (rawNomor.startsWith("KKNT/") ? rawNomor.replace("KKNT/", "KKNT-MHS/") : rawNomor)
+    : `KKNT-MHS/${String(selectedStudent.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`;
 
   const formattedName = selectedStudent.nama ? selectedStudent.nama.toUpperCase().trim() : '';
   const tanggalTerbit = selectedStudent.tanggalTerbit && selectedStudent.tanggalTerbit !== "Menunggu Penilaian"
@@ -415,9 +415,10 @@ export const SertifikatKknPage: React.FC = () => {
     };
 
     const rows = targetStudents.map((s) => {
-      const nomor = s.nomorSertifikat && !s.nomorSertifikat.includes("DRAFT")
-        ? s.nomorSertifikat
-        : `KKNT/${String(s.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`;
+      const rawNomor = s.nomorSertifikat || "";
+      const nomor = rawNomor && !rawNomor.includes("DRAFT")
+        ? (rawNomor.startsWith("KKNT/") ? rawNomor.replace("KKNT/", "KKNT-MHS/") : rawNomor)
+        : `KKNT-MHS/${String(s.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`;
       const tgl = s.tanggalTerbit && s.tanggalTerbit !== "Menunggu Penilaian"
         ? s.tanggalTerbit
         : "10 November 2026";
@@ -985,13 +986,13 @@ export const SertifikatKknPage: React.FC = () => {
               
             </div>
 
-            {/* Title SERTIFIKAT */}
-            <div className="flex items-center justify-center gap-4 mt-4 md:mt-5 w-full">
-              <div className="h-[1.5px] bg-[#C5A059] w-16 md:w-28" />
+            {/* Title SERTIFIKAT - Safe Decorative Lines Flanking (Anti-Bentrok Logo) */}
+            <div className="flex items-center justify-center gap-3 md:gap-4 mt-3 md:mt-4 w-full">
+              <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
               <h2 className="cert-title-main font-cinzel text-2xl md:text-4xl font-extrabold text-[#0A2540] tracking-[3px] m-0 leading-none">
                 SERTIFIKAT
               </h2>
-              <div className="h-[1.5px] bg-[#C5A059] w-16 md:w-28" />
+              <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
             </div>
 
             <div className="cert-title-sub1 text-xs md:text-[15.5pt] font-extrabold text-[#005AA9] tracking-wide mt-1.5 uppercase">
@@ -1028,32 +1029,9 @@ export const SertifikatKknPage: React.FC = () => {
               Program Studi: {selectedStudent.prodi}
             </div>
 
-            {/* Narration 450 Jam */}
-            <div className="cert-narration text-[9px] md:text-[10.5pt] text-[#0A2540] text-center max-w-[620px] md:max-w-[660px] leading-relaxed mt-3.5 md:mt-4 font-sans">
+            {/* Narration 450 Jam (Lapang & Elegan di Halaman 1) */}
+            <div className="cert-narration text-[10px] md:text-[11.5pt] text-[#0A2540] text-center max-w-[620px] md:max-w-[700px] leading-relaxed mt-5 md:mt-8 font-sans">
               Telah mengikuti Kuliah Kerja Nyata (KKN) Tematik Batch I Universitas Komputer Indonesia pada periode Juli–Oktober 2026 dengan total beban kegiatan 450 jam.
-            </div>
-
-            {/* 3 Columns Hours Breakdown */}
-            <div className="flex items-center justify-center w-full max-w-[620px] md:max-w-[660px] mt-2.5">
-              <div className="flex-1 text-center px-2">
-                <div className="cert-hours-label text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Persiapan</div>
-                <div className="cert-hours-val text-base md:text-[16pt] font-extrabold text-[#005AA9]">100 jam</div>
-              </div>
-              <div className="w-[1.5px] h-8 md:h-[38px] bg-[#C5A059] shrink-0" />
-              <div className="flex-1 text-center px-2">
-                <div className="cert-hours-label text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Pelaksanaan di lapangan</div>
-                <div className="cert-hours-val text-base md:text-[16pt] font-extrabold text-[#005AA9]">250 jam</div>
-              </div>
-              <div className="w-[1.5px] h-8 md:h-[38px] bg-[#C5A059] shrink-0" />
-              <div className="flex-1 text-center px-2">
-                <div className="cert-hours-label text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Evaluasi dan pelaporan</div>
-                <div className="cert-hours-val text-base md:text-[16pt] font-extrabold text-[#005AA9]">100 jam</div>
-              </div>
-            </div>
-
-            {/* TOTAL 450 JAM */}
-            <div className="cert-total-hours font-cinzel text-xs md:text-[13pt] font-extrabold text-[#0A2540] tracking-[2px] mt-1.5">
-              TOTAL 450 JAM
             </div>
 
             {/* Page 1 Bottom: Signature Block */}
@@ -1107,20 +1085,17 @@ export const SertifikatKknPage: React.FC = () => {
               
             </div>
 
-            {/* Title REKAP PENILAIAN PESERTA */}
-            <div className="flex items-center justify-center gap-4 mt-4 md:mt-5 w-full">
-              <div className="h-[1.5px] bg-[#C5A059] w-12 md:w-24" />
-              <h2 className="cert-page2-title font-cinzel text-xl md:text-[26pt] font-extrabold text-[#0A2540] tracking-[2px] m-0 leading-none">
+            {/* Title REKAP PENILAIAN PESERTA - Safe Decorative Lines */}
+            <div className="flex items-center justify-center gap-3 md:gap-4 mt-3 md:mt-4 w-full">
+              <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
+              <h2 className="cert-page2-title font-cinzel text-xl md:text-[24pt] font-extrabold text-[#0A2540] tracking-[2px] m-0 leading-none">
                 REKAP PENILAIAN PESERTA
               </h2>
-              <div className="h-[1.5px] bg-[#C5A059] w-12 md:w-24" />
+              <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
             </div>
 
-            <div className="cert-title-sub1 text-[11px] md:text-[13.5pt] font-extrabold text-[#005AA9] tracking-wide mt-1.5 uppercase">
+            <div className="cert-title-sub1 text-[11px] md:text-[13pt] font-extrabold text-[#005AA9] tracking-wide mt-1 uppercase">
               KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026
-            </div>
-            <div className="cert-number text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-0.5">
-              {formattedNomor.startsWith("Nomor:") ? formattedNomor : `Nomor sertifikat: ${formattedNomor}`}
             </div>
 
             {/* ── 4-COLUMN STUDENT IDENTITY (100% CANVA EXACT & SEJAJAR) ── */}
@@ -1252,14 +1227,27 @@ export const SertifikatKknPage: React.FC = () => {
               </tbody>
             </table>
 
-            {/* Page 2 Bottom: Legal & ID */}
-            <div className="absolute bottom-6 md:bottom-7 left-12 right-12 text-center">
-              <div className="text-[7.5px] md:text-[8.5pt] text-slate-500 italic mb-0.5">
-                Nilai diisi berdasarkan hasil penilaian resmi. Jumlah SKS mengikuti pengambilan peserta dan ketentuan akademik.
+            {/* ── 3-COLUMN HOURS BREAKDOWN & TOTAL (DIPINDAHKAN KE HALAMAN 2 DI BAWAH TABEL DATA) ── */}
+            <div className="flex items-center justify-center w-full max-w-[800px] md:max-w-[880px] mt-3 md:mt-4 py-2 md:py-2.5 px-4 bg-slate-50/80 border border-slate-200/90 rounded-xl shadow-2xs">
+              <div className="flex-1 text-center px-2">
+                <div className="cert-hours-label text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Persiapan</div>
+                <div className="cert-hours-val text-sm md:text-[15pt] font-extrabold text-[#005AA9]">100 jam</div>
               </div>
-              <div className="text-[6.5px] md:text-[7.5pt] font-mono text-slate-400 font-semibold tracking-wider">
-                {selectedStudent.idSertifikat} &bull; Halaman 2 dari 2
+              <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
+              <div className="flex-1 text-center px-2">
+                <div className="cert-hours-label text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Pelaksanaan di lapangan</div>
+                <div className="cert-hours-val text-sm md:text-[15pt] font-extrabold text-[#005AA9]">250 jam</div>
               </div>
+              <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
+              <div className="flex-1 text-center px-2">
+                <div className="cert-hours-label text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Evaluasi dan pelaporan</div>
+                <div className="cert-hours-val text-sm md:text-[15pt] font-extrabold text-[#005AA9]">100 jam</div>
+              </div>
+            </div>
+
+            {/* TOTAL 450 JAM */}
+            <div className="cert-total-hours font-cinzel text-xs md:text-[13pt] font-extrabold text-[#0A2540] tracking-[2px] mt-1.5 md:mt-2">
+              TOTAL 450 JAM
             </div>
           </div>
         </div>

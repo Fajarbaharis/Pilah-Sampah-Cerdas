@@ -80,8 +80,8 @@ function buildStudentHtml(s) {
 
   const rawNomor = s.nomorSertifikat || "";
   const nomorSert = rawNomor && !rawNomor.includes('DRAFT')
-    ? rawNomor
-    : `KKNT/${String(s.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`;
+    ? (rawNomor.startsWith('KKNT/') ? rawNomor.replace('KKNT/', 'KKNT-MHS/') : rawNomor)
+    : `KKNT-MHS/${String(s.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`;
 
   const tanggalTerbit = s.tanggalTerbit && s.tanggalTerbit !== "Menunggu Penilaian"
     ? s.tanggalTerbit
@@ -195,7 +195,8 @@ function buildStudentHtml(s) {
     .title-line {
       height: 1.5px;
       background-color: #C5A059;
-      width: 110px;
+      width: 50px;
+      flex-shrink: 0;
     }
 
     .title-main {
@@ -595,24 +596,7 @@ function buildStudentHtml(s) {
         Telah mengikuti Kuliah Kerja Nyata (KKN) Tematik Batch I Universitas Komputer Indonesia pada periode Juli–Oktober 2026 dengan total beban kegiatan 450 jam.
       </div>
 
-      <div class="hours-container">
-        <div class="hours-col">
-          <div class="hours-label">Persiapan</div>
-          <div class="hours-val">100 jam</div>
-        </div>
-        <div class="hours-divider"></div>
-        <div class="hours-col">
-          <div class="hours-label">Pelaksanaan di lapangan</div>
-          <div class="hours-val">250 jam</div>
-        </div>
-        <div class="hours-divider"></div>
-        <div class="hours-col">
-          <div class="hours-label">Evaluasi dan pelaporan</div>
-          <div class="hours-val">100 jam</div>
-        </div>
-      </div>
 
-      <div class="total-hours-label">TOTAL 450 JAM</div>
     </div>
 
     <div class="page1-bottom">
@@ -655,8 +639,6 @@ function buildStudentHtml(s) {
       </div>
 
       <div class="title-sub1" style="font-size: 13.5pt;">KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026</div>
-      <div class="cert-number">Nomor sertifikat: ${nomorSert}</div>
-
       <div class="student-card-4col">
         <div class="card-col">
           <div class="card-label">Nama:</div>
@@ -715,15 +697,25 @@ function buildStudentHtml(s) {
           </tr>
         </tbody>
       </table>
-    </div>
 
-    <div class="page2-bottom">
-      <div class="page2-legal">
-        Nilai diisi berdasarkan hasil penilaian resmi. Jumlah SKS mengikuti pengambilan peserta dan ketentuan akademik.
+      <div class="hours-container" style="margin-top: 15px; background: rgba(240, 247, 255, 0.7); border: 1px solid #CBD5E1; border-radius: 10px; padding: 10px 18px;">
+        <div class="hours-col">
+          <div class="hours-label">Persiapan</div>
+          <div class="hours-val">100 jam</div>
+        </div>
+        <div class="hours-divider"></div>
+        <div class="hours-col">
+          <div class="hours-label">Pelaksanaan di lapangan</div>
+          <div class="hours-val">250 jam</div>
+        </div>
+        <div class="hours-divider"></div>
+        <div class="hours-col">
+          <div class="hours-label">Evaluasi dan pelaporan</div>
+          <div class="hours-val">100 jam</div>
+        </div>
       </div>
-      <div class="page2-footer-id">
-        ${s.idSertifikat} &bull; Halaman 2 dari 2
-      </div>
+
+      <div class="total-hours-label" style="margin-top: 8px;">TOTAL 450 JAM</div>
     </div>
   </div>
 
