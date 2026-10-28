@@ -288,6 +288,47 @@ Setiap pengembang maupun asisten AI wajib mematuhi 3 pilar perlindungan sistem b
 
 ---
 
+### I. 27 Oktober 2026 - Standardisasi Pengajuan Tunggal Kelompok (Single-Submission Lock), Migrasi Total ke Tautan Google Drive, dan Sanitasi Artefak Judul
+- **Konteks & Kebutuhan Integrasi Mobile (`032/MEMO-ENG/BERSEKA-MOBILE/X/2026`)**:
+  1. **Single-Submission Lock per Kelompok**: Mencegah celah di mana multiple mahasiswa dalam kelompok yang sama mengirimkan baris laporan baru secara simultan; pengajuan baru hanya diizinkan jika status telaah DPL berstatus `PERLU_REVISI` atau `DITOLAK`.
+  2. **100% Migrasi Tautan Google Drive**: Menghilangkan ketergantungan upload berkas biner multipart `.pdf` di mobile guna membebaskan kapasitas storage VPS, mendukung payload `linkGoogleDrive` dan `fileUrl`.
+  3. **Sanitasi Artefak Markdown & Duplikasi Awalan**: Mengeliminasi string berulang seperti `Laporan Akhir KKN: Laporan Akhir KKN: **[nama] judul**` melalui helper `cleanLaporanTitle` di `laporanAkhirService.ts` dan telaah DPL di `penilaianKknService.ts`.
+- **Implementasi Solusi Teknis**:
+  1. `apps/api/src/services/laporanAkhirService.ts`: Menambahkan validasi `existing` berbasis `kelompokId`, `orderBy: { updatedAt: 'desc' }`, pengecekan guard `isDitolakAtauRevisi`, fungsi normalisasi `cleanLaporanTitle`, serta preservasi `linkGoogleDrive` & `attachmentFile`.
+  2. `apps/api/src/services/penilaianKknService.ts`: Mengadopsi `cleanLaporanTitle(parsed?.judul || primaryProker?.deskripsi, groupName)` untuk telaah rubrik DPL tanpa mengubah kalkulasi formula mutu maupun scoping kelompok DPL.
+  3. `apps/api/src/controllers/laporanAkhirController.ts`: Mengembalikan status HTTP 200 OK dengan payload lengkap saat submit/revisi, dan HTTP 400 Bad Request jika melanggar Single-Submission Lock.
+- **Validasi Mutu & Quality Gate**:
+  - `npm run build --prefix apps/api`: 0 error (`tsc --noEmit` Pass 100%).
+  - Vitest Test Suite DPL (30 tests): 100% Green (`dplApproval.test.ts`, `logbookVerifikasi.test.ts`, `penilaianKknRoleGuard.test.ts`).
+  - Vitest Test Suite Laporan Akhir (`laporanAkhirService.test.ts`): 10/10 tests 100% Green.
+  - Skema Database Prisma (`schema.prisma`): 0 mutasi skema (Zero-Migration / Safe VPS).
+- **Alur Integrasi Git-Flow**:
+  - Diterapkan pada branch `staging` melalui commit `2a0bf8a79` dan `7d74dd0cd`.
+
+---
+
+### J. 28 Oktober 2026 - Standardisasi Desain Header E-Sertifikat KKN Berseka & Pemilihan Kelompok Canva Bulk Create
+- **Konteks & Analisis Keluhan Pengguna**:
+  1. **Inkonsistensi Header / Navbar**: Penggunaan floating pseudo-navbar dengan tombol ungu gradien dan biru mencolok yang bertumpuk di bawah Topbar Berseka tidak selaras dengan design token Berseka dan terkesan seperti *AI-slop*.
+  2. **Keterbatasan Ekspor Canva Bulk Create**: Tombol format Canva sebelumnya mengekspor seluruh 527 mahasiswa tanpa opsi memilih kelompok, memfilter status nilai, atau memilih mahasiswa tertentu.
+  3. **Mekanisme Unduh PDF**: Tombol unduh tidak mencerminkan identitas visual Berseka dan belum menyertakan panduan cetak dialog vektor A4 yang jelas.
+- **Implementasi Solusi Terpadu**:
+  1. `apps/web/src/pages/PenilaianKkn/SertifikatKknPage.tsx`:
+     - Mengadopsi komponen resmi `PageHeader` Berseka (`category="PENILAIAN KKN"`, `scope="E-Sertifikat Kelulusan Resmi"`, `icon={Award}`).
+     - Standardisasi tombol tindakan: `Sinkron Data Live` (dengan animasi putar), `Format Canva (Bulk Create)` (dengan counter dinamis mahasiswa), dan `Unduh / Cetak PDF` (emerald #009966).
+     - Filter bar terpadu Berseka: input pencarian nama/NIM dengan autocomplete, filter kelompok dengan counter, filter status nilai, serta stepper navigasi cepat (Next / Prev Student).
+     - Modal Canva Bulk Create: pilihan kelompok target (semua vs kelompok tertentu), filter status penilaian, tabel checklist seleksi mahasiswa interaktif, dynamic counter terpilih, tombol *Pilih Semua / Kosongkan Pilihan*, serta panduan praktis 5 langkah impor massal ke Canva.
+     - Preservasi 100% tata letak vektor cetak sertifikat 2 halaman sesuai acuan master Canva UNIKOM (Cinzel, Playfair Display, tabel 5 aspek, dan TTE Warek 1).
+  2. `apps/web/src/services/sertifikatKknService.ts`:
+     - Menambahkan parameter `forceRefresh` dengan bypass cache timestamp (`_t: Date.now()`) untuk menjamin data live database selalu termutakhir saat disinkronkan.
+     - Penanganan filter lokal yang konsisten pada data fallback ketika koneksi server offline.
+- **Validasi Mutu & Quality Gate**:
+  - `npm run build --prefix apps/web`: 0 error (Vite build sukses: `SertifikatKknPage-DcaLFE4T.js` 56.45 kB).
+  - Vitest Test Suite DPL (30 tests): 100% Green (`dplApproval.test.ts`, `logbookVerifikasi.test.ts`, `penilaianKknRoleGuard.test.ts`).
+  - Deploy Staging VPS (`157.10.160.93`): Berhasil tersinkronisasi dan aktif di `https://staging.berseka.id/sertifikat-kkn`.
+
+---
+
 ## 5. Direktori & Arsip Dokumen
 
 Semua laporan audit berkala, investigasi teknis perorangan, dan dokumen historis telah dirapikan ke dalam folder:
