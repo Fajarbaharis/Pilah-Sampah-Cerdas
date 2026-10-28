@@ -14,48 +14,96 @@
  * - 4 Kolom Mahasiswa (Nama, NIM, Program Studi, SKS diambil) 100% sejajar, proporsional, dan bebas teks tumpang tindih
  */
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Award,
   Search,
   ChevronLeft,
+  ChevronRight,
   GraduationCap,
   ShieldCheck,
   FileDown,
+  Printer,
+  Download,
+  X,
+  CheckCircle2,
+  FileSpreadsheet,
+  Layers,
+  Info,
+  RotateCcw,
+  CheckSquare,
+  Square,
+  Copy,
+  Check,
+  Filter,
+  Users,
+  ChevronDown,
+  Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../../store/useAuthStore";
 import studentsDataRaw from "../../data/students_certificates_data.json";
 import { sertifikatKknService, type StudentCertData } from "../../services/sertifikatKknService";
+import { PageHeader } from "../../components/common/PageHeader";
 
 export const SertifikatKknPage: React.FC = () => {
   const { user } = useAuthStore();
   const [studentsData, setStudentsData] = useState<StudentCertData[]>(studentsDataRaw as StudentCertData[]);
-  const [, setIsLoadingLive] = useState<boolean>(true);
-  const [, setIsLiveDatabase] = useState<boolean>(false);
+  const [isLoadingLive, setIsLoadingLive] = useState<boolean>(true);
+  const [isLiveDatabase, setIsLiveDatabase] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>("Tersinkron");
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [showCanvaModal, setShowCanvaModal] = useState<boolean>(false);
+  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
+  const [hasCopiedId, setHasCopiedId] = useState<boolean>(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  // Sync live database from API if available
+  // Click outside listener for search autocomplete
   useEffect(() => {
-    let mounted = true;
-    const fetchLiveData = async () => {
-      try {
-        const liveList = await sertifikatKknService.getSertifikatList();
-        if (mounted && liveList && liveList.length > 0) {
-          setStudentsData(liveList);
-          setIsLiveDatabase(true);
-        }
-      } catch (err) {
-        console.warn("[SertifikatKknPage] Fallback to bundled dataset:", err);
-      } finally {
-        if (mounted) setIsLoadingLive(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setIsSearchFocused(false);
       }
     };
-    fetchLiveData();
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      mounted = false;
+      document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, []);
+
+  // Fetch live database from API
+  const fetchLiveData = async (force: boolean = false) => {
+    if (force) setIsSyncing(true);
+    try {
+      const liveList = await sertifikatKknService.getSertifikatList({ forceRefresh: force });
+      if (liveList && liveList.length > 0) {
+        setStudentsData(liveList);
+        setIsLiveDatabase(true);
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+        setLastSyncTime(`Pukul ${timeStr} WIB`);
+        if (force) {
+          toast.success(`Data live database berhasil diperbarui (${liveList.length} Mahasiswa)!`);
+        }
+      }
+    } catch (err) {
+      console.warn("[SertifikatKknPage] Fallback to bundled dataset:", err);
+      if (force) {
+        toast.error("Gagal menyinkronkan data live database, menggunakan salinan data lokal.");
+      }
+    } finally {
+      setIsLoadingLive(false);
+      if (force) setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveData(false);
   }, []);
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -84,8 +132,9 @@ export const SertifikatKknPage: React.FC = () => {
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedKelompok, setSelectedKelompok] = useState<string>("ALL");
+  const [filterStatusPenilaian, setFilterStatusPenilaian] = useState<string>("ALL");
 
-  // Initial student from query param or logged in Mahasiswa or default to #1
+  // Initial student from query param or logged in Mahasiswa or default to first student
   const initialNim = searchParams.get("nim") || (currentMahasiswa ? currentMahasiswa.nim : "21224142");
   const [selectedStudent, setSelectedStudent] = useState<StudentCertData>(() => {
     if (isMahasiswa && currentMahasiswa) return currentMahasiswa;
@@ -156,9 +205,38 @@ export const SertifikatKknPage: React.FC = () => {
         s.prodi.toLowerCase().includes(searchQuery.toLowerCase());
       const matchKelompok =
         selectedKelompok === "ALL" || s.kelompok === selectedKelompok;
-      return matchSearch && matchKelompok;
+      const isGraded = Boolean(
+        s.sudahDinilai &&
+        s.statusPenilaian === "SUDAH_DINILAI" &&
+        s.nilai &&
+        s.nilai.total > 0 &&
+        s.nilai.predikat !== "Belum Dinilai"
+      );
+      const matchStatus =
+        filterStatusPenilaian === "ALL" ||
+        (filterStatusPenilaian === "SUDAH" && isGraded) ||
+        (filterStatusPenilaian === "BELUM" && !isGraded);
+
+      return matchSearch && matchKelompok && matchStatus;
     });
-  }, [searchQuery, selectedKelompok, isMahasiswa, selectedStudent, studentsData]);
+  }, [searchQuery, selectedKelompok, filterStatusPenilaian, isMahasiswa, selectedStudent, studentsData]);
+
+  // Quick navigation: Previous and Next student in filtered list
+  const currentStudentIndex = useMemo(() => {
+    return filteredStudents.findIndex((s) => s.nim === selectedStudent.nim);
+  }, [filteredStudents, selectedStudent.nim]);
+
+  const handlePrevStudent = () => {
+    if (currentStudentIndex > 0) {
+      handleSelectStudent(filteredStudents[currentStudentIndex - 1]);
+    }
+  };
+
+  const handleNextStudent = () => {
+    if (currentStudentIndex < filteredStudents.length - 1) {
+      handleSelectStudent(filteredStudents[currentStudentIndex + 1]);
+    }
+  };
 
   // Direct Official High-Res PDF Download with seamless print fallback
   const handleDirectDownloadPdf = async () => {
@@ -187,10 +265,21 @@ export const SertifikatKknPage: React.FC = () => {
     }
 
     setIsDownloading(false);
-    toast.loading("Membuka dialog cetak / simpan PDF resolusi tinggi...", { duration: 2500 });
+    toast("Membuka dialog Simpan PDF / Cetak. Pilih 'Save as PDF' dengan ukuran A4 Landscape untuk hasil vektor presisi.", {
+      icon: "🖨️",
+      duration: 3500,
+    });
     setTimeout(() => {
       window.print();
     }, 400);
+  };
+
+  const handleCopyId = () => {
+    if (!selectedStudent?.idSertifikat) return;
+    navigator.clipboard.writeText(selectedStudent.idSertifikat);
+    setHasCopiedId(true);
+    toast.success("ID Sertifikat berhasil disalin!");
+    setTimeout(() => setHasCopiedId(false), 2000);
   };
 
   const isGraded = Boolean(
@@ -211,8 +300,154 @@ export const SertifikatKknPage: React.FC = () => {
     ? selectedStudent.tanggalTerbit
     : "10 November 2026";
 
+  // =========================================================================
+  // CANVA BULK CREATE MODAL STATE & LOGIC (WITH GROUP & STUDENT SELECTION)
+  // =========================================================================
+  const [canvaGroupFilter, setCanvaGroupFilter] = useState<string>("ALL");
+  const [canvaStatusFilter, setCanvaStatusFilter] = useState<string>("ALL");
+  const [canvaSearchQuery, setCanvaSearchQuery] = useState<string>("");
+  const [selectedNimsForCanva, setSelectedNimsForCanva] = useState<Set<string>>(new Set());
+
+  // Filtered dataset for Canva modal
+  const canvaFilteredStudents = useMemo(() => {
+    return studentsData.filter((s) => {
+      const matchGroup = canvaGroupFilter === "ALL" || s.kelompok === canvaGroupFilter;
+      const isGraded = Boolean(
+        s.sudahDinilai &&
+        s.statusPenilaian === "SUDAH_DINILAI" &&
+        s.nilai &&
+        s.nilai.total > 0 &&
+        s.nilai.predikat !== "Belum Dinilai"
+      );
+      const matchStatus =
+        canvaStatusFilter === "ALL" ||
+        (canvaStatusFilter === "SUDAH" && isGraded) ||
+        (canvaStatusFilter === "BELUM" && !isGraded);
+      const matchSearch =
+        !canvaSearchQuery.trim() ||
+        s.nama.toLowerCase().includes(canvaSearchQuery.toLowerCase()) ||
+        s.nim.includes(canvaSearchQuery) ||
+        s.prodi.toLowerCase().includes(canvaSearchQuery.toLowerCase());
+
+      return matchGroup && matchStatus && matchSearch;
+    });
+  }, [studentsData, canvaGroupFilter, canvaStatusFilter, canvaSearchQuery]);
+
+  // When opening modal or changing filters, auto-select all filtered students
+  useEffect(() => {
+    if (showCanvaModal) {
+      const allFilteredNims = new Set(canvaFilteredStudents.map((s) => s.nim));
+      setSelectedNimsForCanva(allFilteredNims);
+    }
+  }, [showCanvaModal, canvaGroupFilter, canvaStatusFilter]);
+
+  const handleToggleSelectStudent = (nim: string) => {
+    setSelectedNimsForCanva((prev) => {
+      const next = new Set(prev);
+      if (next.has(nim)) {
+        next.delete(nim);
+      } else {
+        next.add(nim);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllCanva = () => {
+    const allFilteredNims = new Set(canvaFilteredStudents.map((s) => s.nim));
+    setSelectedNimsForCanva(allFilteredNims);
+  };
+
+  const handleDeselectAllCanva = () => {
+    setSelectedNimsForCanva(new Set());
+  };
+
+  // Export dataset specifically formatted for Canva "Bulk Create" (Buat Massal)
+  const handleDownloadCanvaCsv = () => {
+    const targetStudents = studentsData.filter((s) => selectedNimsForCanva.has(s.nim));
+    if (targetStudents.length === 0) {
+      toast.error("Pilih minimal 1 mahasiswa untuk diekspor ke Canva!");
+      return;
+    }
+
+    const headers = [
+      "NIM",
+      "Nama_Lengkap",
+      "Program_Studi",
+      "SKS",
+      "Kelompok",
+      "Wilayah_RW",
+      "DPL_Nama",
+      "Nomor_Sertifikat",
+      "ID_Sertifikat",
+      "Total_Jam_KKN",
+      "Nilai_Personal",
+      "Nilai_Proker",
+      "Nilai_Laporan",
+      "Nilai_Paper",
+      "Nilai_Video",
+      "Nilai_Akhir",
+      "Predikat",
+      "Tanggal_Terbit",
+    ];
+
+    const escapeCsv = (val: any) => {
+      const str = String(val ?? "");
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+
+    const rows = targetStudents.map((s) => {
+      const nomor = s.nomorSertifikat && !s.nomorSertifikat.includes("DRAFT")
+        ? s.nomorSertifikat
+        : `KKNT/${String(s.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`;
+      const tgl = s.tanggalTerbit && s.tanggalTerbit !== "Menunggu Penilaian"
+        ? s.tanggalTerbit
+        : "10 November 2026";
+      const totalNilai = s.nilai && s.nilai.total > 0 ? s.nilai.total.toFixed(2) : "-";
+      const predikat = s.nilai?.predikat || "Belum Dinilai";
+
+      return [
+        escapeCsv(s.nim),
+        escapeCsv(s.nama.toUpperCase()),
+        escapeCsv(s.prodi),
+        escapeCsv(s.sks),
+        escapeCsv(s.kelompok),
+        escapeCsv(s.rw),
+        escapeCsv(s.dpl),
+        escapeCsv(nomor),
+        escapeCsv(s.idSertifikat),
+        escapeCsv("450 Jam"),
+        escapeCsv(s.nilai?.personal !== null ? s.nilai.personal.toFixed(1) : "-"),
+        escapeCsv(s.nilai?.proker !== null ? s.nilai.proker.toFixed(1) : "-"),
+        escapeCsv(s.nilai?.laporan !== null ? s.nilai.laporan.toFixed(1) : "-"),
+        escapeCsv(s.nilai?.paper !== null ? s.nilai.paper.toFixed(1) : "-"),
+        escapeCsv(s.nilai?.video !== null ? s.nilai.video.toFixed(1) : "-"),
+        escapeCsv(totalNilai),
+        escapeCsv(predikat),
+        escapeCsv(tgl),
+      ].join(",");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    const groupSlug = canvaGroupFilter === "ALL" 
+      ? "SEMUA_KELOMPOK" 
+      : canvaGroupFilter.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+
+    link.setAttribute("download", `DATA_CANVA_BULK_${groupSlug}_${targetStudents.length}_MAHASISWA.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Berhasil mengunduh dataset Canva (${targetStudents.length} Mahasiswa)!`);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 pb-16 print:p-0 print:bg-white print:m-0">
+    <div className="w-full max-w-full space-y-5 text-slate-800 dark:text-slate-100 min-w-0 print:p-0 print:m-0 print:bg-white">
       {/* ── EMBED GOOGLE FONTS & 100% CANVA EXACT PRINT STYLES ────────────────────────── */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap');
@@ -361,97 +596,105 @@ export const SertifikatKknPage: React.FC = () => {
         }
       `}</style>
 
-      {/* ── TOP ACTION BAR (HIDDEN IN PRINT) ────────────────────────── */}
-      <div className="no-print sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 shadow-xs">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Kembali
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-blue-700" />
-                <h1 className="text-base font-bold text-slate-900 leading-tight">
-                  E-Sertifikat Resmi KKN Tematik UNIKOM
-                </h1>
-                <span className="bg-blue-100 text-blue-800 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                  Batch I &bull; 450 Jam
-                </span>
+      {/* ── BERSEKA NATIVE PAGE HEADER (CONSISTENT WITH OTHER BERSEKA PAGES) ──── */}
+      <div className="no-print">
+        <PageHeader
+          icon={Award}
+          category="PENILAIAN KKN"
+          scope="E-Sertifikat Kelulusan Resmi"
+          title="E-Sertifikat KKN Tematik UNIKOM"
+          description="Format resmi 2 Halaman Canva: Sertifikat Kelulusan 450 Jam & Transkrip Rekapitulasi 5 Aspek Resmi"
+          actions={
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Sync Live Database Button */}
+              <button
+                type="button"
+                onClick={() => fetchLiveData(true)}
+                disabled={isSyncing}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold shadow-2xs transition cursor-pointer disabled:opacity-60"
+                title="Perbarui data mahasiswa & nilai langsung dari database live"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 text-slate-500 ${isSyncing ? "animate-spin text-[#009966]" : ""}`} />
+                <span className="hidden sm:inline">{isSyncing ? "Menyinkronkan..." : "Sinkron Data Live"}</span>
+              </button>
 
-                {isPimpinan && (
-                  <span className="hidden sm:inline-flex items-center gap-1 bg-purple-100 text-purple-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-purple-200">
-                    <ShieldCheck className="w-3 h-3 text-purple-700" />
-                    Mode Monitoring Pimpinan
+              {/* Format Canva (Bulk Create) Button */}
+              {!isMahasiswa && (
+                <button
+                  type="button"
+                  onClick={() => setShowCanvaModal(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-emerald-600/30 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 text-xs font-bold shadow-2xs transition cursor-pointer"
+                  title="Pilih kelompok & unduh CSV untuk Buat Massal di Canva"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Format Canva (Bulk Create)</span>
+                  <span className="px-1.5 py-0.2 rounded-md bg-emerald-200 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200 text-[10px] font-extrabold font-mono">
+                    {filteredStudents.length}
                   </span>
-                )}
+                </button>
+              )}
 
-                {isMahasiswa && (
-                  <span className="hidden sm:inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    <GraduationCap className="w-3 h-3 text-emerald-700" />
-                    Portal Mahasiswa
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500">
-                Format resmi 2 Halaman Canva: Sertifikat Kelulusan &amp; Transkrip Rekapitulasi 5 Aspek Resmi
-              </p>
+              {/* Unduh / Cetak PDF Button */}
+              <button
+                type="button"
+                onClick={handleDirectDownloadPdf}
+                disabled={isDownloading}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#009966] hover:bg-[#008055] text-white text-xs font-bold shadow-xs transition cursor-pointer disabled:opacity-60"
+                title="Cetak atau Unduh PDF Vektor Resolusi Cetak"
+              >
+                <FileDown className="w-4 h-4" />
+                <span>{isDownloading ? "Menyiapkan..." : "Unduh / Cetak PDF"}</span>
+              </button>
             </div>
-          </div>
-
-          {/* Single Primary Action: [Unduh PDF] */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleDirectDownloadPdf}
-              disabled={isDownloading}
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
-              title="Unduh Berkas PDF Resmi Vektor Resolusi Cetak"
-            >
-              <FileDown className="w-4 h-4" />
-              <span>{isDownloading ? "Menyiapkan PDF..." : "Unduh PDF"}</span>
-            </button>
-          </div>
-        </div>
+          }
+        />
       </div>
 
       {/* ── SELECTOR & METADATA BAR (HIDDEN IN PRINT) ───────────────── */}
-      <div className="no-print max-w-7xl mx-auto px-4 mt-4">
+      <div className="no-print">
         {/* Mahasiswa Personal Lock View */}
         {isMahasiswa ? (
-          <div className="bg-white rounded-xl border border-blue-200 p-4 shadow-2xs space-y-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-blue-200 dark:border-blue-900/50 p-4 shadow-xs space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-[#009966] text-white flex items-center justify-center font-bold shadow-xs shrink-0">
                   <GraduationCap className="w-6 h-6" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-base font-bold text-slate-900">{selectedStudent.nama}</h2>
+                    <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{selectedStudent.nama}</h2>
                     {isGraded ? (
                       <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
                         LULUS &bull; {selectedStudent.nilai.predikat}
                       </span>
                     ) : (
-                      <span className="bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-slate-300">
+                      <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-slate-300 dark:border-slate-700">
                         Belum Selesai Dinilai
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    NIM: <strong className="font-mono text-slate-900">{selectedStudent.nim}</strong> &bull; Program Studi: <strong>{selectedStudent.prodi}</strong> &bull; {selectedStudent.kelompok} ({selectedStudent.sks} SKS)
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    NIM: <strong className="font-mono text-slate-900 dark:text-slate-100">{selectedStudent.nim}</strong> &bull; Program Studi: <strong>{selectedStudent.prodi}</strong> &bull; {selectedStudent.kelompok} ({selectedStudent.sks} SKS)
                   </p>
                 </div>
               </div>
 
-              <div className="bg-blue-50/70 border border-blue-100 rounded-lg p-2.5 sm:text-right shrink-0">
-                <span className="text-[11px] text-blue-700 font-semibold block">ID Verifikasi Sertifikat:</span>
-                <span className="font-mono text-xs font-black text-blue-900">
-                  {selectedStudent.idSertifikat}
-                </span>
-                <span className="text-[10.5px] text-slate-500 block mt-0.5">
+              <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 rounded-xl p-2.5 sm:text-right shrink-0">
+                <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold block">ID Verifikasi Sertifikat:</span>
+                <div className="flex items-center gap-1.5 justify-end">
+                  <span className="font-mono text-xs font-black text-slate-900 dark:text-slate-100">
+                    {selectedStudent.idSertifikat}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyId}
+                    className="p-1 hover:bg-emerald-200/50 rounded-md transition cursor-pointer text-emerald-700 dark:text-emerald-400"
+                    title="Salin ID Sertifikat"
+                  >
+                    {hasCopiedId ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                  </button>
+                </div>
+                <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block mt-0.5">
                   Dosen Pembimbing: {selectedStudent.dpl}
                 </span>
               </div>
@@ -459,95 +702,232 @@ export const SertifikatKknPage: React.FC = () => {
           </div>
         ) : (
           /* Non-Mahasiswa (Admin, Pimpinan, Super User, DPL) Standard Selector */
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs space-y-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3.5">
             {/* Pimpinan Notice Banner */}
             {isPimpinan && (
-              <div className="bg-purple-50/90 border border-purple-200/90 rounded-lg p-2.5 flex items-center gap-2.5 text-xs text-purple-900">
-                <ShieldCheck className="w-4 h-4 text-purple-700 shrink-0" />
+              <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-3 flex items-center gap-3 text-xs text-amber-900 dark:text-amber-200">
+                <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>
-                  <strong>Mode Monitoring Pimpinan:</strong> Anda memiliki hak akses peninjauan dan pemantauan e-sertifikat mahasiswa KKN Tematik UNIKOM.
+                  <strong>Mode Pemantauan Eksekutif:</strong> Anda memiliki hak akses peninjauan dan pemantauan e-sertifikat mahasiswa KKN Tematik UNIKOM (View-Only).
                 </span>
               </div>
             )}
 
+            {/* Filter Row: Search, Kelompok, Status, & Quick Navigator */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-              {/* Search Input */}
-              <div className="md:col-span-5 relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              {/* Search Input with Instant Autocomplete */}
+              <div className="md:col-span-4 relative" ref={searchContainerRef}>
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Cari nama, NIM, atau prodi mahasiswa..."
+                  placeholder="Cari nama, NIM, atau program studi..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  onFocus={() => setIsSearchFocused(true)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setIsSearchFocused(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && filteredStudents.length > 0) {
+                      handleSelectStudent(filteredStudents[0]);
+                      setIsSearchFocused(false);
+                    } else if (e.key === "Escape") {
+                      setIsSearchFocused(false);
+                    }
+                  }}
+                  className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-[#009966]/20 focus:border-[#009966] text-slate-800 dark:text-slate-100"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setIsSearchFocused(false);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full cursor-pointer"
+                    title="Hapus pencarian"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                {/* Instant Autocomplete Suggestions Dropdown */}
+                {isSearchFocused && searchQuery.trim().length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    <div className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800/80 text-[10.5px] font-bold text-slate-500 uppercase tracking-wider flex justify-between items-center sticky top-0 z-10 border-b border-slate-100 dark:border-slate-800">
+                      <span>Hasil Pencarian ({filteredStudents.length} Mahasiswa)</span>
+                      <span className="text-[10px] text-[#009966] font-semibold">Klik untuk memilih</span>
+                    </div>
+                    {filteredStudents.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-500">
+                        Tidak ada mahasiswa yang cocok dengan "<strong>{searchQuery}</strong>".
+                      </div>
+                    ) : (
+                      filteredStudents.slice(0, 10).map((s) => (
+                        <button
+                          key={s.nim}
+                          type="button"
+                          onClick={() => {
+                            handleSelectStudent(s);
+                            setIsSearchFocused(false);
+                          }}
+                          className={`w-full text-left px-3.5 py-2.5 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/30 transition-colors flex items-center justify-between gap-3 cursor-pointer ${
+                            s.nim === selectedStudent.nim ? "bg-emerald-50/60 dark:bg-emerald-950/40 font-semibold border-l-4 border-[#009966]" : ""
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
+                              <span>{s.nama}</span>
+                              {s.nim === selectedStudent.nim && (
+                                <span className="text-[9.5px] font-bold bg-[#009966] text-white px-1.5 py-0.2 rounded-sm">
+                                  Aktif
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                              NIM: <strong className="font-mono text-slate-700 dark:text-slate-300">{s.nim}</strong> &bull; {s.prodi}
+                            </div>
+                            <div className="text-[10px] text-emerald-700 dark:text-emerald-400 truncate">
+                              {s.kelompok}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 block">
+                              {s.sks} SKS
+                            </span>
+                            {s.sudahDinilai && s.nilai?.total > 0 && (
+                              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 block mt-1">
+                                {s.nilai.total.toFixed(1)} ({s.nilai.predikat.split(" ")[0]})
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Filter Kelompok */}
-              <div className="md:col-span-4">
+              <div className="md:col-span-3">
                 <select
                   value={selectedKelompok}
                   onChange={(e) => setSelectedKelompok(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium cursor-pointer"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 font-semibold text-slate-700 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#009966]/20 focus:border-[#009966] cursor-pointer"
                 >
-                  <option value="ALL">Semua Kelompok ({studentsData.length} Mahasiswa)</option>
+                  <option value="ALL">Semua Kelompok ({studentsData.length} Mhs)</option>
                   {kelompokList.map((k) => (
                     <option key={k} value={k}>
-                      {k} ({studentsData.filter((x) => x.kelompok === k).length} Mahasiswa)
+                      {k} ({studentsData.filter((x) => x.kelompok === k).length} Mhs)
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Quick Student Selector Dropdown */}
-              <div className="md:col-span-3">
+              {/* Filter Status Penilaian */}
+              <div className="md:col-span-2">
+                <select
+                  value={filterStatusPenilaian}
+                  onChange={(e) => setFilterStatusPenilaian(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 font-semibold text-slate-700 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#009966]/20 focus:border-[#009966] cursor-pointer"
+                >
+                  <option value="ALL">Semua Status</option>
+                  <option value="SUDAH">Sudah Dinilai</option>
+                  <option value="BELUM">Belum Dinilai</option>
+                </select>
+              </div>
+
+              {/* Quick Student Selector Dropdown with Next / Prev Stepper */}
+              <div className="md:col-span-3 flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handlePrevStudent}
+                  disabled={currentStudentIndex <= 0}
+                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 disabled:opacity-40 transition cursor-pointer text-slate-700 dark:text-slate-300"
+                  title="Mahasiswa sebelumnya"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
                 <select
                   value={selectedStudent.nim}
                   onChange={(e) => {
                     const s = studentsData.find((x) => x.nim === e.target.value);
                     if (s) handleSelectStudent(s);
                   }}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-blue-300 bg-blue-50/50 text-blue-900 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#009966]/30 cursor-pointer truncate"
                 >
+                  {!filteredStudents.some((x) => x.nim === selectedStudent.nim) && (
+                    <option key={selectedStudent.nim} value={selectedStudent.nim}>
+                      {selectedStudent.nim} - {selectedStudent.nama} ({selectedStudent.sks} SKS)
+                    </option>
+                  )}
                   {filteredStudents.map((s) => (
                     <option key={s.nim} value={s.nim}>
                       {s.nim} - {s.nama} ({s.sks} SKS)
                     </option>
                   ))}
                 </select>
+
+                <button
+                  type="button"
+                  onClick={handleNextStudent}
+                  disabled={currentStudentIndex >= filteredStudents.length - 1}
+                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 disabled:opacity-40 transition cursor-pointer text-slate-700 dark:text-slate-300"
+                  title="Mahasiswa berikutnya"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
             {/* Student Quick Summary Pill Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-semibold text-slate-900">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-xs">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="font-bold text-slate-900 dark:text-slate-100">
                   {selectedStudent.nama}
                 </span>
-                <span className="text-slate-500">NIM: <strong className="text-slate-700 font-mono">{selectedStudent.nim}</strong></span>
-                <span className="text-slate-500">Prodi: <strong className="text-slate-700">{selectedStudent.prodi}</strong></span>
-                <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full text-[10.5px]">
+                <span className="text-slate-400">&bull;</span>
+                <span className="text-slate-500">
+                  NIM: <strong className="text-slate-700 dark:text-slate-300 font-mono">{selectedStudent.nim}</strong>
+                </span>
+                <span className="text-slate-400">&bull;</span>
+                <span className="text-slate-500">
+                  Prodi: <strong className="text-slate-700 dark:text-slate-300">{selectedStudent.prodi}</strong>
+                </span>
+                <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full text-[10.5px]">
                   {selectedStudent.sks} SKS
                 </span>
-                <span className="bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full text-[10.5px]">
+                <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-2 py-0.5 rounded-full text-[10.5px]">
                   {selectedStudent.kelompok}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500">Nilai Akhir:</span>
-                {isGraded ? (
-                  <span className="bg-emerald-50 border border-emerald-300 text-emerald-800 font-extrabold px-2.5 py-0.5 rounded-md text-xs">
-                    {selectedStudent.nilai.total.toFixed(2)} ({selectedStudent.nilai.predikat.split(" ")[0]})
-                  </span>
-                ) : (
-                  <span className="bg-slate-100 border border-slate-200 text-slate-600 font-bold px-2.5 py-0.5 rounded-md text-xs">
-                    -
-                  </span>
-                )}
-                <span className="text-slate-400 font-mono text-[11px]">
-                  {formattedNomor}
-                </span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500">Nilai Akhir:</span>
+                  {isGraded ? (
+                    <span className="bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-extrabold px-2.5 py-0.5 rounded-md text-xs">
+                      {selectedStudent.nilai.total.toFixed(2)} ({selectedStudent.nilai.predikat.split(" ")[0]})
+                    </span>
+                  ) : (
+                    <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold px-2.5 py-0.5 rounded-md text-xs">
+                      Belum Dinilai
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1 text-[11px] text-slate-500 font-mono bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
+                  <span>{selectedStudent.idSertifikat}</span>
+                  <button
+                    type="button"
+                    onClick={handleCopyId}
+                    className="hover:text-emerald-600 cursor-pointer"
+                    title="Salin ID Sertifikat"
+                  >
+                    {hasCopiedId ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -555,7 +935,7 @@ export const SertifikatKknPage: React.FC = () => {
       </div>
 
       {/* ── LIVE CERTIFICATE RENDER AREA (100% CANVA RESMI MOCKUP ALIGNED) ─── */}
-      <div className="cert-export-wrapper max-w-[1150px] mx-auto mt-6 px-4 flex flex-col items-center gap-8 print:p-0 print:m-0 print:max-w-none print:w-full">
+      <div className="cert-export-wrapper max-w-[1150px] mx-auto mt-4 px-2 flex flex-col items-center gap-8 print:p-0 print:m-0 print:max-w-none print:w-full">
         
         {/* ==================== HALAMAN 1: SERTIFIKAT ==================== */}
         <div
@@ -679,7 +1059,7 @@ export const SertifikatKknPage: React.FC = () => {
                   Wakil Rektor I UNIKOM<br />Bidang Akademik dan Kemahasiswaan
                 </div>
 
-                <div className="my-1 border border-slate-300 rounded-md p-1 bg-white/95 flex items-center gap-2 w-44 md:w-52 h-11 md:h-13 shadow-2xs">
+                <div className="my-1 border border-slate-300 rounded-md p-1 bg-white flex items-center gap-2 w-44 md:w-52 h-11 md:h-13 shadow-2xs">
                   <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 p-0.5">
                     <QrSvgComponent idSertifikat={selectedStudent.idSertifikat} />
                   </div>
@@ -882,13 +1262,294 @@ export const SertifikatKknPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── MODAL EKSPOR FORMAT CANVA BULK CREATE DENGAN PILIHAN KELOMPOK ──── */}
+      {showCanvaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
+            {/* Modal Header (Native Berseka Styling) */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#009966] flex items-center justify-center shrink-0 border border-emerald-200 dark:border-emerald-900/50">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    Ekspor Dataset Canva (Bulk Create)
+                    <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      Format UTF-8 BOM
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Pilih kelompok atau mahasiswa tertentu untuk diekspor ke master template Canva resmi UNIKOM
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCanvaModal(false)}
+                className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer text-slate-600 dark:text-slate-300"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-5 text-slate-700 dark:text-slate-300 text-xs leading-relaxed">
+              {/* Filter Controls Row */}
+              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-emerald-600" />
+                    <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                      Pilihan Cakupan Mahasiswa yang Diekspor:
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    Sumber Data: <strong className="text-emerald-700 dark:text-emerald-400">{isLiveDatabase ? "Live Database API" : "Lokal Bundle"}</strong> ({lastSyncTime})
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  {/* Select Group */}
+                  <div className="sm:col-span-5">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Pilih Kelompok KKN:
+                    </label>
+                    <select
+                      value={canvaGroupFilter}
+                      onChange={(e) => setCanvaGroupFilter(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-semibold text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-[#009966]/20 focus:border-[#009966] cursor-pointer"
+                    >
+                      <option value="ALL">Semua Kelompok ({studentsData.length} Mahasiswa)</option>
+                      {kelompokList.map((k) => (
+                        <option key={k} value={k}>
+                          {k} ({studentsData.filter((x) => x.kelompok === k).length} Mahasiswa)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Select Status */}
+                  <div className="sm:col-span-4">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Status Penilaian:
+                    </label>
+                    <select
+                      value={canvaStatusFilter}
+                      onChange={(e) => setCanvaStatusFilter(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-semibold text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-[#009966]/20 focus:border-[#009966] cursor-pointer"
+                    >
+                      <option value="ALL">Semua Status Penilaian</option>
+                      <option value="SUDAH">Hanya Sudah Dinilai (Siap Terbit)</option>
+                      <option value="BELUM">Hanya Belum Dinilai (Draft)</option>
+                    </select>
+                  </div>
+
+                  {/* Search within Modal */}
+                  <div className="sm:col-span-3">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Cari Cepat:
+                    </label>
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Nama / NIM..."
+                        value={canvaSearchQuery}
+                        onChange={(e) => setCanvaSearchQuery(e.target.value)}
+                        className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-hidden focus:ring-2 focus:ring-[#009966]/20 focus:border-[#009966] text-slate-800 dark:text-slate-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Batch Selection Tools & Count Badge */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-700 text-xs">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSelectAllCanva}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300 cursor-pointer"
+                    >
+                      <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
+                      Pilih Semua ({canvaFilteredStudents.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeselectAllCanva}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300 cursor-pointer"
+                    >
+                      <Square className="w-3.5 h-3.5 text-slate-400" />
+                      Kosongkan Pilihan
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500 text-[11.5px]">Mahasiswa terpilih:</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-[#009966] font-mono font-black text-xs border border-emerald-300 dark:border-emerald-800">
+                      {selectedNimsForCanva.size} dari {canvaFilteredStudents.length} Mahasiswa
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Checklist Table */}
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <div className="max-h-60 overflow-y-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-slate-100 dark:bg-slate-800/80 sticky top-0 z-10 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
+                      <tr>
+                        <th className="py-2 px-3 w-10 text-center">
+                          <input
+                            type="checkbox"
+                            checked={
+                              canvaFilteredStudents.length > 0 &&
+                              canvaFilteredStudents.every((s) => selectedNimsForCanva.has(s.nim))
+                            }
+                            onChange={(e) => {
+                              if (e.target.checked) handleSelectAllCanva();
+                              else handleDeselectAllCanva();
+                            }}
+                            className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                          />
+                        </th>
+                        <th className="py-2 px-3 w-28">NIM</th>
+                        <th className="py-2 px-3">Nama Mahasiswa</th>
+                        <th className="py-2 px-3">Program Studi</th>
+                        <th className="py-2 px-3">Kelompok</th>
+                        <th className="py-2 px-3 w-20 text-center">SKS</th>
+                        <th className="py-2 px-3 w-28 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                      {canvaFilteredStudents.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-6 text-center text-slate-400 text-xs">
+                            Tidak ada mahasiswa yang sesuai dengan filter di atas.
+                          </td>
+                        </tr>
+                      ) : (
+                        canvaFilteredStudents.map((s) => {
+                          const isChecked = selectedNimsForCanva.has(s.nim);
+                          const isGradedStudent = Boolean(
+                            s.sudahDinilai &&
+                            s.statusPenilaian === "SUDAH_DINILAI" &&
+                            s.nilai &&
+                            s.nilai.total > 0
+                          );
+                          return (
+                            <tr
+                              key={s.nim}
+                              onClick={() => handleToggleSelectStudent(s.nim)}
+                              className={`hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer ${
+                                isChecked ? "bg-emerald-50/40 dark:bg-emerald-950/20" : ""
+                              }`}
+                            >
+                              <td className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => handleToggleSelectStudent(s.nim)}
+                                  className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                />
+                              </td>
+                              <td className="py-2 px-3 font-mono font-semibold text-slate-900 dark:text-slate-100">
+                                {s.nim}
+                              </td>
+                              <td className="py-2 px-3 font-bold text-slate-900 dark:text-slate-100">
+                                {s.nama}
+                              </td>
+                              <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
+                                {s.prodi}
+                              </td>
+                              <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
+                                {s.kelompok}
+                              </td>
+                              <td className="py-2 px-3 text-center font-bold text-slate-700 dark:text-slate-300">
+                                {s.sks}
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                {isGradedStudent ? (
+                                  <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold text-[10px]">
+                                    {s.nilai.total.toFixed(1)} (Lulus)
+                                  </span>
+                                ) : (
+                                  <span className="inline-block px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px]">
+                                    Belum Dinilai
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 5-Step Practical Canva Instructions */}
+              <div className="space-y-2.5">
+                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-xs flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-emerald-600" />
+                  Panduan Impor Massal (Bulk Create) di Canva Resmi:
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+                    <strong className="block text-slate-900 dark:text-slate-100 mb-0.5">1. Buka Template Canva</strong>
+                    <span className="text-slate-500">Buka master desain e-sertifikat KKN UNIKOM (2 Halaman: Sertifikat &amp; Transkrip).</span>
+                  </div>
+                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+                    <strong className="block text-slate-900 dark:text-slate-100 mb-0.5">2. Pilih Aplikasi Bulk Create</strong>
+                    <span className="text-slate-500">Di menu bar kiri Canva, klik <strong>Apps</strong> &gt; cari <strong>Bulk Create</strong> (Buat Massal).</span>
+                  </div>
+                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+                    <strong className="block text-slate-900 dark:text-slate-100 mb-0.5">3. Unggah Berkas CSV</strong>
+                    <span className="text-slate-500">Pilih <strong>Upload CSV</strong> dan pilih file CSV yang baru diunduh dari tombol di bawah.</span>
+                  </div>
+                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+                    <strong className="block text-slate-900 dark:text-slate-100 mb-0.5">4. Hubungkan Data ke Teks</strong>
+                    <span className="text-slate-500">Klik kanan teks Nama &gt; <strong>Connect Data</strong> &gt; pilih <code>Nama_Lengkap</code>. Ulangi untuk <code>NIM</code>, <code>SKS</code>, dll.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+              <div className="text-xs text-slate-500">
+                Format: <strong className="text-slate-800 dark:text-slate-200 font-mono">18 Kolom Data Lengkap</strong> (Nama, NIM, Nilai 5 Aspek, SKS, No. Sertifikat)
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCanvaModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition cursor-pointer"
+                >
+                  Tutup
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadCanvaCsv}
+                  disabled={selectedNimsForCanva.size === 0}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#009966] hover:bg-[#008055] disabled:opacity-50 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Unduh CSV Canva ({selectedNimsForCanva.size} Mahasiswa)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 // SVG QR Code generator component for React UI
 const QrSvgComponent: React.FC<{ idSertifikat: string }> = ({ idSertifikat }) => {
-  // Deterministic 15x15 QR pattern based on hash of idSertifikat
   const pattern = useMemo(() => {
     let hash = 0;
     for (let i = 0; i < idSertifikat.length; i++) {

@@ -58,9 +58,13 @@ export const sertifikatKknService = {
   /**
    * Mengambil daftar e-sertifikat mahasiswa langsung dari backend API (Database live)
    */
-  getSertifikatList: async (params?: { kelompok?: string; prodi?: string; search?: string }): Promise<StudentCertData[]> => {
+  getSertifikatList: async (params?: { kelompok?: string; prodi?: string; search?: string; forceRefresh?: boolean }): Promise<StudentCertData[]> => {
     try {
-      const res = await api.get("/sertifikat-kkn/list", { params });
+      const queryParams: any = { ...params };
+      if (params?.forceRefresh) {
+        queryParams._t = Date.now();
+      }
+      const res = await api.get("/sertifikat-kkn/list", { params: queryParams });
       if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
         return res.data.data as StudentCertData[];
       }
@@ -68,7 +72,23 @@ export const sertifikatKknService = {
       console.warn("[sertifikatKknService.getSertifikatList] Live API query failed, fallback to local data:", err);
     }
     // Fallback data jika API offline
-    return fallbackStudentsRaw as unknown as StudentCertData[];
+    let list = fallbackStudentsRaw as unknown as StudentCertData[];
+    if (params?.kelompok && params.kelompok !== "ALL" && params.kelompok !== "all") {
+      list = list.filter((s) => s.kelompok.toLowerCase() === params.kelompok?.toLowerCase());
+    }
+    if (params?.prodi && params.prodi !== "ALL" && params.prodi !== "all") {
+      list = list.filter((s) => s.prodi.toLowerCase() === params.prodi?.toLowerCase());
+    }
+    if (params?.search && params.search.trim()) {
+      const q = params.search.toLowerCase().trim();
+      list = list.filter(
+        (s) =>
+          s.nama.toLowerCase().includes(q) ||
+          s.nim.toLowerCase().includes(q) ||
+          s.prodi.toLowerCase().includes(q)
+      );
+    }
+    return list;
   },
 
   /**
