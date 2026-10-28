@@ -65,6 +65,23 @@ Setiap pengembang maupun asisten AI wajib mematuhi 3 pilar perlindungan sistem b
 
 ## 4. Status Fitur & Pencapaian Utama (Resolved Milestones)
 
+- [x] **Audit, Validasi Data Riil & Perbaikan Unduh PDF E-Sertifikat KKN Tematik (`SertifikatKknPage.tsx`, `sertifikatKknService.ts`, & Nginx Staging)**:
+  - **Audit Integritas Data & Relasi Staging Database**:
+    - Memverifikasi data 530 Mahasiswa KKN di database PostgreSQL live staging (`StudentKkn`, `User`, `KelompokKkn`, `DPL`, `Rw`, `PenilaianKknMahasiswa`).
+    - 100% relasi terhubung valid tanpa dummy data: status penilaian riil (`BELUM_DINILAI` untuk draft/belum finalisasi, `SUDAH_DINILAI` untuk yang telah selesai difinalisasi DPL).
+    - Memperbaiki fallback wilayah dan prodi pada `sertifikatKknService.ts` agar dinamis berbasis data kelompok/kelurahan riil tanpa asumsi hardcoded.
+  - **Akar Masalah Bug Unduh PDF (PDF Tidak Bisa Dibuka)**:
+    - Request `/certificates/....pdf` untuk berkas yang belum ada di-catch-all oleh Nginx `try_files $uri $uri/ /index.html;`, menghasilkan respon status HTTP 200 dengan payload `index.html` (HTML string).
+    - Frontend hanya mengecek `res.ok` (yang bernilai true karena status 200), sehingga mengunduh berkas HTML berukuran ~2KB dengan ekstensi `.pdf` yang rusak/tidak dapat dibuka di viewer PDF pembaca.
+    - Fallback cetak vektor `window.print()` tidak pernah dieksekusi karena tertahan oleh blok `if (res.ok) return;`.
+  - **Solusi Komprehensif & Implementasi**:
+    1. **Nginx Staging VPS**: Menambahkan blok eksplisit `location /certificates/ { add_header Cache-Control "no-cache, must-revalidate"; try_files $uri =404; }` sehingga berkas yang tidak ada merespons HTTP 404 asli, bukan `index.html`.
+    2. **Frontend `SertifikatKknPage.tsx`**:
+       - Validasi ketat Content-Type `application/pdf` dan magic bytes header `%PDF` sebelum download blob biner.
+       - Jika berkas statis belum tersedia, sistem secara mulus mengeksekusi fallback cetak vektor `window.print()` (Save as PDF A4 Landscape).
+       - Menambahkan tombol aksi ganda yang jelas: **"Cetak / Simpan PDF"** (vektor A4 instan) dan **"Unduh PDF Resmi"** (unduh berkas pre-rendered).
+    3. **Test Suite**: Menambahkan unit test komprehensif `sertifikatKknService.test.ts` (5/5 tests passed, total 35/35 DPL & KKN Vitest suite passed 100%).
+
 - [x] **Presensi Mandiri Mahasiswa KKN (V2)**:
   - Validasi radius geofencing posko (50-100 meter dinamis).
   - Cutoff waktu otomatis (pagi s.d. 18:00 WIB).
@@ -326,6 +343,36 @@ Setiap pengembang maupun asisten AI wajib mematuhi 3 pilar perlindungan sistem b
   - `npm run build --prefix apps/web`: 0 error (Vite build sukses: `SertifikatKknPage-DcaLFE4T.js` 56.45 kB).
   - Vitest Test Suite DPL (30 tests): 100% Green (`dplApproval.test.ts`, `logbookVerifikasi.test.ts`, `penilaianKknRoleGuard.test.ts`).
   - Deploy Staging VPS (`157.10.160.93`): Berhasil tersinkronisasi dan aktif di `https://staging.berseka.id/sertifikat-kkn`.
+
+---
+
+### K. 28 Oktober 2026 - Pipeline Sinkronisasi Database VPS Utama (Produksi) ke VPS Staging & Eksekusi Sukses 100% Paritas Data QC
+- **Konteks & Kebutuhan Bisnis**:
+  - Tim Quality Control (QC) membutuhkan data pengujian di server Staging (`https://staging.berseka.id`) yang identik 100% dan mutakhir dengan kondisi riil di database VPS Utama / Produksi (`157.10.252.252` / `psc_db`), mencakup pertumbuhan logbook KKN (+3.225 logbook), logbook DPL (+33 logbook), program kerja (+27 proker), akun pengguna (+75 user), dan perolehan poin (+10.602 poin).
+- **Arsitektur Pipeline Sinkronisasi (`scripts/tools/sync_db_main_to_staging.cjs`)**:
+  1. **Protokol Perlindungan Data Utama (100% READ-ONLY)**: Database VPS Utama (`psc-postgres`) hanya diakses secara *read-only* melalui `pg_dump` tanpa mutasi data (zero `INSERT`/`UPDATE`/`DELETE`), menjamin kepatuhan penuh terhadap Kebijakan Anti-Dummy Seed Berseka.
+  2. **Golden Backup Mandatori Staging**: Sebelum penimpaan, snapshot penuh basis data Staging diamankan secara terkompresi ke `/home/maker/staging_pre_sync_*.sql.gz` di server Staging.
+  3. **Pembersihan Koneksi Pool & Schema Canvas**: Menghentikan sementara worker PM2 `psc-backend-staging`, memutus koneksi residual, dan merefresh skema `public` dengan `CASCADE` agar tidak terjadi *deadlock* atau *foreign key cycle collision*.
+  4. **High-Speed Datacenter Streaming**: Mengalirkan *uncompressed SQL dump stream* secara langsung antar-server VPS melalui jaringan internal datacenter berlatensi 0,45 ms tanpa membebani bandwidth mesin lokal developer.
+  5. **Post-Sync Sanitasi & Cache Flush**: Membersihkan total Redis Cache Staging (`redis-cli FLUSHALL`) dan merestart backend Staging dengan PM2 `--update-env`.
+  6. **Validasi Paritas Data Otomatis**: Membandingkan langsung 11 metrik inti antara VPS Utama dan VPS Staging setelah restore selesai.
+- **Hasil Verifikasi Pasca-Sinkronisasi (100% Identik)**:
+  - `users`: 1.339 (Utama) vs 1.339 (Staging) — **100% MATCH**
+  - `mahasiswa`: 530 (Utama) vs 530 (Staging) — **100% MATCH**
+  - `kelompok`: 34 (Utama) vs 34 (Staging) — **100% MATCH**
+  - `presensi`: 2.835 (Utama) vs 2.835 (Staging) — **100% MATCH**
+  - `poin`: 75.707 (Utama) vs 75.707 (Staging) — **100% MATCH**
+  - `tempat_sampah`: 1.967 (Utama) vs 1.967 (Staging) — **100% MATCH**
+  - `setoran_manual`: 430 (Utama) vs 430 (Staging) — **100% MATCH**
+  - `fasilitas`: 135 (Utama) vs 135 (Staging) — **100% MATCH**
+  - `logbook_kkn`: 15.906 (Utama) vs 15.906 (Staging) — **100% MATCH**
+  - `logbook_dpl`: 288 (Utama) vs 288 (Staging) — **100% MATCH**
+  - `program_kerja_kkn`: 225 (Utama) vs 225 (Staging) — **100% MATCH**
+- **Quality Gate & Automated Test Suite**:
+  - `test_staging_system_e2e.cjs`: 8/8 System QC Tests Passed (100% Green).
+  - Health Endpoint Live Staging (`https://staging.berseka.id/api/v1/health`): HTTP 200 OK (`{ status: 'OK' }`).
+  - Vitest DPL Suite: 30/30 tests 100% Green.
+  - TypeScript Compilation: 0 errors (`tsc --noEmit` Pass).
 
 ---
 

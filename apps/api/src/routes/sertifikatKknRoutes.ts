@@ -54,4 +54,26 @@ router.get(
   sertifikatKknController.verify
 );
 
+// 4. Endpoint Daftar Sertifikat DPL (Live DB Scoped by Role)
+router.get(
+  "/dpl/list",
+  authMiddleware,
+  roleMiddleware([...SERTIFIKAT_READ_ROLES]),
+  sertifikatKknController.getDplList
+);
+
+// 5. Endpoint Detail Sertifikat DPL per NIP / ID
+router.get(
+  "/dpl/detail/:nip",
+  authMiddleware,
+  roleMiddleware([...SERTIFIKAT_READ_ROLES]),
+  sertifikatKknController.getDplByNip
+);
+
+// 6. Endpoint Verifikasi Publik QR Code DPL (Public - No Auth Required)
+router.get(
+  "/dpl/verify/:idSertifikat",
+  sertifikatKknController.verifyDpl
+);
+
 export default router;

@@ -81,6 +81,7 @@ const RekapNilaiKknPage = React.lazy(() => import("../pages/PenilaianKkn/RekapNi
 const PenilaianKknMahasiswaPage = React.lazy(() => import("../pages/PenilaianKkn/PenilaianKknMahasiswaPage"));
 const PenilaianLaporanAkhirPage = React.lazy(() => import("../pages/PenilaianKkn/PenilaianLaporanAkhirPage"));
 const SertifikatKknPage = React.lazy(() => import("../pages/PenilaianKkn/SertifikatKknPage"));
+const SertifikatDplPage = React.lazy(() => import("../pages/PenilaianKkn/SertifikatDplPage"));
 const VerifikasiSertifikatPage = React.lazy(() => import("../pages/PenilaianKkn/VerifikasiSertifikatPage"));
 const MasterPanduanPage = React.lazy(() => import("../pages/MasterData/MasterPanduanPage"));
 const MasterKegiatanSampahPage = React.lazy(() => import("../pages/MasterData/MasterKegiatanSampahPage"));
@@ -96,7 +97,6 @@ const KelolaLogbookPage = React.lazy(() => import("../pages/Developer/KelolaLogb
 const PoinMahasiswaKknPage = React.lazy(() => import("../pages/Developer/PoinMahasiswaKknPage"));
 const LaporanResmiKknPage = React.lazy(() => import("../pages/LaporanKkn/LaporanResmiKknPage"));
 const DeveloperSettingsPage = React.lazy(() => import("../pages/Developer/DeveloperSettingsPage"));
-const MplDashboardPage = React.lazy(() => import("../pages/mpl/MplDashboardPage"));
 const LaporanTataKelolaSampahPage = React.lazy(() => import("../pages/Laporan/LaporanTataKelolaSampahPage"));
 const IotMonitoringPage = React.lazy(() => import("../pages/IoT/IotMonitoringPage"));
 const IotDataSensorPage = React.lazy(() => import("../pages/IoT/IotDataSensorPage"));
@@ -302,6 +302,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/register-mahasiswa" element={<MahasiswaRegistration />} />
       <Route path="/verify/:idSertifikat" element={<VerifikasiSertifikatPage />} />
+      <Route path="/verify-dpl/:idSertifikat" element={<VerifikasiSertifikatPage />} />
+      <Route path="/verify/dpl/:idSertifikat" element={<VerifikasiSertifikatPage />} />
       <Route path="/verify-sertifikat/:idSertifikat" element={<VerifikasiSertifikatPage />} />
       <Route path="/sertifikat/verify/:idSertifikat" element={<VerifikasiSertifikatPage />} />
       <Route
@@ -814,7 +816,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/laporan/tata-kelola-sampah"
           element={
-            <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER", "PIMPINAN", "PEMIMPIN"]}>
+            <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER", "PIMPINAN", "PEMIMPIN", "ADMIN_DLH", "CAMAT", "LURAH", "PANITIA_TASKFORCE"]}>
               <LaporanTataKelolaSampahPage />
             </ProtectedRoute>
           }
@@ -991,6 +993,30 @@ const AppRoutes: React.FC = () => {
               <RekapNilaiKknPage />
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/e-sertifikat/mahasiswa"
+          element={
+            <ProtectedRoute allowedRoles={["DEVELOPER", "DPL", "DOSEN_PEMBIMBING", "MPL", "ADMIN_DLH", "LURAH", "CAMAT", "RW", "SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "MAHASISWA_KKN"]}>
+              <SertifikatKknPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/e-sertifikat/dpl"
+          element={
+            <ProtectedRoute allowedRoles={["DEVELOPER", "DPL", "DOSEN_PEMBIMBING", "MPL", "ADMIN_DLH", "LURAH", "CAMAT", "RW", "SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN"]}>
+              <SertifikatDplPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/e-sertifikat"
+          element={<Navigate to="/e-sertifikat/mahasiswa" replace />}
+        />
+        <Route
+          path="/sertifikat-dpl"
+          element={<Navigate to="/e-sertifikat/dpl" replace />}
         />
         <Route
           path="/sertifikat-kkn"
@@ -1590,7 +1616,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/laporan/kkn"
           element={
-            <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER", "PIMPINAN", "PEMIMPIN"]}>
+            <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER", "PIMPINAN", "PEMIMPIN", "ADMIN_DLH", "CAMAT", "LURAH", "PANITIA_TASKFORCE"]}>
               <LaporanResmiKknPage />
             </ProtectedRoute>
           }
