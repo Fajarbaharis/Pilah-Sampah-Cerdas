@@ -164,7 +164,7 @@ export const dashboardController = {
 
   getTrend: async (req: Request, res: Response) => {
     try {
-      let { weeks, wilayah, year, range } = req.query;
+      let { weeks, wilayah, year, range, month } = req.query;
       const user = req.user;
 
       const isAllWilayah = (w: any) =>
@@ -203,13 +203,15 @@ export const dashboardController = {
       const parsedWeeks = weeks ? parseInt(weeks as string) : 8;
       const parsedYear = year ? parseInt(year as string) : undefined;
       const parsedRange = typeof range === "string" ? range : undefined;
+      const parsedMonth = month ? parseInt(month as string) : undefined;
       const [trend, availableYears] = await Promise.all([
         dashboardService.getTrend(
           parsedWeeks,
           wilayah as string,
           parsedYear,
           parsedRange,
-          includeTestAccounts
+          includeTestAccounts,
+          parsedMonth
         ),
         dashboardService.getAvailableYears(wilayah as string),
       ]);
@@ -383,13 +385,14 @@ export const dashboardController = {
 
   getWasteExecutiveReport: async (req: Request, res: Response) => {
     try {
-      const { wilayah, periode, startDate, endDate, hari, jamMulai, jamSelesai, sourceType } = req.query;
+      const { wilayah, rw, periode, startDate, endDate, hari, jamMulai, jamSelesai, sourceType } = req.query;
       const user = req.user;
       const isDevOnly = user?.role === "DEVELOPER";
       const includeTestAccounts = req.query.includeTestAccounts === "true" && isDevOnly;
 
       const report = await wasteExecutiveReportService.getWasteExecutiveReport({
         wilayah: wilayah as string,
+        rw: rw as string,
         periode: periode as string,
         startDate: startDate as string,
         endDate: endDate as string,
@@ -415,12 +418,14 @@ export const dashboardController = {
 
   exportWasteExecutiveReport: async (req: Request, res: Response) => {
     try {
-      const { wilayah, periode, startDate, endDate } = req.query;
+      const { wilayah, rw, periode, startDate, endDate, sourceType } = req.query;
       const buffer = await wasteExecutiveReportService.exportWasteExecutiveReport({
         wilayah: wilayah as string,
+        rw: rw as string,
         periode: periode as string,
         startDate: startDate as string,
         endDate: endDate as string,
+        sourceType: sourceType as any,
       });
 
       res.setHeader(

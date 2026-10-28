@@ -25,6 +25,12 @@ vi.mock("../lib/prisma.js", () => ({
     rw: {
       count: vi.fn().mockResolvedValue(75),
     },
+    logbookKkn: {
+      count: vi.fn().mockResolvedValue(15),
+    },
+    logbookDpl: {
+      count: vi.fn().mockResolvedValue(8),
+    },
   },
 }));
 
@@ -186,6 +192,16 @@ describe("laporanKknService - Laporan Resmi KKN Eksekutif", () => {
       // Total menit = (180 + 180) + 240 = 600 menit = 10 jam
       expect(result.ringkasanEksekutif.totalJamKontribusi).toBe(10);
       expect(result.ringkasanEksekutif.rataRataJamPerMahasiswa).toBe(5);
+
+      // Verifikasi Logbook Riil
+      expect(result.ringkasanEksekutif.totalLogbookMahasiswa).toBe(15);
+      expect(result.ringkasanEksekutif.totalLogbookDpl).toBe(8);
+
+      // Verifikasi Profil Akademik (SKS & Prodi) & Identitas Program
+      expect(result.distribusiSks).toBeDefined();
+      expect(result.sebaranProdi).toBeDefined();
+      expect(result.programIdentity).toBeDefined();
+      expect(result.programIdentity.kodePts).toBe("041027");
 
       // Verifikasi Matriks Kelompok
       expect(result.matriksKelompok.length).toBe(1);

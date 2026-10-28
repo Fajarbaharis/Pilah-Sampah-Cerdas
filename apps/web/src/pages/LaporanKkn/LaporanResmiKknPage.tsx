@@ -15,19 +15,32 @@ import {
   FileText,
   Printer,
   RefreshCw,
-  Users,
-  CheckCircle2,
-  Clock,
   Filter,
   Award,
   GraduationCap,
+  Settings,
   Search,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   Check,
   Compass,
+  BookOpen,
+  Layers,
+  TrendingUp,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  Tooltip as RechartsTooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
 import api from "../../services/api";
 import showToast from "../../utils/showToast";
 import { FormulaTooltip } from "../../components/common/FormulaTooltip";
@@ -64,6 +77,8 @@ export interface LaporanSummaryResponse {
     persentaseProkerSelesai: number;
     totalJamKontribusi: number;
     rataRataJamPerMahasiswa: number;
+    totalLogbookMahasiswa: number;
+    totalLogbookDpl: number;
   };
   ringkasanDampakSampah?: {
     totalSampahTerpilahKg: number;
@@ -141,6 +156,32 @@ export interface LaporanSummaryResponse {
     jumlahMhsDinilai: number;
     statusEvaluasiLabel: string;
   }>;
+  distribusiSks?: {
+    totalMahasiswa: number;
+    totalMahasiswaSemua?: number;
+    totalMahasiswaDenganSks?: number;
+    belumTerdataCount?: number;
+    breakdown: Array<{
+      sks: number;
+      label: string;
+      count: number;
+      percentage: number;
+      color: string;
+    }>;
+  };
+  sebaranProdi?: Array<{
+    name: string;
+    count: number;
+    breakdown?: Array<{ name: string; count: number }>;
+  }>;
+  sebaranProdiFull?: Array<{ name: string; count: number }>;
+  programIdentity?: {
+    tahun: string;
+    kodePts: string;
+    namaPts: string;
+    batch: string;
+    identitasFormat: string;
+  };
   grafikPerforma: {
     prokerKategori: Array<{ kategori: string; total: number; selesai: number }>;
     statusPelaksanaanProker: Array<{ status: string; count: number; percentage: number; color: string }>;
@@ -166,7 +207,21 @@ export interface LaporanSummaryResponse {
     }>;
   };
   filterOptions: {
+    periodeOptions?: Array<{
+      value: string;
+      label: string;
+      tahun?: string;
+      kodePts?: string;
+      namaPts?: string;
+      batch?: string;
+    }>;
     kelurahanOptions: string[];
+    rwOptions?: string[];
+    kelompokOptions?: Array<{
+      value: string;
+      label: string;
+      kelurahan?: string;
+    }>;
     selectedKelurahan: string;
     selectedRw: string;
     selectedKelompok: string;
@@ -186,6 +241,7 @@ export const LaporanResmiKknPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"dashboard" | "document">("dashboard");
 
   // Filter States
+  const [selectedPeriode, setSelectedPeriode] = useState<string>("2026-041027-Universitas Komputer Indonesia - 1");
   const [selectedKelurahan, setSelectedKelurahan] = useState<string>("Semua Kelurahan");
   const [selectedRw, setSelectedRw] = useState<string>("");
   const [selectedKelompok, setSelectedKelompok] = useState<string>("");
@@ -214,13 +270,16 @@ export const LaporanResmiKknPage: React.FC = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
+      if (selectedPeriode && selectedPeriode !== "ALL") {
+        params.append("periode", selectedPeriode);
+      }
       if (selectedKelurahan && selectedKelurahan !== "Semua Kelurahan" && selectedKelurahan !== "ALL") {
         params.append("kelurahan", selectedKelurahan);
       }
-      if (selectedRw && selectedRw.trim() !== "") {
+      if (selectedRw && selectedRw.trim() !== "" && selectedRw !== "Semua RW" && selectedRw !== "ALL") {
         params.append("rw", selectedRw.trim());
       }
-      if (selectedKelompok && selectedKelompok.trim() !== "") {
+      if (selectedKelompok && selectedKelompok.trim() !== "" && selectedKelompok !== "Semua Kelompok" && selectedKelompok !== "ALL") {
         params.append("kelompok", selectedKelompok.trim());
       }
 
@@ -240,7 +299,7 @@ export const LaporanResmiKknPage: React.FC = () => {
 
   useEffect(() => {
     fetchLaporanData();
-  }, [selectedKelurahan]);
+  }, [selectedPeriode, selectedKelurahan]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -249,10 +308,20 @@ export const LaporanResmiKknPage: React.FC = () => {
     return () => clearTimeout(handler);
   }, [selectedRw, selectedKelompok]);
 
-  // Alur Buka Modal sebelum Cetak PDF
-  const handleOpenPrintFlow = () => {
-    setIsPrintFlow(true);
-    setIsSettingsOpen(true);
+  // Aksi Cetak PDF Resmi Langsung
+  const handlePrint = () => {
+    setViewMode("document");
+    setTimeout(() => {
+      const originalTitle = document.title;
+      const cleanTitle = (reportConfig.judulLaporan || "Laporan_Resmi_Evaluasi_KKN")
+        .replace(/[^a-zA-Z0-9_-]/g, "_")
+        .replace(/_+/g, "_");
+      document.title = `${cleanTitle}_Coblong_UNIKOM_2026`;
+      window.print();
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
+    }, 250);
   };
 
   // Simpan Pengaturan Naskah Dinamis
@@ -267,7 +336,10 @@ export const LaporanResmiKknPage: React.FC = () => {
         setViewMode("document");
         setTimeout(() => {
           const originalTitle = document.title;
-          document.title = "";
+          const cleanTitle = (newConfig.judulLaporan || "Laporan_Resmi_Evaluasi_KKN")
+            .replace(/[^a-zA-Z0-9_-]/g, "_")
+            .replace(/_+/g, "_");
+          document.title = `${cleanTitle}_Coblong_UNIKOM_2026`;
           window.print();
           setTimeout(() => {
             document.title = originalTitle;
@@ -336,6 +408,139 @@ export const LaporanResmiKknPage: React.FC = () => {
     if (tablePageSize === -1 || processedMatriksKelompok.length === 0) return 1;
     return Math.ceil(processedMatriksKelompok.length / tablePageSize);
   }, [processedMatriksKelompok.length, tablePageSize]);
+
+  // Data Donut Chart: 4 Klaster Program Kerja
+  const prokerKlasterDonutData = useMemo(() => {
+    if (!data?.grafikPerforma?.prokerKategori) return [];
+    const colors: Record<string, string> = {
+      EDUKASI: "#10b981",    // Emerald
+      LINGKUNGAN: "#14b8a6", // Teal
+      DIGITAL: "#3b82f6",    // Blue
+      FISIK: "#8b5cf6",      // Violet
+    };
+    return data.grafikPerforma.prokerKategori.map((k) => ({
+      name: k.kategori === "EDUKASI" ? "Edukasi & Sosialisasi" :
+            k.kategori === "LINGKUNGAN" ? "Lingkungan & Biokonversi" :
+            k.kategori === "DIGITAL" ? "Digitalisasi & Inovasi" :
+            "Sarana Fisik Posko",
+      rawKategori: k.kategori,
+      total: k.total,
+      value: k.selesai,
+      selesai: k.selesai,
+      color: colors[k.kategori] || "#0ea5e9",
+    }));
+  }, [data?.grafikPerforma?.prokerKategori]);
+
+  // Data Grouped Bar Chart: Komparasi 6 Kelurahan Binaan
+  const kelurahanBarData = useMemo(() => {
+    if (!data?.grafikPerforma?.sebaranPerKelurahan) return [];
+    return data.grafikPerforma.sebaranPerKelurahan.map((k) => {
+      return {
+        name: k.kelurahan.replace("Lebak ", "L. "),
+        fullName: `Kelurahan ${k.kelurahan}`,
+        mahasiswa: k.totalMahasiswa,
+        prokerSelesai: k.prokerSelesai,
+        kelompok: k.totalKelompok,
+      };
+    });
+  }, [data?.grafikPerforma?.sebaranPerKelurahan]);
+
+  // Data Donut Chart: Distribusi Beban SKS Akademik Mahasiswa
+  const sksDonutData = useMemo(() => {
+    if (!data?.distribusiSks?.breakdown) return [];
+    return data.distribusiSks.breakdown
+      .filter((b) => b.count > 0)
+      .map((b) => ({
+        name: b.label,
+        sks: b.sks,
+        value: b.count,
+        percentage: b.percentage,
+        color: b.color || "#0ea5e9",
+      }));
+  }, [data?.distribusiSks?.breakdown]);
+
+  // Data Bar Chart: Sebaran Multidisiplin Program Studi Mahasiswa
+  const prodiBarData = useMemo(() => {
+    const list = data?.sebaranProdiFull || data?.sebaranProdi || [];
+    return list.slice(0, 6).map((p) => ({
+      name: p.name.length > 18 ? `${p.name.slice(0, 16)}...` : p.name,
+      fullName: p.name,
+      count: p.count,
+    }));
+  }, [data?.sebaranProdi, data?.sebaranProdiFull]);
+
+  // Status Pemilihan Kelurahan
+  const isKelurahanSelected = useMemo(() => {
+    return (
+      selectedKelurahan !== "Semua Kelurahan" &&
+      selectedKelurahan !== "ALL" &&
+      selectedKelurahan.trim() !== ""
+    );
+  }, [selectedKelurahan]);
+
+  // Opsi RW yang tersedia (dinamis berdasarkan kelurahan yang dipilih)
+  const availableRwOptions = useMemo(() => {
+    if (!isKelurahanSelected || !data?.matriksKelompok) return ["Semua RW"];
+
+    const rws = new Set<string>();
+    data.matriksKelompok
+      .filter((m) => m.kelurahan.toLowerCase().includes(selectedKelurahan.toLowerCase()))
+      .forEach((m) => {
+        if (Array.isArray(m.cakupanRw)) {
+          m.cakupanRw.forEach((rw) => {
+            const num = parseInt(String(rw).replace(/\D/g, ""), 10);
+            if (!isNaN(num) && num > 0) {
+              rws.add(`RW ${String(num).padStart(2, "0")}`);
+            }
+          });
+        }
+      });
+
+    const sortedList = Array.from(rws).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ""), 10);
+      const numB = parseInt(b.replace(/\D/g, ""), 10);
+      return numA - numB;
+    });
+
+    return ["Semua RW", ...sortedList];
+  }, [isKelurahanSelected, selectedKelurahan, data?.matriksKelompok]);
+
+  // Opsi Kelompok yang tersedia (dinamis berdasarkan kelurahan dan RW terpilih)
+  const availableKelompokOptions = useMemo(() => {
+    if (!data?.matriksKelompok) return ["Semua Kelompok"];
+
+    let list = data.matriksKelompok;
+
+    // Jika kelurahan tertentu aktif, persempit kelompok ke kelurahan tersebut
+    if (isKelurahanSelected) {
+      list = list.filter((m) =>
+        m.kelurahan.toLowerCase().includes(selectedKelurahan.toLowerCase())
+      );
+    }
+
+    // Jika RW tertentu aktif, persempit kelompok ke RW tersebut
+    if (selectedRw && selectedRw !== "Semua RW" && selectedRw.trim() !== "") {
+      const rwNum = parseInt(selectedRw.replace(/\D/g, ""), 10);
+      if (!isNaN(rwNum)) {
+        list = list.filter((m) =>
+          m.cakupanRw.some((r) => parseInt(String(r).replace(/\D/g, ""), 10) === rwNum)
+        );
+      }
+    }
+
+    const sortedGroupNames = list
+      .map((m) => m.nama)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+    return ["Semua Kelompok", ...sortedGroupNames];
+  }, [isKelurahanSelected, selectedKelurahan, selectedRw, data?.matriksKelompok]);
+
+  // Reset selectedKelompok jika kelompok terpilih tidak ada dalam opsi kelurahan/RW baru
+  useEffect(() => {
+    if (selectedKelompok && selectedKelompok !== "Semua Kelompok" && !availableKelompokOptions.includes(selectedKelompok)) {
+      setSelectedKelompok("Semua Kelompok");
+    }
+  }, [availableKelompokOptions, selectedKelompok]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 pb-20">
@@ -490,17 +695,48 @@ export const LaporanResmiKknPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Baris Kontrol Filter */}
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            {/* Filter Kelurahan */}
-            <div className="w-full sm:w-64">
+          {/* Baris Kontrol Filter Dropdown 1 Baris Penuh */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            {/* Filter 1: Identitas Program / Batch KKN */}
+            <div className="min-w-0">
+              <label className="block text-[10.5px] font-extrabold uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-wider">
+                Identitas Program / Batch
+              </label>
+              <select
+                value={selectedPeriode}
+                onChange={(e) => setSelectedPeriode(e.target.value)}
+                className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#009966] cursor-pointer truncate"
+              >
+                {data?.filterOptions?.periodeOptions?.length ? (
+                  data.filterOptions.periodeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="2026-041027-Universitas Komputer Indonesia - 1">
+                      2026-041027-Universitas Komputer Indonesia - 1
+                    </option>
+                    <option value="ALL">Semua Batch / Periode</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {/* Filter 2: Cakupan Kelurahan */}
+            <div className="min-w-0">
               <label className="block text-[10.5px] font-extrabold uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-wider">
                 Cakupan Kelurahan
               </label>
               <select
                 value={selectedKelurahan}
-                onChange={(e) => setSelectedKelurahan(e.target.value)}
-                className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#009966] cursor-pointer"
+                onChange={(e) => {
+                  setSelectedKelurahan(e.target.value);
+                  setSelectedRw("Semua RW");
+                  setSelectedKelompok("Semua Kelompok");
+                }}
+                className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#009966] cursor-pointer truncate"
               >
                 {Array.from(
                   new Set(
@@ -516,31 +752,105 @@ export const LaporanResmiKknPage: React.FC = () => {
               </select>
             </div>
 
+            {/* Filter 3: RW Binaan Aktif (Wajib Pilih Kelurahan Terlebih Dahulu) */}
+            <div className="min-w-0">
+              <label className="block text-[10.5px] font-extrabold uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-wider">
+                RW Binaan
+              </label>
+              <select
+                value={isKelurahanSelected ? (selectedRw || "Semua RW") : ""}
+                onChange={(e) => setSelectedRw(e.target.value)}
+                disabled={!isKelurahanSelected}
+                title={
+                  !isKelurahanSelected
+                    ? "Pilih cakupan kelurahan terlebih dahulu untuk memfilter RW binaan"
+                    : "Pilih RW binaan aktif"
+                }
+                className={`w-full text-xs border rounded-xl px-3 py-2 font-bold transition-all truncate ${
+                  isKelurahanSelected
+                    ? "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#009966] cursor-pointer"
+                    : "bg-slate-100/70 dark:bg-slate-800/40 border-slate-200/50 dark:border-slate-800/50 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                }`}
+              >
+                {!isKelurahanSelected ? (
+                  <option value="">Pilih Kelurahan Dulu</option>
+                ) : (
+                  availableRwOptions.map((rw) => (
+                    <option key={rw} value={rw}>
+                      {rw}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            {/* Filter 4: Kelompok KKN */}
+            <div className="min-w-0">
+              <label className="block text-[10.5px] font-extrabold uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-wider">
+                Kelompok KKN
+              </label>
+              <select
+                value={selectedKelompok || "Semua Kelompok"}
+                onChange={(e) => setSelectedKelompok(e.target.value)}
+                className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#009966] cursor-pointer truncate"
+              >
+                {availableKelompokOptions.map((kel) => (
+                  <option key={kel} value={kel}>
+                    {kel}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Baris Kedua: Tombol Reset Filter & Aksi Eksekutif */}
+          <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5 text-xs">
             {/* Reset Filter Button */}
-            {selectedKelurahan !== "Semua Kelurahan" && (
-              <div className="self-end pb-1">
+            <div>
+              {(selectedKelurahan !== "Semua Kelurahan" ||
+                (selectedRw && selectedRw !== "Semua RW" && selectedRw !== "") ||
+                (selectedKelompok && selectedKelompok !== "Semua Kelompok" && selectedKelompok !== "")) ? (
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedKelurahan("Semua Kelurahan");
-                    setSelectedRw("");
-                    setSelectedKelompok("");
+                    setSelectedRw("Semua RW");
+                    setSelectedKelompok("Semua Kelompok");
                   }}
-                  className="px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer inline-flex items-center gap-1"
                 >
-                  Reset Filter
+                  <span>&times;</span>
+                  <span>Reset Filter</span>
                 </button>
-              </div>
-            )}
+              ) : (
+                <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                  Menampilkan seluruh data binaan KKN
+                </span>
+              )}
+            </div>
 
-            {/* Tombol Aksi di Ujung Kanan (Cetak PDF) */}
-            <div className="ml-auto flex items-end gap-2 self-end pb-0.5">
+            {/* Tombol Aksi di Ujung Kanan (Format Naskah, Cetak PDF) */}
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={handleOpenPrintFlow}
+                onClick={() => {
+                  setIsPrintFlow(false);
+                  setIsSettingsOpen(true);
+                }}
+                disabled={loading || !data}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold text-xs shadow-2xs transition-all disabled:opacity-50 cursor-pointer"
+                title="Sesuaikan Nomor Surat, SK Rektor, Pejabat & TTD Naskah Dinas"
+              >
+                <Settings size={13} />
+                <span>Format Naskah</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePrint}
                 disabled={loading || !data}
                 className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#009966] hover:bg-[#008855] active:scale-95 text-white font-black text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-                title="Pratinjau naskah dan cetak PDF resmi"
+                title="Cetak Dokumen Resmi Capaian KKN (Standar F4)"
               >
                 <Printer size={14} />
                 <span>Cetak PDF</span>
@@ -591,355 +901,319 @@ export const LaporanResmiKknPage: React.FC = () => {
                 viewMode === "dashboard" ? "block" : "hidden"
               }`}
             >
-              {/* SECTION 1: INFORMASI SINGKAT */}
+              {/* SECTION 1: EMPAT INDIKATOR UTAMA KKN & RELASI LUARAN */}
               <div className="space-y-3">
                 <div className="px-1 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <span>INFORMASI SINGKAT</span>
+                  <span>INDIKATOR UTAMA KULIAH KERJA NYATA & AKUNTABILITAS PENGABDIAN</span>
                   <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
-                  {/* KPI 1: Mahasiswa Aktif */}
-                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 flex flex-col justify-between">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* KPI 1: Partisipasi SDM Mahasiswa */}
+                  <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-3 flex flex-col justify-between">
                     <div>
-                      <div className="flex items-start justify-between gap-1.5 text-slate-400">
-                        <div className="flex items-center min-w-0">
-                          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
-                            Mahasiswa Aktif
-                          </span>
-                          <FormulaTooltip
-                            title="Total Mahasiswa Aktif"
-                            formula="∑ Mahasiswa KKN (status aktif) di 32 kelompok binaan"
-                            description="Data terverifikasi dari registrasi akademik resmi UNIKOM dan penempatan posko KKN Tematik 2026."
-                            isoStandard="ISO 9241-110"
-                          />
-                        </div>
-                        <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                          <Users size={16} />
-                        </div>
+                      <div className="flex items-start justify-between gap-1 text-slate-400">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                          Partisipasi Mahasiswa
+                        </span>
+                        <FormulaTooltip
+                          title="Total Mahasiswa Aktif"
+                          formula="∑ Mahasiswa KKN (status aktif) di 32 kelompok binaan"
+                          description="Data terverifikasi dari registrasi akademik resmi UNIKOM dan penempatan posko KKN Tematik 2026."
+                          isoStandard="ISO 9241-110"
+                        />
                       </div>
-                      <div className="flex items-baseline flex-wrap gap-1 mt-1">
-                        <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                      <div className="flex items-baseline flex-wrap gap-1 mt-2">
+                        <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight font-mono">
                           {data.ringkasanEksekutif.totalMahasiswaAktif}
                         </span>
-                        <span className="text-xs font-semibold text-slate-500">Orang</span>
+                        <span className="text-xs font-bold text-slate-500">Orang</span>
                       </div>
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between">
-                      <span>{data.ringkasanEksekutif.totalKelompok} Kelompok</span>
+                    <div className="text-[10.5px] text-slate-500 dark:text-slate-400 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                      <span className="font-semibold text-purple-600 dark:text-purple-400">{data.ringkasanEksekutif.totalKelompok} Posko Kelompok</span>
                       <span>&bull;</span>
-                      <span>{data.ringkasanEksekutif.totalDpl} DPL Binaan</span>
+                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">{data.ringkasanEksekutif.totalDpl} DPL Pengampu</span>
                     </div>
                   </div>
 
-                  {/* KPI 2: Kepatuhan Hadir */}
-                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 flex flex-col justify-between">
+                  {/* KPI 2: Kepatuhan Hadir Posko */}
+                  <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-3 flex flex-col justify-between">
                     <div>
-                      <div className="flex items-start justify-between gap-1.5 text-slate-400">
-                        <div className="flex items-center min-w-0">
-                          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
-                            Kepatuhan Hadir
-                          </span>
-                          <FormulaTooltip
-                            title="Tingkat Kepatuhan Presensi Posko"
-                            formula="(∑ Sesi Hadir Memenuhi ÷ ∑ Sesi Terjadwal) × 100%"
-                            description="Dihitung dari presensi GPS anti-fake dalam radius 250 m posko resmi dengan durasi efektif minimal 240 menit (4 jam bersih) per sesi."
-                            isoStandard="ISO 9241-110"
-                          />
-                        </div>
-                        <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#009966] dark:text-emerald-400 flex items-center justify-center shrink-0">
-                          <CheckCircle2 size={16} />
-                        </div>
+                      <div className="flex items-start justify-between gap-1 text-slate-400">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                          Kepatuhan Hadir Posko
+                        </span>
+                        <FormulaTooltip
+                          title="Tingkat Kepatuhan Presensi Posko"
+                          formula="(∑ Sesi Hadir Memenuhi ÷ ∑ Sesi Terjadwal) × 100%"
+                          description="Dihitung dari presensi GPS anti-fake dalam radius 250 m posko resmi dengan durasi efektif minimal 240 menit (4 jam bersih) per sesi."
+                          isoStandard="ISO 9241-110"
+                        />
                       </div>
-                      <div className="flex items-baseline flex-wrap gap-1 mt-1">
-                        <span className="text-2xl sm:text-3xl font-black text-[#009966] dark:text-emerald-400 tracking-tight">
-                          {data.ringkasanEksekutif.kepatuhanPresensiPercent}%
+                      <div className="flex items-baseline flex-wrap gap-1 mt-2">
+                        <span className="text-2xl sm:text-3xl font-black text-[#009966] dark:text-emerald-400 tracking-tight font-mono">
+                          {Number(data.ringkasanEksekutif.kepatuhanPresensiPercent ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%
                         </span>
                       </div>
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <span>Target Posko &ge; 240 Menit Bersih</span>
+                    <div className="text-[10.5px] text-slate-500 dark:text-slate-400 pt-2.5 border-t border-slate-100 dark:border-slate-800 leading-snug">
+                      <span>Target Posko &ge; 240 Menit Bersih &bull; Geofence 250 m</span>
                     </div>
                   </div>
 
-                  {/* KPI 3: Total Jam Kontribusi */}
-                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 flex flex-col justify-between">
+                  {/* KPI 3: Jam Kerja Nyata */}
+                  <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-3 flex flex-col justify-between">
                     <div>
-                      <div className="flex items-start justify-between gap-1.5 text-slate-400">
-                        <div className="flex items-center min-w-0">
-                          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
-                            Jam Kontribusi
-                          </span>
-                          <FormulaTooltip
-                            title="Total Jam Kerja Nyata Lapangan"
-                            formula="(∑ Menit Posko + ∑ Menit Presensi Mandiri) ÷ 60"
-                            description="Akumulasi waktu kerja nyata mahasiswa untuk memenuhi target kurikulum pengabdian (minimal 200 jam efektif per mahasiswa)."
-                            isoStandard="ISO 9241-110"
-                          />
-                        </div>
-                        <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                          <Clock size={16} />
-                        </div>
-                      </div>
-                      <div className="flex items-baseline flex-wrap gap-1 mt-1">
-                        <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                          {(data.ringkasanEksekutif.totalJamKontribusi ?? 0).toLocaleString("id-ID")}
+                      <div className="flex items-start justify-between gap-1 text-slate-400">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                          Jam Kerja Nyata Lapangan
                         </span>
-                        <span className="text-xs font-semibold text-slate-500">Jam</span>
+                        <FormulaTooltip
+                          title="Total Jam Kerja Nyata Lapangan"
+                          formula="(∑ Menit Posko + ∑ Menit Presensi Mandiri) ÷ 60"
+                          description="Akumulasi waktu kerja nyata mahasiswa untuk memenuhi target kurikulum pengabdian (minimal 200 jam efektif per mahasiswa)."
+                          isoStandard="ISO 9241-110"
+                        />
+                      </div>
+                      <div className="flex items-baseline flex-wrap gap-1 mt-2">
+                        <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight font-mono">
+                          {(data.ringkasanEksekutif.totalJamKontribusi ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-xs font-bold text-slate-500">Jam</span>
                       </div>
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <span>Rerata {data.ringkasanEksekutif.rataRataJamPerMahasiswa ?? 0} Jam / Mahasiswa</span>
+                    <div className="text-[10.5px] text-slate-500 dark:text-slate-400 pt-2.5 border-t border-slate-100 dark:border-slate-800 leading-snug">
+                      <span>Rerata <strong className="text-blue-600 dark:text-blue-400">{Number(data.ringkasanEksekutif.rataRataJamPerMahasiswa ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })} Jam</strong> / Mahasiswa (Target &ge; 200 Jam)</span>
                     </div>
                   </div>
 
                   {/* KPI 4: Capaian Program Kerja */}
-                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 flex flex-col justify-between">
+                  <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-3 flex flex-col justify-between">
                     <div>
-                      <div className="flex items-start justify-between gap-1.5 text-slate-400">
-                        <div className="flex items-center min-w-0">
-                          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
-                            Capaian Program Kerja
-                          </span>
-                          <FormulaTooltip
-                            title="Persentase Realisasi Program Kerja"
-                            formula="(∑ Program Kerja Selesai 100% ÷ ∑ Program Kerja Disetujui DPL) × 100%"
-                            description="Indikator luaran program kerja di 4 klaster binaan yang telah diverifikasi kelengkapannya oleh Dosen Pembimbing Lapangan."
-                            isoStandard="ISO 9241-110"
-                          />
-                        </div>
-                        <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                          <Award size={16} />
-                        </div>
+                      <div className="flex items-start justify-between gap-1 text-slate-400">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                          Capaian Program Kerja
+                        </span>
+                        <FormulaTooltip
+                          title="Persentase Realisasi Program Kerja"
+                          formula="(∑ Program Kerja Selesai 100% ÷ ∑ Program Kerja Disetujui DPL) × 100%"
+                          description="Indikator luaran program kerja di 4 klaster binaan yang telah diverifikasi kelengkapannya oleh Dosen Pembimbing Lapangan."
+                          isoStandard="ISO 9241-110"
+                        />
                       </div>
-                      <div className="flex items-baseline flex-wrap gap-1 mt-1">
-                        <span className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                      <div className="flex items-baseline flex-wrap gap-1 mt-2">
+                        <span className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight font-mono">
                           {data.ringkasanEksekutif.persentaseProkerSelesai}%
                         </span>
                       </div>
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <span>{data.ringkasanEksekutif.totalProkerSelesai} Tuntas dari {data.ringkasanEksekutif.totalProkerDisetujui} Disetujui</span>
+                    <div className="text-[10.5px] text-slate-500 dark:text-slate-400 pt-2.5 border-t border-slate-100 dark:border-slate-800 leading-snug">
+                      <span><strong className="text-emerald-600 dark:text-emerald-400">{data.ringkasanEksekutif.totalProkerSelesai} Tuntas</strong> dari {data.ringkasanEksekutif.totalProkerDisetujui} Disetujui DPL</span>
                     </div>
                   </div>
+                </div>
 
-                  {/* KPI 5: Warga Dampingan dan Logbook Lapangan (Fokus Murni KKN) */}
-                  <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 flex flex-col justify-between">
+                {/* Sub-Banner Relasi Luaran Dampak Lingkungan */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-blue-950/30 border border-emerald-200/80 dark:border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#009966] text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Compass size={20} />
+                    </div>
                     <div>
-                      <div className="flex items-start justify-between gap-1.5 text-slate-400">
-                        <div className="flex items-center min-w-0">
-                          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
-                            Warga Dampingan
-                          </span>
-                          <FormulaTooltip
-                            title="Total Warga Binaan dan Logbook Lapangan"
-                            formula="∑ Kepala Keluarga Binaan di 74 RW + ∑ Logbook Terverifikasi"
-                            description="Akumulasi kepala keluarga warga binaan yang didampingi secara langsung oleh mahasiswa posko KKN Tematik di 74 RW se-Kecamatan Coblong beserta rekapitulasi logbook kegiatan."
-                            isoStandard="ISO 9241-110"
-                          />
-                        </div>
-                        <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-[#009966] dark:text-emerald-400 flex items-center justify-center shrink-0">
-                          <Compass size={16} />
-                        </div>
+                      <div className="font-extrabold text-slate-900 dark:text-white text-xs">
+                        Relasi Luaran Lingkungan & Pendampingan Warga Binaan
                       </div>
-                      <div className="flex items-baseline flex-wrap gap-1 mt-1">
-                        <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                          {data.ringkasanDampakSampah?.totalPenggunaWarga && data.ringkasanDampakSampah.totalPenggunaWarga > 0
-                            ? data.ringkasanDampakSampah.totalPenggunaWarga
-                            : 288}
-                        </span>
-                        <span className="text-xs font-semibold text-slate-500">Keluarga</span>
+                      <div className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+                        Intervensi mahasiswa KKN mendampingi <strong>{(data.ringkasanDampakSampah?.totalPenggunaWarga ?? 0).toLocaleString("id-ID")} Keluarga Binaan</strong> di <strong>{data.ringkasanDampakSampah?.totalLokasiRw ?? 74} RW</strong> sukses merealisasikan pemilahan <strong>{Number(data.ringkasanDampakSampah?.totalSampahTerpilahKg || 0).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} kg Sampah</strong> dan reduksi emisi <strong>{Number(data.ringkasanDampakSampah?.reduksiEmisiCo2Kg || 0).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} kg CO₂e</strong>.
                       </div>
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <span>
-                        {((data.ringkasanEksekutif as any)?.totalLogbookMahasiswa ?? 12533).toLocaleString("id-ID")} Logbook Mahasiswa &bull; {((data.ringkasanEksekutif as any)?.totalLogbookDpl ?? 246).toLocaleString("id-ID")} Log DPL
-                      </span>
-                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                    <span className="text-[10.5px] font-bold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 font-mono">
+                      {(data.ringkasanEksekutif.totalLogbookMahasiswa ?? 0).toLocaleString("id-ID")} Log Mhs &bull; {(data.ringkasanEksekutif.totalLogbookDpl ?? 0).toLocaleString("id-ID")} Log DPL
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* SECTION 2: SEBARAN WILAYAH DAN CAPAIAN PROGRAM KERJA */}
+              {/* SECTION 2: ANALISIS VISUAL RECHARTS KLASTER PROKER & WILAYAH BINAAN */}
               <div className="space-y-3">
                 <div className="px-1 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
                   <div className="flex items-center">
-                    <span>SEBARAN WILAYAH DAN CAPAIAN PROGRAM KERJA</span>
+                    <span>ANALISIS VISUAL KOMPOSISI 4 KLASTER & KINERJA WILAYAH</span>
                     <FormulaTooltip
-                      title="Sebaran Partisipasi dan Realisasi Program Kerja"
-                      formula="∑ Kelompok, Mahasiswa, dan Program Kerja per Kelurahan Binaan"
-                      description="Data agregasi real-time dari database PostgreSQL BERSEKA berdasarkan penempatan mahasiswa, presensi posko 240 menit, dan berita acara pengesahan program kerja oleh DPL."
+                      title="Analisis Visual Capaian Proker dan Sebaran Kelurahan"
+                      formula="Realisasi Klaster Proker = (∑ Proker Tuntas ÷ ∑ Proker Disetujui) × 100%"
+                      description="Data agregasi analitik interaktif berbasis standar visualisasi Recharts."
                       isoStandard="ISO 9241-110"
                     />
                   </div>
                   <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
                 </div>
-              <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Sebaran per Kelurahan */}
-                <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between min-h-[380px]">
-                  <div>
-                    <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-                      Sebaran Partisipasi dan Capaian per Kelurahan Binaan
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      Kecamatan Coblong (6 Kelurahan Binaan, {data.ringkasanDampakSampah?.totalLokasiRw ?? 74} RW)
-                    </p>
-                  </div>
 
-                  <div className="space-y-3 pt-2">
-                    {data.grafikPerforma.sebaranPerKelurahan
-                      .filter((k) => {
-                        if (selectedKelurahan && selectedKelurahan !== "Semua Kelurahan" && selectedKelurahan !== "ALL") {
-                          return k.kelurahan.toLowerCase().includes(selectedKelurahan.toLowerCase()) || k.totalKelompok > 0;
-                        }
-                        return true;
-                      })
-                      .map((k) => (
-                      <div key={k.kelurahan} className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <span className="text-slate-800 dark:text-slate-200">
-                            Kelurahan {k.kelurahan} ({k.totalKelompok} Kelompok &bull; {k.totalMahasiswa} Mahasiswa)
-                          </span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
-                            {k.prokerSelesai} Program Kerja Tuntas
-                          </span>
-                        </div>
-                        <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500"
-                            style={{
-                              width: `${Math.min(100, Math.max(12, (k.prokerSelesai / Math.max(1, data.ringkasanEksekutif.totalProkerSelesai)) * 100))}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="pt-2 text-[11px] text-slate-400 italic">
-                    {selectedKelurahan !== "Semua Kelurahan"
-                      ? `Menampilkan cakupan aktif: ${selectedKelurahan}`
-                      : "Menampilkan akumulasi seluruh wilayah binaan Kecamatan Coblong"}
-                  </div>
-                </div>
-
-                {/* Status Realisasi 4 Klaster Program Kerja (Dinamis Berdasarkan Filter Kelurahan) */}
-                <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-                  <div className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  {/* Kolom Kiri: Donut Chart Realisasi 4 Klaster Program Kerja (5 cols) */}
+                  <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-4">
                     <div>
                       <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-                        Status Realisasi Program Kerja
+                        Realisasi 4 Klaster Program Kerja
                       </h2>
-                      <p className="text-xs text-slate-500">Realisasi 4 Klaster Program Kerja di Lapangan</p>
+                      <p className="text-xs text-slate-500">
+                        Proporsi capaian tuntas per klaster program kerja di lapangan
+                      </p>
                     </div>
 
-                    <div className="space-y-2">
-                      {/* Klaster 1: Edukasi */}
-                      {(() => {
-                        const edu = data.grafikPerforma?.prokerKategori?.find((k) => k.kategori.toUpperCase().includes("EDUKASI"));
-                        const total = edu?.total ?? 0;
-                        const selesai = edu?.selesai ?? 0;
-                        const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
-                        return (
-                          <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between">
-                            <div>
-                              <div className="text-xs font-bold text-emerald-900 dark:text-emerald-200">Klaster I: Edukasi dan Sosialisasi</div>
-                              <div className="text-[10.5px] text-emerald-700 dark:text-emerald-400">Sosialisasi warga, sekolah binaan, dan forum RW</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-black text-emerald-700 dark:text-emerald-300">
-                                {selesai} / {total}
-                              </div>
-                              <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                                {pct}% Tuntas
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
+                    <div className="relative h-60 w-full flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPieChart>
+                          <Pie
+                            data={prokerKlasterDonutData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={90}
+                            paddingAngle={3}
+                            dataKey="value"
+                          >
+                            {prokerKlasterDonutData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const d = payload[0];
+                                const p = d.payload;
+                                const pct = p.total > 0 ? Math.round((p.selesai / p.total) * 100) : 0;
+                                return (
+                                  <div className="bg-slate-900 text-white text-xs font-bold py-2 px-3 rounded-xl shadow-lg border border-slate-700">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+                                      <span>{p.name}</span>
+                                    </div>
+                                    <div className="mt-1 text-sm font-black text-emerald-400 font-mono">
+                                      {p.selesai} / {p.total} Tuntas ({pct}%)
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Tuntas</span>
+                        <span className="text-lg font-black text-slate-900 dark:text-slate-100 font-mono mt-0.5">
+                          {data.ringkasanEksekutif.totalProkerSelesai}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">dari {data.ringkasanEksekutif.totalProkerDisetujui} Proker</span>
+                      </div>
+                    </div>
 
-                      {/* Klaster 2: Lingkungan */}
-                      {(() => {
-                        const ling = data.grafikPerforma?.prokerKategori?.find((k) => k.kategori.toUpperCase().includes("LINGKUNGAN"));
-                        const total = ling?.total ?? 0;
-                        const selesai = ling?.selesai ?? 0;
-                        const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
+                    <div className="grid grid-cols-2 gap-2.5 pt-2">
+                      {prokerKlasterDonutData.map((klaster) => {
+                        const pct = klaster.total > 0 ? Math.round((klaster.selesai / klaster.total) * 100) : 0;
                         return (
-                          <div className="p-2.5 rounded-xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/60 flex items-center justify-between">
-                            <div>
-                              <div className="text-xs font-bold text-teal-900 dark:text-teal-200">Klaster II: Lingkungan dan Biokonversi</div>
-                              <div className="text-[10.5px] text-teal-700 dark:text-teal-400">Pengolahan kompos, biopori, dan budi daya maggot</div>
+                          <div
+                            key={klaster.rawKategori}
+                            className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60"
+                          >
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: klaster.color }} />
+                              <span className="truncate">{klaster.name}</span>
                             </div>
-                            <div className="text-right">
-                              <div className="text-sm font-black text-teal-700 dark:text-teal-300">
-                                {selesai} / {total}
-                              </div>
-                              <div className="text-[10px] font-bold text-teal-600 dark:text-teal-400">
-                                {pct}% Tuntas
-                              </div>
+                            <div className="text-sm font-black text-slate-900 dark:text-white font-mono mt-1">
+                              {klaster.selesai} <span className="text-xs font-normal text-slate-400">/ {klaster.total}</span>
+                            </div>
+                            <div className="text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                              {pct}% Tuntas
                             </div>
                           </div>
                         );
-                      })()}
-
-                      {/* Klaster 3: Digital */}
-                      {(() => {
-                        const dig = data.grafikPerforma?.prokerKategori?.find((k) => k.kategori.toUpperCase().includes("DIGITAL"));
-                        const total = dig?.total ?? 0;
-                        const selesai = dig?.selesai ?? 0;
-                        const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
-                        return (
-                          <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 flex items-center justify-between">
-                            <div>
-                              <div className="text-xs font-bold text-blue-900 dark:text-blue-200">Klaster III: Digitalisasi dan Pemanfaatan</div>
-                              <div className="text-[10.5px] text-blue-700 dark:text-blue-400">Platform BERSEKA, QR posko, dan nilai sirkular</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-black text-blue-700 dark:text-blue-300">
-                                {selesai} / {total}
-                              </div>
-                              <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
-                                {pct}% Tuntas
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Klaster 4: Fisik */}
-                      {(() => {
-                        const fis = data.grafikPerforma?.prokerKategori?.find((k) => k.kategori.toUpperCase().includes("FISIK"));
-                        const total = fis?.total ?? 0;
-                        const selesai = fis?.selesai ?? 0;
-                        const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
-                        return (
-                          <div className="p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 flex items-center justify-between">
-                            <div>
-                              <div className="text-xs font-bold text-purple-900 dark:text-purple-200">Klaster IV: Sarana Fisik Posko dan Lapangan</div>
-                              <div className="text-[10.5px] text-purple-700 dark:text-purple-400">Penataan posko, pemilahan, dan Tempat Sampah</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-black text-purple-700 dark:text-purple-300">
-                                {selesai} / {total}
-                              </div>
-                              <div className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
-                                {pct}% Tuntas
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
+                      })}
                     </div>
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
-                    <span>Total Realisasi Program Kerja</span>
-                    <span className="font-bold text-[#009966]">
-                      {data.ringkasanEksekutif.totalProkerSelesai} Tuntas dari {data.ringkasanEksekutif.totalProkerDisetujui} Program Kerja ({data.ringkasanEksekutif.persentaseProkerSelesai}%)
-                    </span>
+                  {/* Kolom Kanan: Grouped Bar Chart Kinerja 6 Kelurahan Binaan (7 cols) */}
+                  <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                          Komparasi 6 Kelurahan Binaan
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                          Perbandingan kuantitatif: Mahasiswa Diterjunkan vs Program Kerja Tuntas
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        {selectedKelurahan !== "Semua Kelurahan" ? selectedKelurahan : "6 Kelurahan Binaan"}
+                      </span>
+                    </div>
+
+                    <div className="h-64 w-full pt-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={kelurahanBarData} margin={{ top: 10, right: 10, left: -10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.6} />
+                          <XAxis
+                            dataKey="name"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 11, fontWeight: 700, fill: "#64748b" }}
+                          />
+                          <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 11, fontWeight: 600, fill: "#94a3b8" }}
+                          />
+                          <RechartsTooltip
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const d = payload[0].payload;
+                                return (
+                                  <div className="bg-slate-900 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-lg border border-slate-700 space-y-1">
+                                    <div className="font-extrabold text-sm text-slate-100">{d.fullName}</div>
+                                    <div className="text-[11px] text-slate-400">{d.kelompok} Posko Kelompok Binaan</div>
+                                    <div className="pt-1 border-t border-slate-800 space-y-0.5">
+                                      <div className="flex justify-between gap-4">
+                                        <span className="text-blue-400 font-semibold">Mahasiswa:</span>
+                                        <span className="font-mono font-bold text-white">{d.mahasiswa} Orang</span>
+                                      </div>
+                                      <div className="flex justify-between gap-4">
+                                        <span className="text-emerald-400 font-semibold">Proker Tuntas:</span>
+                                        <span className="font-mono font-bold text-white">{d.prokerSelesai} Proker</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar dataKey="mahasiswa" name="Mahasiswa Diterjunkan" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={32} />
+                          <Bar dataKey="prokerSelesai" name="Program Kerja Tuntas" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={32} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 dark:border-slate-800 text-slate-500">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
+                          <span className="font-semibold">Mahasiswa Diterjunkan</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="font-semibold">Program Kerja Tuntas</span>
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-slate-400 italic">
+                        {data.ringkasanEksekutif.totalKelompok} Posko Kelompok Tersebar
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </section>
               </div>
 
               {/* SECTION 3: PERINGKAT KINERJA UNGGULAN */}
@@ -973,42 +1247,44 @@ export const LaporanResmiKknPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-2.5">
-                    {(data.topMahasiswa && data.topMahasiswa.length > 0 ? data.topMahasiswa : [
-                      { ranking: 1, nama: "Genta Nugraha", nim: "10124180", kelompok: "Kelompok 5 Sadang Serang", kelurahan: "Sadang Serang", nilaiAkhir: 516, grade: "516 Poin", kehadiranPercent: 100, totalJamKerja: 367.8 },
-                      { ranking: 2, nama: "Robi Zoelfahmi", nim: "63824038", kelompok: "Kelompok 4 Sadang Serang", kelurahan: "Sadang Serang", nilaiAkhir: 504, grade: "504 Poin", kehadiranPercent: 100, totalJamKerja: 516.9 },
-                      { ranking: 3, nama: "Dimas Rizki Nugraha", nim: "10124439", kelompok: "Kelompok 5 Sadang Serang", kelurahan: "Sadang Serang", nilaiAkhir: 482, grade: "482 Poin", kehadiranPercent: 100, totalJamKerja: 513.6 },
-                    ]).map((mhs) => (
-                      <div
-                        key={mhs.ranking}
-                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/70"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-black text-xs flex items-center justify-center shrink-0">
-                            #{mhs.ranking}
-                          </span>
-                          <div>
-                            <div className="font-bold text-sm text-slate-900 dark:text-white leading-tight">{mhs.nama}</div>
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                              NIM. {mhs.nim} &bull; {mhs.kelompok}
+                    {data.topMahasiswa && data.topMahasiswa.length > 0 ? (
+                      data.topMahasiswa.map((mhs) => (
+                        <div
+                          key={mhs.ranking}
+                          className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/70"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-black text-xs flex items-center justify-center shrink-0">
+                              #{mhs.ranking}
+                            </span>
+                            <div>
+                              <div className="font-bold text-sm text-slate-900 dark:text-white leading-tight">{mhs.nama}</div>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                NIM. {mhs.nim} &bull; {mhs.kelompok}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0 pl-2">
+                            <div className="font-black text-indigo-600 dark:text-indigo-400 text-sm">
+                              {mhs.grade && mhs.grade.includes("Poin")
+                                ? mhs.grade
+                                : mhs.nilaiAkhir > 0
+                                ? `${mhs.nilaiAkhir.toLocaleString("id-ID")} Poin`
+                                : "0 Poin"}
+                            </div>
+                            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                              {mhs.totalJamKerja > 0
+                                ? `${mhs.totalJamKerja.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} Jam`
+                                : `${mhs.kehadiranPercent.toLocaleString("id-ID")}% Hadir`}
                             </div>
                           </div>
                         </div>
-                        <div className="text-right shrink-0 pl-2">
-                          <div className="font-black text-indigo-600 dark:text-indigo-400 text-sm">
-                            {mhs.grade && mhs.grade.includes("Poin")
-                              ? mhs.grade
-                              : mhs.nilaiAkhir > 0
-                              ? `${mhs.nilaiAkhir.toLocaleString("id-ID")} Poin`
-                              : "0 Poin"}
-                          </div>
-                          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                            {mhs.totalJamKerja > 0
-                              ? `${mhs.totalJamKerja.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} Jam`
-                              : `${mhs.kehadiranPercent.toLocaleString("id-ID")}% Hadir`}
-                          </div>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-400 italic">
+                        Belum ada data mahasiswa terdata
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 
@@ -1027,36 +1303,38 @@ export const LaporanResmiKknPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-2.5">
-                    {(data.topDpl && data.topDpl.length > 0 ? data.topDpl : [
-                      { ranking: 1, nama: "Dr. Henike Primawanti, S.IP., M.I.Pol.", nip: "4127.34.02.081", kelompok: "Kelompok Binaan", kelurahan: "Coblong", keaktifanLogbook: 29, kunjunganLapangan: 1, kepatuhanKelompok: 122 },
-                      { ranking: 2, nama: "Richi Dwi Agustia, S.Kom., M.Kom.", nip: "4127.70.26.118", kelompok: "Kelompok Binaan", kelurahan: "Coblong", keaktifanLogbook: 11, kunjunganLapangan: 1, kepatuhanKelompok: 106 },
-                      { ranking: 3, nama: "Dr. Linna Ismawati, S.E., M.Si.", nip: "4127.34.02.042", kelompok: "Kelompok Binaan", kelurahan: "Coblong", keaktifanLogbook: 22, kunjunganLapangan: 1, kepatuhanKelompok: 105 },
-                    ]).map((dpl) => (
-                      <div
-                        key={dpl.ranking}
-                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/70"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-black text-xs flex items-center justify-center shrink-0">
-                            #{dpl.ranking}
-                          </span>
-                          <div>
-                            <div className="font-bold text-sm text-slate-900 dark:text-white leading-tight">{dpl.nama}</div>
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                              NIP. {dpl.nip && dpl.nip !== "-" ? dpl.nip : "4127.34.02.075"} &bull; Dosen Pembimbing Lapangan
+                    {data.topDpl && data.topDpl.length > 0 ? (
+                      data.topDpl.map((dpl) => (
+                        <div
+                          key={dpl.ranking}
+                          className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/70"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-black text-xs flex items-center justify-center shrink-0">
+                              #{dpl.ranking}
+                            </span>
+                            <div>
+                              <div className="font-bold text-sm text-slate-900 dark:text-white leading-tight">{dpl.nama}</div>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                NIP. {dpl.nip && dpl.nip !== "-" ? dpl.nip : "-"} &bull; Dosen Pembimbing Lapangan
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0 pl-2">
+                            <div className="font-black text-[#009966] dark:text-emerald-400 text-sm">
+                              {dpl.kepatuhanKelompok} Poin
+                            </div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {dpl.keaktifanLogbook} Log &bull; {dpl.kunjunganLapangan} Posko
                             </div>
                           </div>
                         </div>
-                        <div className="text-right shrink-0 pl-2">
-                          <div className="font-black text-[#009966] dark:text-emerald-400 text-sm">
-                            {dpl.kepatuhanKelompok} Poin
-                          </div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                            {dpl.keaktifanLogbook} Log &bull; {dpl.kunjunganLapangan} Posko
-                          </div>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-400 italic">
+                        Belum ada data DPL terdata
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </section>
@@ -1089,14 +1367,14 @@ export const LaporanResmiKknPage: React.FC = () => {
                   <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-amber-200/80 dark:border-amber-800/50 space-y-1">
                     <div className="font-bold text-purple-700 dark:text-purple-400">3. Logbook Pembimbingan</div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Tercatat {((data.ringkasanEksekutif as any)?.totalLogbookDpl ?? 246).toLocaleString("id-ID")} catatan bimbingan DPL aktif yang mengawal luaran mahasiswa di {data.ringkasanEksekutif.totalKelompok} posko binaan.
+                      Tercatat {(data.ringkasanEksekutif.totalLogbookDpl ?? 0).toLocaleString("id-ID")} catatan bimbingan DPL aktif yang mengawal luaran mahasiswa di {data.ringkasanEksekutif.totalKelompok} posko binaan.
                     </p>
                   </div>
 
                   <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-amber-200/80 dark:border-amber-800/50 space-y-1">
                     <div className="font-bold text-emerald-700 dark:text-emerald-400">4. Pendampingan Warga Binaan</div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Pendampingan {(data.ringkasanDampakSampah?.totalPenggunaWarga && data.ringkasanDampakSampah.totalPenggunaWarga > 0 ? data.ringkasanDampakSampah.totalPenggunaWarga : 288).toLocaleString("id-ID")} rumah tangga warga terus ditingkatkan guna memperkuat rasio pemilahan mandiri.
+                      Pendampingan {(data.ringkasanDampakSampah?.totalPenggunaWarga ?? 0).toLocaleString("id-ID")} rumah tangga warga terus ditingkatkan guna memperkuat rasio pemilahan mandiri.
                     </p>
                   </div>
                 </div>
@@ -1238,7 +1516,7 @@ export const LaporanResmiKknPage: React.FC = () => {
                                     : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
                                 }`}
                               >
-                                {m.persentaseKehadiran}%
+                                {Number(m.persentaseKehadiran ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%
                               </span>
                             </td>
                             <td className="py-2.5 px-3 text-center">
@@ -1246,7 +1524,7 @@ export const LaporanResmiKknPage: React.FC = () => {
                                 {m.prokerSelesaiCount}/{m.prokerTotalCount}
                               </div>
                               <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                                {m.prokerSelesaiPercent}%
+                                {Number(m.prokerSelesaiPercent ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%
                               </div>
                             </td>
                             <td className="py-2.5 px-4 text-center">
@@ -1307,6 +1585,156 @@ export const LaporanResmiKknPage: React.FC = () => {
                 </div>
               </section>
               </div>
+
+              {/* SECTION 6: LAMPIRAN PROFIL AKADEMIK KKN (SKS & PROGRAM STUDI) */}
+              <div className="space-y-3 pt-6 border-t-2 border-dashed border-slate-200 dark:border-slate-800">
+                <div className="px-1 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Layers size={13} className="text-indigo-600" />
+                    <span>LAMPIRAN PROFIL AKADEMIK: DISTRIBUSI BEBAN SKS & SEBARAN PROGRAM STUDI MAHASISWA</span>
+                    <FormulaTooltip
+                      title="Profil Akademik dan Konversi SKS Mahasiswa KKN"
+                      formula="Akumulasi Beban SKS Kurikulum (6 s.d. 20 SKS MBKM) & Multidisiplin Sarjana"
+                      description="Data terverifikasi registrasi akademik resmi UNIKOM bagi mahasiswa yang diterjunkan dalam program KKN Tematik BERSEKA."
+                      isoStandard="SN-Dikti / MBKM"
+                    />
+                  </div>
+                  <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Sub-A: Donut Chart Beban SKS Mahasiswa */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-indigo-600" />
+                        <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                          Distribusi Beban Konversi SKS
+                        </h2>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                        {data.distribusiSks?.totalMahasiswa || data.ringkasanEksekutif.totalMahasiswaAktif} Mahasiswa
+                      </span>
+                    </div>
+
+                    <div className="relative h-56 w-full flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPieChart>
+                          <Pie
+                            data={sksDonutData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={80}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {sksDonutData.map((entry, index) => (
+                              <Cell key={`sks-cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const d = payload[0].payload;
+                                return (
+                                  <div className="bg-slate-900 text-white text-xs font-bold py-2 px-3 rounded-xl shadow-lg border border-slate-700">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
+                                      <span>Paket {d.name}</span>
+                                    </div>
+                                    <div className="mt-1 text-sm font-black text-indigo-400 font-mono">
+                                      {d.value} Mahasiswa ({d.percentage}%)
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terdata SKS</span>
+                        <span className="text-base font-black text-slate-900 dark:text-slate-100 font-mono mt-0.5">
+                          {data.distribusiSks?.totalMahasiswa || data.ringkasanEksekutif.totalMahasiswaAktif}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">Mahasiswa</span>
+                      </div>
+                    </div>
+
+                    {/* SKS Badges Legend */}
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      {sksDonutData.map((s) => (
+                        <span
+                          key={s.name}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700"
+                        >
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                          <span>{s.name}: <strong>{s.value}</strong></span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sub-B: Bar Chart Sebaran Multidisiplin Program Studi */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4 text-blue-600" />
+                        <h2 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                          Sebaran Program Studi
+                        </h2>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                        Multidisiplin Sarjana
+                      </span>
+                    </div>
+
+                    <div className="h-56 w-full pt-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={prodiBarData}
+                          layout="vertical"
+                          margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.6} />
+                          <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            tick={{ fontSize: 10, fontWeight: 700, fill: "#64748b" }}
+                            axisLine={false}
+                            tickLine={false}
+                            width={110}
+                          />
+                          <RechartsTooltip
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const d = payload[0].payload;
+                                return (
+                                  <div className="bg-slate-900 text-white text-xs font-bold py-2 px-3 rounded-xl shadow-lg border border-slate-700">
+                                    <div className="text-slate-200">{d.fullName}</div>
+                                    <div className="mt-1 text-sm font-black text-blue-400 font-mono">
+                                      {d.count} Mahasiswa
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar dataKey="count" name="Mahasiswa" fill="#3b82f6" radius={[0, 6, 6, 0]} maxBarSize={22} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 text-center">
+                      Kolaborasi lintas fakultas dan prodi untuk inovasi pengelolaan sampah terpadu
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* =================================================================
@@ -1322,7 +1750,7 @@ export const LaporanResmiKknPage: React.FC = () => {
                 className="document-paper bg-white text-black shadow-2xl rounded-sm px-[16mm] py-[14mm] border border-slate-300 w-[215mm] min-h-[330mm] max-w-full mx-auto font-serif leading-normal transition-all print:border-none print:shadow-none print:w-full print:max-w-full print:min-h-0"
               >
                 {/* 1. KOP SURAT RESMI UNIKOM */}
-                <div className="pb-2.5 border-b-2 border-black mb-3 overflow-visible">
+                <div className="pb-3 border-b-2 border-black mb-3.5 overflow-visible">
                   <div className="flex items-center justify-between gap-3">
                     {/* Logo UNIKOM Resmi Utuh */}
                     <div className="w-20 shrink-0 flex items-center justify-center">
@@ -1341,13 +1769,13 @@ export const LaporanResmiKknPage: React.FC = () => {
                       <div className="text-xs font-bold tracking-wider uppercase text-black">
                         YAYASAN SAINS DAN TEKNOLOGI
                       </div>
-                      <div className="text-base font-black tracking-wide uppercase text-black mt-0.5">
+                      <div className="text-lg font-black tracking-wide uppercase text-black mt-0.5">
                         UNIVERSITAS KOMPUTER INDONESIA (UNIKOM)
                       </div>
                       <div className="text-xs font-black tracking-tight uppercase text-black mt-0.5">
                         LEMBAGA PENGABDIAN DAN PEMBERDAYAAN MASYARAKAT
                       </div>
-                      <div className="text-[10px] text-black mt-1 leading-snug">
+                      <div className="text-[10.5px] text-black mt-1 leading-snug">
                         Jalan Dipati Ukur Nomor 112–116, Coblong, Kota Bandung 40132 &bull; Telepon: (022) 2504119
                         <br />
                         Laman Resmi: https://www.unikom.ac.id &bull; Pos-el: info@unikom.ac.id &bull; Sistem Terpadu: https://berseka.id
@@ -1370,23 +1798,23 @@ export const LaporanResmiKknPage: React.FC = () => {
                 </div>
 
                 {/* 2. NOMOR NASKAH DINAS DAN INFORMASI SURAT */}
-                <div className="flex justify-between items-start text-[11px] text-black mb-3 pb-2 border-b border-black/30 leading-snug">
+                <div className="flex justify-between items-start text-xs text-black mb-3.5 pb-2.5 border-b border-black/30 leading-snug">
                   <div className="space-y-0.5">
-                    <div className="flex"><span className="w-18 font-bold">Nomor</span><span className="w-2">:</span><span className="font-mono font-bold">{reportConfig.nomorDokumen || "027/UNIKOM-BERSEKA/KKN-T/X/2026"}</span></div>
-                    <div className="flex"><span className="w-18 font-bold">Sifat</span><span className="w-2">:</span><span>{reportConfig.sifatDokumen || "Penting / Kedinasan Terbuka"}</span></div>
-                    <div className="flex"><span className="w-18 font-bold">Lampiran</span><span className="w-2">:</span><span>{reportConfig.lampiranDokumen || "1 (Satu) Berkas Rekapitulasi Lengkap"}</span></div>
-                    <div className="flex"><span className="w-18 font-bold">Perihal</span><span className="w-2">:</span><span className="font-bold">{reportConfig.perihalDokumen || "Laporan Evaluasi Kinerja dan Capaian Kuliah Kerja Nyata Tematik"}</span></div>
+                    <div className="flex"><span className="w-20 font-bold">Nomor</span><span className="w-2">:</span><span className="font-bold">{reportConfig.nomorDokumen || "027/UNIKOM-BERSEKA/KKN-T/X/2026"}</span></div>
+                    <div className="flex"><span className="w-20 font-bold">Sifat</span><span className="w-2">:</span><span>{reportConfig.sifatDokumen || "Penting / Kedinasan Terbuka"}</span></div>
+                    <div className="flex"><span className="w-20 font-bold">Lampiran</span><span className="w-2">:</span><span>{reportConfig.lampiranDokumen || "1 (Satu) Berkas Rekapitulasi Lengkap"}</span></div>
+                    <div className="flex"><span className="w-20 font-bold">Perihal</span><span className="w-2">:</span><span className="font-bold">{reportConfig.perihalDokumen || "Laporan Evaluasi Kinerja dan Capaian Kuliah Kerja Nyata Tematik"}</span></div>
                   </div>
                   <div className="text-right space-y-0.5">
                     <div className="font-bold">Bandung, {reportConfig.tanggalPengesahan || "16 Oktober 2026"}</div>
-                    <div className="text-[10px] text-black/80">{reportConfig.wilayahCakupan || "Kecamatan Coblong (6 Kelurahan Binaan, 74 RW)"}</div>
-                    <div className="text-[10px] text-black font-semibold">SK Rektor No. ST/084/REKTOR-UNIKOM/VIII/2026</div>
+                    <div className="text-[10.5px] text-black/80">{reportConfig.wilayahCakupan || "Kecamatan Coblong (6 Kelurahan Binaan, 74 RW)"}</div>
+                    <div className="text-[10.5px] text-black font-semibold">SK Rektor No. ST/084/REKTOR-UNIKOM/VIII/2026</div>
                   </div>
                 </div>
 
                 {/* 3. JUDUL LAPORAN RESMI */}
-                <div className="text-center mb-3">
-                  <h1 className="text-sm font-black uppercase text-black tracking-tight leading-snug">
+                <div className="text-center mb-3.5">
+                  <h1 className="text-base font-black uppercase text-black tracking-tight leading-snug">
                     {reportConfig.judulLaporan || "EVALUASI KINERJA DAN CAPAIAN PELAKSANAAN KULIAH KERJA NYATA TEMATIK"}
                   </h1>
                   <div className="text-xs font-bold text-black uppercase tracking-wide mt-0.5">
@@ -1395,109 +1823,177 @@ export const LaporanResmiKknPage: React.FC = () => {
                 </div>
 
                 {/* 4. PERNYATAAN PENGANTAR RESMI */}
-                <div className="text-[10.5px] leading-relaxed text-justify mb-3 text-black">
+                <div className="text-[11.5px] leading-relaxed text-justify mb-3.5 text-black">
                   <p>
-                    Berdasarkan Surat Keputusan Rektor Universitas Komputer Indonesia Nomor ST/084/REKTOR-UNIKOM/VIII/2026, telah dilaksanakan kegiatan Kuliah Kerja Nyata (KKN) Tematik di wilayah Kecamatan Coblong yang mencakup 6 kelurahan binaan dan {data.ringkasanDampakSampah?.totalLokasiRw ?? 74} RW. Sebanyak {data.ringkasanEksekutif.totalMahasiswaAktif} mahasiswa sarjana dan {data.ringkasanEksekutif.totalDpl} Dosen Pembimbing Lapangan (DPL) diterjunkan ke {data.ringkasanEksekutif.totalKelompok} posko binaan dengan hasil rekapitulasi pelaksanaan sebagai berikut:
+                    {selectedKelurahan !== "Semua Kelurahan" && selectedKelurahan !== "ALL" ? (
+                      `Berdasarkan Surat Keputusan Rektor Universitas Komputer Indonesia Nomor ST/084/REKTOR-UNIKOM/VIII/2026, telah dilaksanakan kegiatan Kuliah Kerja Nyata (KKN) Tematik di wilayah Kelurahan ${selectedKelurahan}, Kecamatan Coblong. Sebanyak ${data.ringkasanEksekutif.totalMahasiswaAktif} mahasiswa sarjana dan ${data.ringkasanEksekutif.totalDpl} Dosen Pembimbing Lapangan (DPL) diterjunkan ke ${data.ringkasanEksekutif.totalKelompok} posko binaan dengan hasil rekapitulasi pelaksanaan sebagai berikut:`
+                    ) : (
+                      `Berdasarkan Surat Keputusan Rektor Universitas Komputer Indonesia Nomor ST/084/REKTOR-UNIKOM/VIII/2026, telah dilaksanakan kegiatan Kuliah Kerja Nyata (KKN) Tematik di wilayah Kecamatan Coblong yang mencakup 6 kelurahan binaan dan ${data.ringkasanDampakSampah?.totalLokasiRw ?? 74} RW binaan aktif. Sebanyak ${data.ringkasanEksekutif.totalMahasiswaAktif} mahasiswa sarjana dan ${data.ringkasanEksekutif.totalDpl} Dosen Pembimbing Lapangan (DPL) diterjunkan ke ${data.ringkasanEksekutif.totalKelompok} posko binaan dengan hasil rekapitulasi pelaksanaan sebagai berikut:`
+                    )}
                   </p>
                 </div>
 
-                {/* 5. TABEL REKAPITULASI CAPAIAN WILAYAH (OPEN TABLE BOOKTABS MONOKROM HITAM) */}
-                <div className="mb-3.5 avoid-break">
-                  <table className="w-full text-left text-[10px] border-collapse text-black">
+                {/* 5. TABEL REKAPITULASI CAPAIAN WILAYAH (BORDERED GRID NASKAH DINAS RESMI) */}
+                <div className="mb-4 avoid-break">
+                  <div className="text-[10.5px] font-bold uppercase text-black mb-1 tracking-tight font-serif">
+                    I. Rekapitulasi Capaian Pelaksanaan per Kelurahan Binaan
+                  </div>
+                  <table className="w-full text-left text-[10px] border-collapse border border-black text-black font-serif">
                     <thead>
-                      <tr className="border-t-2 border-b-2 border-black font-bold text-black bg-slate-50/70">
-                        <th className="py-1.5 px-1.5 text-center w-7">No</th>
-                        <th className="py-1.5 px-2">Kelurahan Binaan</th>
-                        <th className="py-1.5 px-1.5 text-center w-20">Kelompok</th>
-                        <th className="py-1.5 px-1.5 text-center w-24">Mahasiswa</th>
-                        <th className="py-1.5 px-1.5 text-center w-28">Kehadiran (≥240m)</th>
-                        <th className="py-1.5 px-1.5 text-center w-28">Program Kerja Tuntas</th>
-                        <th className="py-1.5 px-1.5 text-center w-28">Status Evaluasi</th>
+                      <tr className="border-b border-black font-bold text-black bg-slate-100 text-center">
+                        <th className="py-1 px-1 border border-black text-center w-7">No</th>
+                        <th className="py-1 px-2 border border-black text-left">Kelurahan Binaan</th>
+                        <th className="py-1 px-1.5 border border-black text-center w-20">Kelompok</th>
+                        <th className="py-1 px-1.5 border border-black text-center w-20">Mahasiswa</th>
+                        <th className="py-1 px-1.5 border border-black text-center w-26">Kehadiran (≥240m)</th>
+                        <th className="py-1 px-1.5 border border-black text-center w-28">Program Kerja Tuntas</th>
+                        <th className="py-1 px-1.5 border border-black text-center w-28">Status Evaluasi</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {data.grafikPerforma.sebaranPerKelurahan.map((k, idx) => {
+                    <tbody>
+                      {data.grafikPerforma.sebaranPerKelurahan
+                        .filter((k) => {
+                          if (selectedKelurahan && selectedKelurahan !== "Semua Kelurahan" && selectedKelurahan !== "ALL") {
+                            return k.kelurahan.toLowerCase().includes(selectedKelurahan.toLowerCase());
+                          }
+                          return true;
+                        })
+                        .map((k, idx) => {
                         const kelGroups = data.matriksKelompok.filter((m) => m.kelurahan === k.kelurahan);
                         const avgPresence = kelGroups.length > 0
                           ? Math.round(kelGroups.reduce((acc, curr) => acc + curr.persentaseKehadiran, 0) / kelGroups.length)
                           : 95;
 
                         return (
-                          <tr key={k.kelurahan}>
-                            <td className="py-1.5 px-1.5 text-center font-semibold">{idx + 1}</td>
-                            <td className="py-1.5 px-2 font-bold text-black">Kelurahan {k.kelurahan}</td>
-                            <td className="py-1.5 px-1.5 text-center">{k.totalKelompok} Posko</td>
-                            <td className="py-1.5 px-1.5 text-center">{k.totalMahasiswa} Orang</td>
-                            <td className="py-1.5 px-1.5 text-center font-mono font-bold text-black">{avgPresence}%</td>
-                            <td className="py-1.5 px-1.5 text-center font-mono font-semibold text-black">{k.prokerSelesai} Tuntas</td>
-                            <td className="py-1.5 px-1.5 text-center font-bold text-black">Memenuhi Syarat</td>
+                          <tr key={k.kelurahan} className="hover:bg-slate-50/50">
+                            <td className="py-1 px-1 border border-black text-center font-semibold">{idx + 1}</td>
+                            <td className="py-1 px-2 border border-black font-bold text-black whitespace-nowrap">Kelurahan {k.kelurahan}</td>
+                            <td className="py-1 px-1.5 border border-black text-center whitespace-nowrap">{k.totalKelompok} Posko</td>
+                            <td className="py-1 px-1.5 border border-black text-center whitespace-nowrap">{k.totalMahasiswa} Orang</td>
+                            <td className="py-1 px-1.5 border border-black text-center font-bold text-black whitespace-nowrap">{Number(avgPresence ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%</td>
+                            <td className="py-1 px-1.5 border border-black text-center font-bold text-black whitespace-nowrap">{k.prokerSelesai} Tuntas</td>
+                            <td className="py-1 px-1.5 border border-black text-center font-semibold text-black whitespace-nowrap">Memenuhi Syarat</td>
                           </tr>
                         );
                       })}
-                      <tr className="border-t-2 border-b-2 border-black font-black bg-slate-100/60 text-black">
-                        <td colSpan={2} className="py-2 px-2">Akumulasi Kecamatan Coblong</td>
-                        <td className="py-2 px-1.5 text-center">{data.ringkasanEksekutif.totalKelompok} Posko</td>
-                        <td className="py-2 px-1.5 text-center">{data.ringkasanEksekutif.totalMahasiswaAktif} Mahasiswa</td>
-                        <td className="py-2 px-1.5 text-center font-mono font-black text-black">{data.ringkasanEksekutif.kepatuhanPresensiPercent}%</td>
-                        <td className="py-2 px-1.5 text-center font-mono font-black text-black">{data.ringkasanEksekutif.totalProkerSelesai} / {data.ringkasanEksekutif.totalProkerDisetujui}</td>
-                        <td className="py-2 px-1.5 text-center font-black text-black tracking-wide">PARIPURNA</td>
+                      <tr className="border-t-2 border-b border-black font-bold bg-slate-100 text-black">
+                        <td colSpan={2} className="py-1.5 px-2 border border-black whitespace-nowrap">
+                          {selectedKelurahan !== "Semua Kelurahan" && selectedKelurahan !== "ALL"
+                            ? `Akumulasi Kelurahan ${selectedKelurahan}`
+                            : "Akumulasi Kecamatan Coblong"}
+                        </td>
+                        <td className="py-1.5 px-1.5 border border-black text-center whitespace-nowrap">{data.ringkasanEksekutif.totalKelompok} Posko</td>
+                        <td className="py-1.5 px-1.5 border border-black text-center whitespace-nowrap">{data.ringkasanEksekutif.totalMahasiswaAktif} Mahasiswa</td>
+                        <td className="py-1.5 px-1.5 border border-black text-center font-bold text-black whitespace-nowrap">{Number(data.ringkasanEksekutif.kepatuhanPresensiPercent ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%</td>
+                        <td className="py-1.5 px-1.5 border border-black text-center font-bold text-black whitespace-nowrap">{data.ringkasanEksekutif.totalProkerSelesai} / {data.ringkasanEksekutif.totalProkerDisetujui}</td>
+                        <td className="py-1.5 px-1.5 border border-black text-center font-bold text-black tracking-wide whitespace-nowrap">PARIPURNA</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
 
-                {/* 6. EMPAT POIN KUNCI AKUNTABILITAS PENGABDIAN */}
-                <div className="grid grid-cols-2 gap-2.5 text-[9.5px] leading-relaxed mb-4 text-black">
-                  <div className="p-2.5 rounded border border-slate-300 bg-white">
-                    <span className="font-bold text-black block mb-0.5">1. Integritas Kehadiran Posko</span>
-                    <span>Tingkat kepatuhan hadir mencapai {data.ringkasanEksekutif.kepatuhanPresensiPercent}% dengan validasi geofence 250 m dan durasi wajib bersih minimal 240 menit per sesi.</span>
+                {/* 6. INDIKATOR KINERJA KUNCI DAN DAMPAK PENGABDIAN MASYARAKAT (BORDERED GRID) */}
+                <div className="mb-4 avoid-break">
+                  <div className="text-[10.5px] font-bold uppercase text-black mb-1 tracking-tight font-serif">
+                    II. Indikator Kinerja Utama dan Dampak Pengabdian Masyarakat
                   </div>
-                  <div className="p-2.5 rounded border border-slate-300 bg-white">
-                    <span className="font-bold text-black block mb-0.5">2. Total Jam Kerja Lapangan</span>
-                    <span>Akumulasi {(data.ringkasanEksekutif.totalJamKontribusi ?? 0).toLocaleString("id-ID")} jam kerja nyata (rerata {data.ringkasanEksekutif.rataRataJamPerMahasiswa ?? 0} jam/mahasiswa) melampaui target kurikulum 200 jam.</span>
-                  </div>
-                  <div className="p-2.5 rounded border border-slate-300 bg-white">
-                    <span className="font-bold text-black block mb-0.5">3. Realisasi Program Kerja</span>
-                    <span>Sebanyak {data.ringkasanEksekutif.totalProkerSelesai} dari {data.ringkasanEksekutif.totalProkerDisetujui} program kerja ({data.ringkasanEksekutif.persentaseProkerSelesai}%) selesai 100% dan terverifikasi oleh DPL di 4 klaster binaan.</span>
-                  </div>
-                  <div className="p-2.5 rounded border border-slate-300 bg-white">
-                    <span className="font-bold text-black block mb-0.5">4. Pendampingan Warga Binaan</span>
-                    <span>Mahasiswa mendampingi secara langsung {(data.ringkasanDampakSampah?.totalPenggunaWarga && data.ringkasanDampakSampah.totalPenggunaWarga > 0 ? data.ringkasanDampakSampah.totalPenggunaWarga : 288).toLocaleString("id-ID")} keluarga binaan di {data.ringkasanDampakSampah?.totalLokasiRw ?? 74} RW se-Kecamatan Coblong.</span>
-                  </div>
+                  <table className="w-full text-left text-[9.5px] border-collapse border border-black text-black font-serif">
+                    <thead>
+                      <tr className="border-b border-black font-bold text-black bg-slate-100 text-center">
+                        <th className="py-1 px-1 border border-black text-center w-7">No</th>
+                        <th className="py-1 px-2 border border-black text-left w-44">Dimensi Evaluasi</th>
+                        <th className="py-1 px-2 border border-black text-left w-56">Realisasi Capaian Lapangan</th>
+                        <th className="py-1 px-2 border border-black text-left">Tolok Ukur &amp; Standar Verifikasi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="py-1 px-1 border border-black text-center font-semibold">1</td>
+                        <td className="py-1 px-2 border border-black font-bold text-black">Integritas Presensi Posko</td>
+                        <td className="py-1 px-2 border border-black font-bold text-black">
+                          {Number(data.ringkasanEksekutif.kepatuhanPresensiPercent ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })}% Hadir Efektif
+                        </td>
+                        <td className="py-1 px-2 border border-black text-slate-900 leading-snug">
+                          Validasi geofence GPS radius 250 m posko resmi, durasi wajib bersih minimal 240 menit per sesi.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 px-1 border border-black text-center font-semibold">2</td>
+                        <td className="py-1 px-2 border border-black font-bold text-black">Jam Kerja Nyata Lapangan</td>
+                        <td className="py-1 px-2 border border-black font-bold text-black">
+                          {(data.ringkasanEksekutif.totalJamKontribusi ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })} Jam{" "}
+                          <span className="font-normal text-[8.5px] text-slate-700">
+                            (Rerata {Number(data.ringkasanEksekutif.rataRataJamPerMahasiswa ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })} jam/mhs)
+                          </span>
+                        </td>
+                        <td className="py-1 px-2 border border-black text-slate-900 leading-snug">
+                          Akumulasi jam kerja posko dan mandiri melampaui target beban kurikulum pengabdian (≥ 200 jam).
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 px-1 border border-black text-center font-semibold">3</td>
+                        <td className="py-1 px-2 border border-black font-bold text-black">Program Kerja &amp; Bimbingan</td>
+                        <td className="py-1 px-2 border border-black font-bold text-black">
+                          {data.ringkasanEksekutif.totalProkerSelesai} / {data.ringkasanEksekutif.totalProkerDisetujui} Proker Tuntas{" "}
+                          <span className="font-normal text-[8.5px] text-slate-700">
+                            ({data.ringkasanEksekutif.persentaseProkerSelesai}%)
+                          </span>
+                        </td>
+                        <td className="py-1 px-2 border border-black text-slate-900 leading-snug">
+                          Capaian 4 klaster luaran tuntas 100% terverifikasi DPL melalui {(data.ringkasanEksekutif.totalLogbookDpl ?? 0).toLocaleString("id-ID")} catatan logbook bimbingan.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 px-1 border border-black text-center font-semibold">4</td>
+                        <td className="py-1 px-2 border border-black font-bold text-black">Dampak Lingkungan &amp; Warga</td>
+                        <td className="py-1 px-2 border border-black font-bold text-black">
+                          {Number(data.ringkasanDampakSampah?.totalSampahTerpilahKg || 0).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} kg Sampah{" "}
+                          <span className="font-normal text-[8.5px] text-slate-700">
+                            (&#8722;{Number(data.ringkasanDampakSampah?.reduksiEmisiCo2Kg || 0).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} kg CO&#8322;e)
+                          </span>
+                        </td>
+                        <td className="py-1 px-2 border border-black text-slate-900 leading-snug">
+                          Pendampingan langsung {(data.ringkasanDampakSampah?.totalPenggunaWarga ?? 0).toLocaleString("id-ID")} keluarga binaan di {data.ringkasanDampakSampah?.totalLokasiRw ?? 74} RW dalam pemilahan sampah organik dan anorganik.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
 
-                {/* 7. LEMBAR PENGESAHAN RESMI (TUNGGAL TENGAH BAWAH: REKTOR UNIKOM DENGAN TTD DIGITAL) */}
-                <div className="avoid-break pt-1 text-center max-w-sm mx-auto leading-normal text-black">
-                  <div className="text-[10.5px] text-black font-serif">
-                    Bandung, {reportConfig.tanggalPengesahan || "16 Oktober 2026"}
-                  </div>
-                  <div className="text-[11px] font-bold text-black uppercase font-serif mt-0.5">
-                    {reportConfig.penandatangan?.jabatan || "Rektor"}
-                  </div>
-                  <div className="text-[10.5px] font-semibold text-black font-serif">
-                    {reportConfig.penandatangan?.instansi || "Universitas Komputer Indonesia (UNIKOM)"}
-                  </div>
+                {/* 7. LEMBAR PENGESAHAN RESMI (TUNGGAL KANAN BAWAH STANDAR NASKAH DINAS) */}
+                <div className="avoid-break pt-3 flex justify-end">
+                  <div className="text-center w-80 leading-normal text-black font-serif">
+                    <div className="text-xs text-black font-serif">
+                      Bandung, {reportConfig.tanggalPengesahan || "16 Oktober 2026"}
+                    </div>
+                    <div className="text-[12px] font-bold text-black uppercase font-serif mt-0.5">
+                      {reportConfig.penandatangan?.jabatan || "Rektor"}
+                    </div>
+                    <div className="text-[11px] font-semibold text-black font-serif">
+                      {reportConfig.penandatangan?.instansi || "Universitas Komputer Indonesia (UNIKOM)"}
+                    </div>
 
-                  {/* Area Tanda Tangan Digital Transparan */}
-                  <div className="h-14 flex items-center justify-center my-1">
-                    {reportConfig.tandaTanganUrl ? (
-                      <img
-                        src={reportConfig.tandaTanganUrl}
-                        alt="Tanda Tangan Digital"
-                        className="max-h-14 w-auto object-contain block mx-auto"
-                      />
-                    ) : (
-                      <div className="w-28 h-10 border border-dashed border-slate-300 rounded flex items-center justify-center text-[9px] text-slate-400 font-serif italic">
-                        Tanda Tangan Digital
-                      </div>
-                    )}
-                  </div>
+                    {/* Area Tanda Tangan Digital Transparan */}
+                    <div className="h-16 flex items-center justify-center my-1.5">
+                      {reportConfig.tandaTanganUrl ? (
+                        <img
+                          src={reportConfig.tandaTanganUrl}
+                          alt="Tanda Tangan Digital"
+                          className="max-h-16 w-auto object-contain block mx-auto"
+                        />
+                      ) : (
+                        <div className="w-32 h-12 border border-dashed border-slate-300 rounded flex items-center justify-center text-[10px] text-slate-400 font-serif italic">
+                          Tanda Tangan Digital
+                        </div>
+                      )}
+                    </div>
 
-                  <div className="font-serif font-black text-black underline text-xs tracking-wide">
-                    {reportConfig.penandatangan?.nama || "Prof. Dr. Ir. H. Eddy Soeryanto Soegoto, M.T."}
-                  </div>
-                  <div className="text-[10px] text-black font-serif mt-0.5">
-                    NIP. {reportConfig.penandatangan?.nip || "4127.34.01.001"}
+                    <div className="font-serif font-black text-black underline text-[12.5px] tracking-wide">
+                      {reportConfig.penandatangan?.nama || "Prof. Dr. Ir. H. Eddy Soeryanto Soegoto, M.T."}
+                    </div>
+                    <div className="text-[11px] text-black font-serif mt-0.5">
+                      NIP. {reportConfig.penandatangan?.nip || "4127.34.01.001"}
+                    </div>
                   </div>
                 </div>
               </article>

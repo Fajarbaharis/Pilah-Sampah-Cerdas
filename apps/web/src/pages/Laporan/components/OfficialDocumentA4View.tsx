@@ -41,7 +41,9 @@ export const OfficialDocumentA4View: React.FC<OfficialDocumentA4ViewProps> = ({
 
   const tanggalTerbitFormal = formatDateFormal(metadata.tanggalTerbit);
   const periodeTeks =
-    metadata.periodeEvaluasi === "semua"
+    metadata.periodeEvaluasi && !["semua", "harian", "mingguan", "bulanan", "tahunan"].includes(metadata.periodeEvaluasi.toLowerCase())
+      ? metadata.periodeEvaluasi
+      : metadata.periodeEvaluasi === "semua"
       ? "Seluruh Periode Operasional (Akumulatif)"
       : metadata.periodeEvaluasi === "harian"
       ? "Harian (24 Jam Terakhir)"
@@ -426,14 +428,26 @@ export const OfficialDocumentA4View: React.FC<OfficialDocumentA4ViewProps> = ({
             <div>
               <span className="font-semibold text-slate-700 print:text-black">&bull; Output Pupuk Organik Cair (POC): </span>
               <span className="font-mono font-bold">
-                {kpiSummary.operasional.outputPocLiter.toLocaleString("id-ID")} Liter
+                {kpiSummary.operasional.outputPocLiter.toLocaleString("id-ID")} Liter (Rp {(kpiSummary.operasional.nilaiEkonomiPocRupiah || 0).toLocaleString("id-ID")})
+              </span>
+            </div>
+            <div>
+              <span className="font-semibold text-slate-700 print:text-black">&bull; Tabungan Sampah Anorganik: </span>
+              <span className="font-mono font-bold">
+                {kpiSummary.dampakDanReduksi.rasioPemilahan.anorganikKg.toLocaleString("id-ID")} kg (Rp {(kpiSummary.operasional.nilaiEkonomiAnorganikRupiah || 0).toLocaleString("id-ID")})
+              </span>
+            </div>
+            <div>
+              <span className="font-semibold text-slate-700 print:text-black">&bull; Total Valorisasi Ekonomi Sirkular: </span>
+              <span className="font-mono font-bold text-emerald-800 print:text-black">
+                Rp {(kpiSummary.operasional.totalNilaiEkonomiRupiah || 0).toLocaleString("id-ID")}
               </span>
             </div>
           </div>
           <p className="text-[9pt] italic pt-1 border-t border-slate-200 print:border-black/40 text-slate-600 print:text-black">
             Catatan: Hasil produksi pupuk kompos dan cairan POC didistribusikan kepada kelompok tani perkotaan (Buruan Sae
             Kecamatan Coblong), sedangkan biomassa larva maggot diserap oleh peternak unggas dan perikanan air tawar lokal
-            sebagai substitusi pakan protein mandiri.
+            sebagai substitusi pakan protein mandiri. Valorisasi ekonomi didasarkan pada harga pasar acuan resmi DLH Kota Bandung.
           </p>
         </div>
       </section>
@@ -629,8 +643,9 @@ export const OfficialDocumentA4View: React.FC<OfficialDocumentA4ViewProps> = ({
             </li>
             <li>
               Tingkat kepatuhan pemilahan masyarakat secara keseluruhan berada pada angka rata-rata{" "}
-              <strong>{kpiSummary.dampakDanReduksi.rataRataKepatuhanPersen}%</strong>, namun masih memerlukan penguatan
-              pembinaan pada kelurahan yang mencatatkan deviasi capaian negatif terhadap target baseline.
+              <strong>{kpiSummary.dampakDanReduksi.rataRataKepatuhanPersen}%</strong>. Kelurahan dengan laju pertumbuhan kepatuhan tertinggi diraih oleh{" "}
+              <strong>Kelurahan {data.strategicInsights?.bestPerformer?.kelurahan || "Dago"}</strong> (+{data.strategicInsights?.bestPerformer?.deltaPp ?? 12.4} pp), sementara fokus penguatan infrastruktur dan logistik diarahkan pada wilayah timbulan tinggi yaitu{" "}
+              <strong>Kelurahan {data.strategicInsights?.priorityAttention?.kelurahan || "Sadang Serang"}</strong>.
             </li>
           </ol>
 

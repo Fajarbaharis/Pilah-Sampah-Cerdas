@@ -465,7 +465,16 @@ export const complianceService = {
    * Ambil data metrik kepatuhan dari basis data operasional dengan filter wilayah dan tanggal
    */
   async getComplianceMetrics(filter?: ComplianceFilter): Promise<ComplianceMetricsResult> {
-    const whereClause: any = {};
+    const whereClause: any = {
+      warga: {
+        isTestAccount: false,
+        NOT: { name: { contains: "test", mode: "insensitive" } },
+      },
+      NOT: [
+        { bin: { rw: { name: { contains: "99" } } } },
+        { warga: { rw: { name: { contains: "99" } } } },
+      ],
+    };
 
     if (filter?.userId) {
       whereClause.wargaId = filter.userId;
@@ -534,7 +543,14 @@ export const complianceService = {
     const wargaAktifMemilah = distinctActiveWarga.size;
 
     // 2. Hitung total populasi warga/rumah tangga terdaftar di area ini
-    const wargaWhere: any = { role: { name: "WARGA" }, isTestAccount: false };
+    const wargaWhere: any = {
+      role: { name: "WARGA" },
+      isTestAccount: false,
+      NOT: [
+        { rw: { name: { contains: "99" } } },
+        { name: { contains: "test", mode: "insensitive" } },
+      ],
+    };
     if (filter?.userId) {
       wargaWhere.id = filter.userId;
     } else if (filter?.rwId) {
