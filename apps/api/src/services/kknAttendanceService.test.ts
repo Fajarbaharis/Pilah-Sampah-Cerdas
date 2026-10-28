@@ -79,7 +79,14 @@ vi.mock("../lib/prisma.js", () => {
       },
       kelompokKkn: {
         findMany: vi.fn().mockResolvedValue([
-          { id: "kel-1", name: "Kelompok 1", kelurahan: "Coblong", cakupanRw: ["01"], dplNamaMentah: "DPL 1", dpl: { id: "dpl-1", name: "DPL 1", phone: "0812345678" } }
+          {
+            id: "kel-1",
+            name: "Kelompok 1",
+            kelurahan: "Coblong",
+            cakupanRw: ["01"],
+            dplNamaMentah: "DPL 1",
+            dpl: { id: "dpl-1", name: "DPL 1", phone: "0812345678" },
+          },
         ]),
         findUnique: vi.fn(),
         findFirst: vi.fn(),
@@ -2595,7 +2602,11 @@ describe("kknAttendanceService - Auto-Attendance & Duration Verification", () =>
                 checkOutAt: new Date("2026-09-02T01:00:00.000Z"),
                 actualInZoneMinutes: 0,
                 status: "TIDAK_ADA_KEGIATAN",
-                schedule: { id: "sch-2", title: "Tidak ada kegiatan lapangan (Jadwal Non-Kegiatan)", date: new Date("2026-09-02") },
+                schedule: {
+                  id: "sch-2",
+                  title: "Tidak ada kegiatan lapangan (Jadwal Non-Kegiatan)",
+                  date: new Date("2026-09-02"),
+                },
               },
               // Hari 3: Skip kegiatan resmi
               {
@@ -2605,7 +2616,11 @@ describe("kknAttendanceService - Auto-Attendance & Duration Verification", () =>
                 checkOutAt: new Date("2026-09-03T01:00:00.000Z"),
                 actualInZoneMinutes: 0,
                 status: "SKIP_KEGIATAN",
-                schedule: { id: "sch-3", title: "Kegiatan Diliburkan", date: new Date("2026-09-03") },
+                schedule: {
+                  id: "sch-3",
+                  title: "Kegiatan Diliburkan",
+                  date: new Date("2026-09-03"),
+                },
               },
             ],
             studentLeaveRequests: [],
@@ -2744,7 +2759,11 @@ describe("kknAttendanceService - Auto-Attendance & Duration Verification", () =>
                 checkOutAt: null,
                 actualInZoneMinutes: null,
                 status: "HADIR",
-                schedule: { id: "sch-past-1", title: "Kegiatan Masa Lampau", date: new Date("2026-09-01") },
+                schedule: {
+                  id: "sch-past-1",
+                  title: "Kegiatan Masa Lampau",
+                  date: new Date("2026-09-01"),
+                },
               },
               // Sesi historis lampau lainnya yang ALPA (jam 00:00, status ALPA)
               {
@@ -2754,7 +2773,11 @@ describe("kknAttendanceService - Auto-Attendance & Duration Verification", () =>
                 checkOutAt: null,
                 actualInZoneMinutes: 0,
                 status: "ALPA",
-                schedule: { id: "sch-past-2", title: "Kegiatan Alpa", date: new Date("2026-09-02") },
+                schedule: {
+                  id: "sch-past-2",
+                  title: "Kegiatan Alpa",
+                  date: new Date("2026-09-02"),
+                },
               },
             ],
             studentLeaveRequests: [],

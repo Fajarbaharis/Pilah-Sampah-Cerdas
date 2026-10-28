@@ -788,12 +788,14 @@ export class KknController {
           await import("../services/notificationIntegrationService.js");
 
         const isLaporanAkhir =
-          String(payload.kategori || "").toUpperCase().includes("LAPORAN") ||
-          String(data.kategori || "").toUpperCase().includes("LAPORAN");
+          String(payload.kategori || "")
+            .toUpperCase()
+            .includes("LAPORAN") ||
+          String(data.kategori || "")
+            .toUpperCase()
+            .includes("LAPORAN");
 
-        const title = isLaporanAkhir
-          ? "Pengajuan Laporan Akhir ✅"
-          : "Pengajuan Program Kerja ✅";
+        const title = isLaporanAkhir ? "Pengajuan Laporan Akhir ✅" : "Pengajuan Program Kerja ✅";
 
         const cleanJudul = data.judul ? data.judul.replace(/^\[.*?\]\s*/, "") : "Kegiatan";
         const message = isLaporanAkhir
@@ -1088,7 +1090,8 @@ export class KknController {
         res.status(400).json({
           success: false,
           error: "NO_ACTIVE_BINS",
-          message: "Warga ini belum memiliki tempat sampah aktif untuk diklaim. Silakan lakukan Aktivasi Tempat Sampah QR terlebih dahulu.",
+          message:
+            "Warga ini belum memiliki tempat sampah aktif untuk diklaim. Silakan lakukan Aktivasi Tempat Sampah QR terlebih dahulu.",
         });
         return;
       }
@@ -1313,7 +1316,9 @@ export class KknController {
       const requesterRole = req.user?.role || "MAHASISWA_KKN";
 
       if (!requesterUserId) {
-        res.status(401).json({ success: false, error: "UNAUTHORIZED", message: "User belum terotentikasi" });
+        res
+          .status(401)
+          .json({ success: false, error: "UNAUTHORIZED", message: "User belum terotentikasi" });
         return;
       }
 
@@ -1343,7 +1348,8 @@ export class KknController {
         },
         ONLY_KETUA_CAN_REASSIGN: {
           status: 403,
-          message: "Akses ditolak. Hanya Ketua Kelompok KKN yang berhak mengalihkan pendamping warga",
+          message:
+            "Akses ditolak. Hanya Ketua Kelompok KKN yang berhak mengalihkan pendamping warga",
         },
         CROSS_KELOMPOK_FORBIDDEN: {
           status: 403,

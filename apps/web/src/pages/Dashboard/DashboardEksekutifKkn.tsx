@@ -70,6 +70,7 @@ import LeaderboardWidget from "../../components/LeaderboardWidget";
 import { fetchMasterWilayah, type MasterKelurahanItem } from "../../utils/areaFilterUtils";
 import { isTestKelompok, isTestStudent, isTestUser } from "../../utils/filterTestingUtils";
 import { calculateProkerMetrics } from "../../utils/prokerMetrics";
+import { UnduhLaporanButton } from "../../components/dashboard/UnduhLaporanButton";
 
 // Color palette mapping untuk Sebaran Program Studi Mahasiswa (Serupa Donut Beban SKS)
 const PRODI_COLOR_MAP: Record<string, string> = {
@@ -1130,15 +1131,16 @@ export const DashboardEksekutifKkn: React.FC = () => {
             <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
             <span>Perbarui Data</span>
           </button>
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={downloading}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-extrabold text-xs rounded-full shadow-xs transition-all cursor-pointer disabled:opacity-50"
-          >
-            <Download size={14} />
-            <span>{downloading ? "Mengunduh..." : "Unduh Laporan"}</span>
-          </button>
+          <UnduhLaporanButton
+            reportType="kkn"
+            variant="pill"
+            filters={{
+              periode: selectedPeriode,
+              kelurahan: selectedKelurahan,
+              rw: selectedRw,
+              kelompok: selectedKelompok,
+            }}
+          />
         </div>
       </div>
 
