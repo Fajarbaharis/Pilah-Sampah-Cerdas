@@ -22,7 +22,11 @@ export interface WasteReportData {
       totalFasilitas: number;
       tps3rCount: number;
       bankSampahCount: number;
+      buruanSaeCount?: number;
+      losedaCount?: number;
+      bataTerawangCount?: number;
       rumahMaggotCount: number;
+      pocCount?: number;
       komposterCount: number;
       totalKapasitasKg: number;
       wadahSampahTotal: number;
@@ -49,6 +53,11 @@ export interface WasteReportData {
       outputKomposKg: number;
       outputMaggotKg: number;
       outputPocLiter: number;
+      nilaiEkonomiAnorganikRupiah?: number;
+      nilaiEkonomiKomposRupiah?: number;
+      nilaiEkonomiMaggotRupiah?: number;
+      nilaiEkonomiPocRupiah?: number;
+      totalNilaiEkonomiRupiah?: number;
     };
     dampakDanReduksi: {
       totalSampahTerpilahKg: number;
@@ -120,5 +129,10 @@ export interface WasteReportData {
     camat: { jabatan: string; instansi: string; nama: string; nip: string };
     dlh: { jabatan: string; instansi: string; nama: string; nip: string };
     pimpinan: { jabatan: string; instansi: string; nama: string; nip: string };
+  };
+  strategicInsights?: {
+    bestPerformer: { kelurahan: string; deltaPp: number; aktualKepatuhan: number } | null;
+    priorityAttention: { kelurahan: string; baselineKg: number; aktualKg: number } | null;
+    rasioDiversiTpaPersen: number;
   };
 }

@@ -1793,7 +1793,7 @@ const Dashboard: React.FC = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedWasteSource, setSelectedWasteSource] = useState<WasteSourceType>("ALL");
-  const [wastePeriodMode, setWastePeriodMode] = useState<WastePeriodMode>("DAILY");
+  const [wastePeriodMode, setWastePeriodMode] = useState<WastePeriodMode>("MONTHLY");
   const [wasteFilterState, setWasteFilterState] = useState<WasteImpactFilterState>(() => {
     const today = new Date();
     const yesterday = new Date(today);
@@ -1801,7 +1801,7 @@ const Dashboard: React.FC = () => {
     const pad = (n: number) => String(n).padStart(2, "0");
     const yesterdayStr = `${yesterday.getFullYear()}-${pad(yesterday.getMonth() + 1)}-${pad(yesterday.getDate())}`;
     return {
-      periodMode: "DAILY",
+      periodMode: "MONTHLY",
       selectedSource: "ALL",
       datePreset: "YESTERDAY",
       selectedDate: yesterdayStr,
@@ -2081,7 +2081,7 @@ const Dashboard: React.FC = () => {
 
       const [binsSettled, trendSettled, locSettled] =
         await Promise.allSettled([
-          api.get("/bins", { params: { sortBy: "updatedAt", order: "desc" } }),
+          api.get("/bins", { params: { sortBy: "lastActivityAt", order: "desc" } }),
           api.get("/dashboard/trend", { params: { weeks, wilayah: effectiveWilayah } }),
           api.get("/bins/locations"),
         ]);
@@ -2128,7 +2128,7 @@ const Dashboard: React.FC = () => {
           : [];
         const sortedBins = [...realBins].sort((a: any, b: any) => {
           const getBinTime = (item: any): number => {
-            const raw = item.updatedAt || item.createdAt || item.verifiedAt;
+            const raw = item.lastActivityAt || item.lastDepositAt || item.updatedAt || item.createdAt || item.verifiedAt;
             if (!raw) return 0;
             if (raw instanceof Date) return isNaN(raw.getTime()) ? 0 : raw.getTime();
             const parsed = new Date(raw).getTime();
@@ -2259,13 +2259,27 @@ const Dashboard: React.FC = () => {
           ? item.baselineKg
           : fbKg;
 
+      const isMonthly = wastePeriodMode === "MONTHLY";
+      const actualKg =
+        isMonthly && item.totalKgAccumulated !== undefined && item.totalKgAccumulated !== null
+          ? Number(item.totalKgAccumulated)
+          : Number(item.totalKg || 0);
+      const wargaKg =
+        isMonthly && item.wargaKgAccumulated !== undefined && item.wargaKgAccumulated !== null
+          ? Number(item.wargaKgAccumulated)
+          : Number(item.wargaKg || 0);
+      const petugasKg =
+        isMonthly && item.petugasKgAccumulated !== undefined && item.petugasKgAccumulated !== null
+          ? Number(item.petugasKgAccumulated)
+          : Number(item.petugasKg || 0);
+
       return {
         ...item,
         baselineKg: rawBaselineKg,
         hasBaseline: (rawBaselineKg !== null && rawBaselineKg > 0) || (rawBaselineComp !== null && rawBaselineComp > 0),
-        actualKg: Number(item.totalKg || 0),
-        wargaKg: Number(item.wargaKg || 0),
-        petugasKg: Number(item.petugasKg || 0),
+        actualKg,
+        wargaKg,
+        petugasKg,
         baselineCompliance: rawBaselineComp,
         actualCompliance:
           item.actualCompliance !== undefined && item.actualCompliance !== null
@@ -2277,23 +2291,37 @@ const Dashboard: React.FC = () => {
         totalWarga: (item as any).totalWarga ?? null,
       };
     });
-  }, [wasteFilteredData, kelurahanBaselineList]);
+  }, [wasteFilteredData, kelurahanBaselineList, wastePeriodMode]);
 
   const wastePreviousImpactItems: WasteImpactItem[] | null = useMemo(() => {
     if (!wastePreviousData || !Array.isArray(wastePreviousData) || wastePreviousData.length === 0) return null;
     return wastePreviousData.map((item) => {
+      const isMonthly = wastePeriodMode === "MONTHLY";
+      const actualKg =
+        isMonthly && item.totalKgAccumulated !== undefined && item.totalKgAccumulated !== null
+          ? Number(item.totalKgAccumulated)
+          : Number(item.totalKg || 0);
+      const wargaKg =
+        isMonthly && item.wargaKgAccumulated !== undefined && item.wargaKgAccumulated !== null
+          ? Number(item.wargaKgAccumulated)
+          : Number(item.wargaKg || 0);
+      const petugasKg =
+        isMonthly && item.petugasKgAccumulated !== undefined && item.petugasKgAccumulated !== null
+          ? Number(item.petugasKgAccumulated)
+          : Number(item.petugasKg || 0);
+
       return {
         ...item,
-        actualKg: Number(item.totalKg || 0),
-        wargaKg: Number(item.wargaKg || 0),
-        petugasKg: Number(item.petugasKg || 0),
+        actualKg,
+        wargaKg,
+        petugasKg,
         actualCompliance:
           item.actualCompliance !== undefined && item.actualCompliance !== null
             ? item.actualCompliance
             : (item.endlineRate ?? null),
       };
     });
-  }, [wastePreviousData]);
+  }, [wastePreviousData, wastePeriodMode]);
 
   const renderTabSwitcher = () => {
     if (!canAccessTabs) return null;
@@ -2760,10 +2788,10 @@ const Dashboard: React.FC = () => {
 
       {/* === Central Operational Lists & Activity === */}
       <div className="px-1 pt-2 text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
-        Data Operasional Tempat Sampah
+        Aktivitas Operasional Tempat Sampah
       </div>
       <div className="w-full relative z-10">
-        {/* Data Tempat Sampah Terbaru */}
+        {/* Aktivitas Tempat Sampah Terkini */}
         <div className="w-full bg-white dark:bg-slate-900 shadow-xs rounded-2xl p-6 border border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 pb-4 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-3">
@@ -2772,10 +2800,10 @@ const Dashboard: React.FC = () => {
               </div>
               <div>
                 <h4 className="font-extrabold text-[16px] text-slate-900 dark:text-slate-100 tracking-tight">
-                  Data Tempat Sampah Terbaru
+                  Aktivitas Tempat Sampah Terkini
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                  Pemantauan kapasitas waktu nyata dan status aktivasi QR tempat sampah
+                  Pemantauan log langsung setoran sampah warga dan pemindaian QR waktu nyata
                 </p>
               </div>
             </div>
@@ -2796,10 +2824,10 @@ const Dashboard: React.FC = () => {
               <thead>
                 <tr className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/60">
                   <th className="py-3 px-4">ID &amp; Jenis Tempat Sampah</th>
-                  <th className="py-3 px-4">Wilayah &amp; Pemilik</th>
-                  <th className="py-3 px-4 min-w-[140px]">Kapasitas Terisi</th>
-                  <th className="py-3 px-4 text-center" title="Waktu update operasional, aktivasi warga, atau mutasi status tempat sampah">
-                    Waktu Terkini
+                  <th className="py-3 px-4">Pemilik &amp; Wilayah</th>
+                  <th className="py-3 px-4 min-w-[200px]">Aktivitas Terbaru</th>
+                  <th className="py-3 px-4 text-center min-w-[140px]" title="Waktu pelaksanaan aktivitas setoran atau aktivasi tempat sampah">
+                    Waktu Aktivitas
                   </th>
                   <th className="py-3 px-4 text-right">Aksi</th>
                 </tr>
@@ -2859,77 +2887,138 @@ const Dashboard: React.FC = () => {
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <div className="flex flex-col min-w-[150px]">
-                            <span className="font-bold text-slate-800 dark:text-slate-200 text-[12.5px]">
-                              {(() => {
-                                const kelName = typeof bin.kelurahan === "string" ? bin.kelurahan : bin.kelurahan?.name || bin.rtRw?.kelurahan?.name || "Wilayah Dampingan";
-                                const rwRaw = typeof bin.rw === "string" ? bin.rw : bin.rw?.name || (typeof bin.rtRw === "string" ? bin.rtRw : bin.rtRw?.name);
-                                const rwText = rwRaw && rwRaw !== "-" && rwRaw !== "Belum Terikat" && !rwRaw.startsWith("ID RT/RW:")
-                                  ? (rwRaw.toLowerCase().includes("rw") ? rwRaw : `RW ${rwRaw}`)
-                                  : "";
-                                return rwText ? `${kelName} • ${rwText}` : kelName;
-                              })()}
-                            </span>
-                            <span className="text-[11px] font-medium mt-0.5">
-                              {(() => {
-                                const isKomunal = (bin.tipeKepemilikan || "").toUpperCase() === "KOMUNAL_RW";
-                                const ownerName = bin.wargaName || bin.user?.name;
-                                if (isKomunal) {
-                                  return (
-                                    <span className="text-purple-600 dark:text-purple-400 font-semibold">
-                                      Komunal RW (Fasilitas Umum)
-                                    </span>
-                                  );
-                                }
-                                if (ownerName) {
-                                  const isInactive = (bin.realStatus || bin.status || "").toUpperCase() === "INACTIVE";
-                                  return (
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-emerald-700 dark:text-emerald-400 font-medium truncate max-w-[180px]" title={`Warga Mandiri: ${ownerName}`}>
-                                        Warga Mandiri ({ownerName})
+                          <div className="flex flex-col min-w-[160px]">
+                            {(() => {
+                              const isKomunal = (bin.tipeKepemilikan || "").toUpperCase() === "KOMUNAL_RW";
+                              const ownerName = bin.wargaName || bin.user?.name;
+                              const isInactive = (bin.realStatus || bin.status || "").toUpperCase() === "INACTIVE";
+
+                              const kelName = typeof bin.kelurahan === "string" ? bin.kelurahan : bin.kelurahan?.name || bin.rtRw?.kelurahan?.name || "Wilayah Dampingan";
+                              const rwRaw = typeof bin.rw === "string" ? bin.rw : bin.rw?.name || (typeof bin.rtRw === "string" ? bin.rtRw : bin.rtRw?.name);
+                              const rwText = rwRaw && rwRaw !== "-" && rwRaw !== "Belum Terikat" && !rwRaw.startsWith("ID RT/RW:")
+                                ? (rwRaw.toLowerCase().includes("rw") ? rwRaw : `RW ${rwRaw}`)
+                                : "";
+                              const wilayahStr = rwText ? `${kelName} • ${rwText}` : kelName;
+
+                              return (
+                                <>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    {isKomunal ? (
+                                      <span className="font-extrabold text-purple-700 dark:text-purple-400 text-[13px]">
+                                        Fasilitas Umum (Komunal)
                                       </span>
-                                      {isInactive && (
-                                        <span className="text-[9.5px] font-extrabold px-1.5 py-0.2 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 rounded border border-rose-200 dark:border-rose-800/40" title="Tempat sampah non-aktif otomatis karena tidak ada setoran sampah > 30 hari">
-                                          Non-Aktif (30hr)
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
-                                }
-                                return (
-                                  <span className="text-slate-400 dark:text-slate-500 italic">
-                                    Warga Mandiri (Belum Terikat)
+                                    ) : ownerName ? (
+                                      <span className="font-extrabold text-slate-900 dark:text-slate-100 text-[13px] truncate max-w-[190px]" title={`Pemilik: ${ownerName}`}>
+                                        {ownerName}
+                                      </span>
+                                    ) : (
+                                      <span className="font-semibold text-slate-400 dark:text-slate-500 italic text-[12.5px]">
+                                        Belum Terikat Warga
+                                      </span>
+                                    )}
+                                    {isInactive && (
+                                      <span className="text-[9.5px] font-extrabold px-1.5 py-0.2 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 rounded border border-rose-200 dark:border-rose-800/40" title="Tempat sampah non-aktif otomatis karena tidak ada setoran sampah > 30 hari">
+                                        Non-Aktif (30hr)
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 mt-0.5">
+                                    {wilayahStr}
                                   </span>
-                                );
-                              })()}
-                            </span>
+                                </>
+                              );
+                            })()}
                           </div>
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex justify-between items-center text-[10.5px]">
-                              <span className={isHighCap ? "text-rose-600 dark:text-rose-400 font-black" : "text-emerald-700 dark:text-emerald-400 font-extrabold"}>
-                                {isHighCap ? `${cap}% (Penuh)` : `${cap}% (Aman)`}
-                              </span>
-                              <span className="font-mono text-slate-500 dark:text-slate-400 text-[10.5px]">
-                                {currentVolumeLiter} / {maxCapacityLiter} Liter
-                              </span>
-                            </div>
-                            <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200/70 dark:border-slate-700">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  isHighCap ? "bg-rose-500 animate-pulse" : "bg-emerald-500"
-                                }`}
-                                style={{ width: `${cap}%` }}
-                              />
-                            </div>
-                          </div>
+                          {(() => {
+                            const isInactive = (bin.realStatus || bin.status || "").toUpperCase() === "INACTIVE";
+                            if (bin.lastDepositAt) {
+                              const depositCat = String(bin.lastDepositCategory || "Sampah").toLowerCase();
+                              const isDepOrg = depositCat.includes("organik") && !depositCat.includes("anorganik");
+                              const isDepAno = depositCat.includes("anorganik");
+                              const weightStr = bin.lastDepositWeight ? `${bin.lastDepositWeight} kg` : "Tercatat";
+                              const confMatch = String(bin.lastActivityLog || "").match(/\((\d+)%\s*AI\)/i);
+                              const aiAccuracy = confMatch ? `${confMatch[1]}% Akurat` : null;
+
+                              return (
+                                <div className="flex flex-col gap-0.5 min-w-[170px]">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-extrabold text-slate-900 dark:text-slate-100 text-[12.5px]">
+                                      Setoran {isDepOrg ? "Organik" : isDepAno ? "Anorganik" : "Sampah"}
+                                    </span>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-black bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/50">
+                                      {weightStr}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                    {aiAccuracy ? (
+                                      <>
+                                        <Sparkles size={11} className="text-amber-500 shrink-0" />
+                                        <span>Klasifikasi AI: {aiAccuracy}</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
+                                        <span>Setoran Tervalidasi Sistem</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            if (bin.wargaName) {
+                              return (
+                                <div className="flex flex-col gap-0.5 min-w-[170px]">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-extrabold text-slate-900 dark:text-slate-100 text-[12.5px]">
+                                      Aktivasi Wadah Tempat Sampah
+                                    </span>
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700/50">
+                                      Aktif
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                    <CheckCircle2 size={11} className="text-blue-500 shrink-0" />
+                                    <span>Pendaftaran QR oleh Warga</span>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            if (isInactive) {
+                              return (
+                                <div className="flex flex-col gap-0.5 min-w-[170px]">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-bold text-rose-600 dark:text-rose-400 text-[12px]">
+                                      Non-Aktif Otomatis
+                                    </span>
+                                  </div>
+                                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                                    Tidak ada setoran &gt; 30 hari
+                                  </span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div className="flex flex-col gap-0.5 min-w-[170px]">
+                                <span className="font-bold text-slate-700 dark:text-slate-300 text-[12px]">
+                                  Pencetakan QR Stiker
+                                </span>
+                                <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                                  Menunggu aktivasi lapangan
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </td>
 
                         <td className="py-3.5 px-4 whitespace-nowrap text-center">
                           {(() => {
-                            const rawDate = bin.updatedAt || bin.createdAt || bin.verifiedAt;
+                            const rawDate = bin.lastActivityAt || bin.lastDepositAt || bin.updatedAt || bin.createdAt || bin.verifiedAt;
                             if (!rawDate) {
                               return <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">-</span>;
                             }
@@ -2955,12 +3044,9 @@ const Dashboard: React.FC = () => {
                               ];
                               const dateFormatted = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
                               const timeFormatted = `${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")} WIB`;
-                              const isInactive = (bin.realStatus || bin.status || "").toUpperCase() === "INACTIVE";
-                              const tooltipText = isInactive
-                                ? `Non-Aktif Otomatis oleh Sistem: ${dateFormatted}, ${timeFormatted} (Tidak ada aktivitas setoran > 30 hari)`
-                                : bin.wargaName
-                                ? `Update Aktivitas Operasional Warga: ${dateFormatted}, ${timeFormatted}`
-                                : `Pencetakan / Registrasi QR: ${dateFormatted}, ${timeFormatted}`;
+                              const tooltipText = bin.lastActivityLog
+                                ? `Rincian Log: ${bin.lastActivityLog}`
+                                : `Waktu Aktivitas: ${dateFormatted}, ${timeFormatted}`;
 
                               return (
                                 <div
@@ -2969,14 +3055,10 @@ const Dashboard: React.FC = () => {
                                 >
                                   <div className="inline-flex items-center justify-center gap-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs">
                                     <Calendar size={13} className="text-slate-400 shrink-0" />
-                                    <span>{dateFormatted}, {timeFormatted}</span>
+                                    <span>{dateFormatted}</span>
                                   </div>
-                                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                                    {isInactive
-                                      ? "Auto-Sync Sistem (Non-Aktif)"
-                                      : bin.wargaName
-                                      ? "Aktivitas Terkini"
-                                      : "Registrasi QR"}
+                                  <span className="text-[11px] font-mono font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                                    {timeFormatted}
                                   </span>
                                 </div>
                               );

@@ -638,10 +638,11 @@ export const kknExecutiveService = {
       finalSakit = Math.round((sakitCount / totalAttendanceSample) * totalMahasiswa);
       finalAlpa = Math.max(0, totalMahasiswa - finalHadir - finalIzin - finalSakit);
 
-      pctIzin = Math.round((finalIzin / totalMahasiswa) * 1000) / 10;
-      pctSakit = Math.round((finalSakit / totalMahasiswa) * 1000) / 10;
-      pctAlpa = Math.round((finalAlpa / totalMahasiswa) * 1000) / 10;
-      pctHadir = Math.round((100 - pctIzin - pctSakit - pctAlpa) * 10) / 10;
+      // Hitung persentase langsung dari populasi kehadiran riil agar akurat dan konsisten dengan Laporan KKN
+      pctHadir = Math.round((hadirCount / totalAttendanceSample) * 1000) / 10;
+      pctIzin = Math.round((izinCount / totalAttendanceSample) * 1000) / 10;
+      pctSakit = Math.round((sakitCount / totalAttendanceSample) * 1000) / 10;
+      pctAlpa = Math.round((100 - pctHadir - pctIzin - pctSakit) * 10) / 10;
     }
 
     const presensiMahasiswa = {

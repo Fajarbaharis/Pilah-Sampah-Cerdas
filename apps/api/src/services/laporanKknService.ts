@@ -280,6 +280,178 @@ export const laporanKknService = {
       ? Math.round((totalHadirCount / totalAttendanceSample) * 1000) / 10
       : 0;
 
+    // 2B. Query Logbook Riil Mahasiswa & DPL (100% Real-time Database Aggregation)
+    const filteredKelompokIds = rawKelompokList.map((k) => k.id);
+    const logMhsWhere: any = {};
+    if (filteredKelompokIds.length > 0) {
+      logMhsWhere.kelompokId = { in: filteredKelompokIds };
+    } else if (isFilteredKel || isFilteredRw || isFilteredKelompok) {
+      logMhsWhere.kelompokId = "__none__";
+    }
+
+    const logDplWhere: any = {};
+    if (filteredKelompokIds.length > 0) {
+      logDplWhere.kelompokId = { in: filteredKelompokIds };
+    } else if (isFilteredKel || isFilteredRw || isFilteredKelompok) {
+      logDplWhere.kelompokId = "__none__";
+    }
+
+    const [totalLogbookMahasiswa, totalLogbookDpl] = await Promise.all([
+      (prisma as any).logbookKkn?.count ? prisma.logbookKkn.count({ where: logMhsWhere }) : Promise.resolve(0),
+      (prisma as any).logbookDpl?.count ? prisma.logbookDpl.count({ where: logDplWhere }) : Promise.resolve(0),
+    ]);
+
+    // 2C. Sebaran Program Studi Mahasiswa Multidisiplin
+    const prodiMap = new Map<string, number>();
+    allRealStudents.forEach((s) => {
+      let raw = (s.jurusan || "Lainnya").trim();
+      raw = raw.replace(/^S1\s+/i, "");
+      raw = raw.replace(/\s+S1$/i, "");
+      if (raw.toLowerCase() === "teknik informatika" || raw.toLowerCase() === "informatika") {
+        raw = "Teknik Komputer & IF";
+      }
+      prodiMap.set(raw, (prodiMap.get(raw) || 0) + 1);
+    });
+
+    const sortedProdi = Array.from(prodiMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    let sebaranProdi: Array<{
+      name: string;
+      count: number;
+      breakdown?: Array<{ name: string; count: number }>;
+    }> = [];
+    if (sortedProdi.length > 0) {
+      const top5 = sortedProdi.slice(0, 5);
+      const remainingList = sortedProdi.slice(5);
+      const remainingCount = remainingList.reduce((acc, curr) => acc + curr.count, 0);
+      sebaranProdi = [
+        ...top5,
+        ...(remainingCount > 0
+          ? [
+              {
+                name: "Program Studi Lainnya",
+                count: remainingCount,
+                breakdown: remainingList,
+              },
+            ]
+          : []),
+      ];
+    }
+
+    // 2D. Distribusi Beban SKS Dinamis & Real-time (100% Zero Hardcode)
+    const sksCounts: Record<string, { sks: number; count: number; label: string }> = {};
+    const COLOR_PALETTE: Record<number, string> = {
+      6: "#f59e0b",
+      10: "#14b8a6",
+      11: "#0ea5e9",
+      12: "#3b82f6",
+      13: "#6366f1",
+      14: "#8b5cf6",
+      16: "#d946ef",
+      17: "#ec4899",
+      18: "#f43f5e",
+      19: "#10b981",
+      20: "#059669",
+    };
+
+    const STANDARD_SKS_PACKAGES = [6, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20];
+    STANDARD_SKS_PACKAGES.forEach((sksNum) => {
+      sksCounts[String(sksNum)] = {
+        sks: sksNum,
+        count: 0,
+        label: `${sksNum} SKS`,
+      };
+    });
+
+    let totalMahasiswaDenganSks = 0;
+    let belumTerdataCount = 0;
+
+    allRealStudents.forEach((s: any) => {
+      const sksVal = s.sks && Number(s.sks) > 0 ? Number(s.sks) : 0;
+      if (sksVal <= 0) {
+        belumTerdataCount++;
+        return;
+      }
+
+      totalMahasiswaDenganSks++;
+      const key = String(sksVal);
+      if (!sksCounts[key]) {
+        sksCounts[key] = {
+          sks: sksVal,
+          count: 0,
+          label: `${sksVal} SKS`,
+        };
+      }
+      sksCounts[key].count++;
+    });
+
+    const sksBreakdown = Object.values(sksCounts)
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.sks - b.sks;
+      })
+      .map((item) => ({
+        sks: item.sks,
+        label: item.label,
+        count: item.count,
+        percentage: totalMahasiswaDenganSks > 0 ? Math.round((item.count / totalMahasiswaDenganSks) * 100) : 0,
+        color: COLOR_PALETTE[item.sks] || "#0284c7",
+      }));
+
+    const distribusiSks = {
+      totalMahasiswa: totalMahasiswaDenganSks,
+      totalMahasiswaSemua: totalMahasiswaAktif,
+      totalMahasiswaDenganSks,
+      belumTerdataCount,
+      breakdown: sksBreakdown,
+    };
+
+    // 2E. Opsi Filter RW & Kelompok Terverifikasi Aktif
+    const rwOptionsSet = new Set<string>();
+    rawKelompokList.forEach((k) => {
+      if (Array.isArray(k.cakupanRw)) {
+        k.cakupanRw.forEach((rw) => {
+          const num = parseInt(String(rw).replace(/\D/g, ""), 10);
+          if (!isNaN(num) && num > 0) {
+            rwOptionsSet.add(`RW ${String(num).padStart(2, "0")}`);
+          }
+        });
+      }
+    });
+    const sortedRwOptions = Array.from(rwOptionsSet).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ""), 10);
+      const numB = parseInt(b.replace(/\D/g, ""), 10);
+      return numA - numB;
+    });
+    const rwOptionsList = ["Semua RW", ...sortedRwOptions];
+
+    const kelompokOptionsList = [
+      { value: "Semua Kelompok", label: "Semua Kelompok" },
+      ...rawKelompokList.map((k) => ({ value: k.name, label: k.name, kelurahan: k.kelurahan || "" })),
+    ];
+
+    const periodeOptions = [
+      {
+        value: "2026-041027-Universitas Komputer Indonesia - 1",
+        label: "2026-041027-Universitas Komputer Indonesia - 1",
+        tahun: "2026",
+        kodePts: "041027",
+        namaPts: "Universitas Komputer Indonesia",
+        batch: "1",
+      },
+      { value: "ALL", label: "Semua Batch / Periode" },
+    ];
+
+    const programIdentity = {
+      tahun: "2026",
+      kodePts: "041027",
+      namaPts: "Universitas Komputer Indonesia",
+      batch: "1",
+      identitasFormat: "2026-041027-Universitas Komputer Indonesia - 1",
+    };
+
     // 3. Status Program Kerja Seluruh Wilayah
     let totalProkerSelesai = 0;
     let totalProkerSedangBerjalan = 0;
@@ -870,7 +1042,7 @@ export const laporanKknService = {
         periode: "Semester Genap TA 2025/2026 (Agustus - Oktober 2026)",
         tanggalCetak: now.toISOString(),
         tanggalCetakFormatted,
-        wilayahCakupan: isFilteredKel ? `Kelurahan ${rawKel}, Kecamatan Coblong` : "Kecamatan Coblong, Kota Bandung (6 Kelurahan, 86 RW)",
+        wilayahCakupan: isFilteredKel ? `Kelurahan ${rawKel}, Kecamatan Coblong` : "Kecamatan Coblong, Kota Bandung (6 Kelurahan Binaan, 74 RW)",
         instansi: {
           universitas: "Universitas Komputer Indonesia (UNIKOM)",
           taskforce: "Task Force KKN Tematik Pengelolaan Sampah Mandiri BERSEKA",
@@ -889,11 +1061,17 @@ export const laporanKknService = {
         persentaseProkerSelesai,
         totalJamKontribusi,
         rataRataJamPerMahasiswa,
+        totalLogbookMahasiswa,
+        totalLogbookDpl,
       },
       ringkasanDampakSampah,
       topMahasiswa,
       topDpl,
       matriksKelompok,
+      distribusiSks,
+      sebaranProdi,
+      sebaranProdiFull: sortedProdi,
+      programIdentity,
       grafikPerforma: {
         prokerKategori: [
           { kategori: "EDUKASI", label: "Edukasi Pemilahan", total: prokerKategoriCount.EDUKASI.total, selesai: prokerKategoriCount.EDUKASI.selesai },
@@ -925,11 +1103,14 @@ export const laporanKknService = {
         ],
       },
       filterOptions: {
+        periodeOptions,
         kelurahanOptions: ["Semua Kelurahan", ...KELURAHAN_LIST],
+        rwOptions: rwOptionsList,
+        kelompokOptions: kelompokOptionsList,
         selectedKelurahan: filters.kelurahan || "Semua Kelurahan",
         selectedRw: filters.rw || "Semua RW",
         selectedKelompok: filters.kelompok || "Semua Kelompok",
-        selectedPeriode: filters.periode || "2026",
+        selectedPeriode: filters.periode || "2026-041027-Universitas Komputer Indonesia - 1",
       },
     };
   },
@@ -957,6 +1138,10 @@ export const laporanKknService = {
       ["Total Program Kerja Selesai", `${data.ringkasanEksekutif.totalProkerSelesai} dari ${data.ringkasanEksekutif.totalProkerDisetujui} Program Kerja (${data.ringkasanEksekutif.persentaseProkerSelesai}%)`, "Capaian"],
       ["Akumulasi Jam Kontribusi", `${data.ringkasanEksekutif.totalJamKontribusi} Jam`, "Jam Kerja"],
       ["Rata-rata Jam per Mahasiswa", `${data.ringkasanEksekutif.rataRataJamPerMahasiswa} Jam / Mhs`, "Jam Rata-rata"],
+      ["Total Logbook Mahasiswa", data.ringkasanEksekutif.totalLogbookMahasiswa, "Catatan Kegiatan"],
+      ["Total Logbook DPL", data.ringkasanEksekutif.totalLogbookDpl, "Catatan Bimbingan"],
+      ["Warga Binaan Dampingan", data.ringkasanDampakSampah?.totalPenggunaWarga || 0, "Kepala Keluarga"],
+      ["Total Sampah Terpilah", `${Number(data.ringkasanDampakSampah?.totalSampahTerpilahKg || 0).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg`, "Sampah Terpilah"],
       [],
       ["SEBARAN KELURAHAN", "KELOMPOK", "MAHASISWA", "PROKER SELESAI"],
       ...data.grafikPerforma.sebaranPerKelurahan.map((s) => [s.kelurahan, s.totalKelompok, s.totalMahasiswa, s.prokerSelesai]),
@@ -1080,6 +1265,19 @@ export const laporanKknService = {
     });
     const ws4 = XLSX.utils.aoa_to_sheet(mhsNilaiRows);
     XLSX.utils.book_append_sheet(wb, ws4, "Rekap Nilai Mahasiswa");
+
+    // Sheet 5: Profil Akademik (Distribusi SKS & Sebaran Prodi)
+    const prodiRows: any[] = [
+      ["DISTRIBUSI BEBAN SKS MAHASISWA KKN"],
+      ["BEBAN SKS", "JUMLAH MAHASISWA", "PERSENTASE (%)"],
+      ...((data.distribusiSks?.breakdown || []) as Array<{ label: string; count: number; percentage: number }>).map((b) => [b.label, b.count, `${b.percentage}%`]),
+      [],
+      ["SEBARAN MULTIDISIPLIN PROGRAM STUDI"],
+      ["PROGRAM STUDI", "JUMLAH MAHASISWA"],
+      ...((data.sebaranProdiFull || data.sebaranProdi || []) as Array<{ name: string; count: number }>).map((p) => [p.name, p.count]),
+    ];
+    const ws5 = XLSX.utils.aoa_to_sheet(prodiRows);
+    XLSX.utils.book_append_sheet(wb, ws5, "Profil Akademik");
 
     return XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
   },

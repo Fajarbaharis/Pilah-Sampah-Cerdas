@@ -201,6 +201,31 @@ describe("dashboardService Baseline Anti-Dummy & Fallback Metadata Tests", () =>
         expect(w.label).toMatch(/^W\d+$/);
       });
     });
+
+    it("should return daily buckets for 'month' range (e.g. 31 days for October)", async () => {
+      const trend = await dashboardService.getTrend(1, undefined, 2026, "month", false, 10);
+
+      expect(trend).toHaveLength(31);
+      expect(trend[0].label).toBe("1");
+      expect(trend[0].date).toBe("01/10");
+      expect(trend[30].label).toBe("31");
+      expect(trend[30].date).toBe("31/10");
+      trend.forEach((d: any) => {
+        expect(d.organic).toBe(0);
+        expect(d.inorganic).toBe(0);
+      });
+    });
+
+    it("should return 5 program months (Agu - Des) for 'program' range", async () => {
+      const trend = await dashboardService.getTrend(1, undefined, 2026, "program");
+
+      expect(trend).toHaveLength(5);
+      expect(trend.map((t: any) => t.label)).toEqual(["Agu", "Sep", "Okt", "Nov", "Des"]);
+      trend.forEach((m: any) => {
+        expect(m.organic).toBe(0);
+        expect(m.inorganic).toBe(0);
+      });
+    });
   });
 
   describe("dashboardService getAvailableYears Relational Database Tests", () => {

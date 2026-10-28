@@ -44,6 +44,7 @@ import { MapContainer, Marker, useMapEvents, useMap, Polygon, Polyline, Circle }
 import { ThemeTileLayer, GOOGLE_SATELLITE_URL } from "../../components/common/ThemeTileLayer";
 import L from "leaflet";
 import { ConfirmModal } from "../../components/common/ConfirmModal";
+import { DateRangePicker } from "../../components/common/DateRangePicker";
 import { sortKelompokList, sortChronologicalList } from "../../utils/sortUtils";
 import {
   fetchMasterWilayah,
@@ -1064,6 +1065,57 @@ const JadwalKegiatan: React.FC = () => {
             })()}
           </div>
 
+          {/* Banner Status Pekan KKN Aktif Saat Ini (Indikator Hijau Konsisten) */}
+          {(() => {
+            const todayDate = new Date();
+            const todayFormatted = new Intl.DateTimeFormat("id-ID", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }).format(todayDate);
+
+            const activeItem =
+              timelineList.find((t) => t.statusPelaksanaan === "SEDANG_BERJALAN") ||
+              rawTimelineData.find((t) => t.statusPelaksanaan === "SEDANG_BERJALAN") ||
+              timelineList[0];
+
+            if (!activeItem) return null;
+
+            return (
+              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 dark:from-emerald-950/40 dark:via-teal-950/40 dark:to-emerald-950/40 border border-emerald-300/80 dark:border-emerald-700/60 rounded-3xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <Clock size={22} className="animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 inline-flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                        Pekan Sedang Berlangsung (Hari Ini: {todayFormatted})
+                      </span>
+                      <span className="text-xs font-black text-slate-900 dark:text-slate-100">
+                        {activeItem.tahapMinggu} • {activeItem.tanggal}
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 mt-1">
+                      {activeItem.kegiatanUtama}
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                      <strong>Target Output:</strong> {activeItem.outputTarget}
+                    </p>
+                  </div>
+                </div>
+                <div className="shrink-0 flex items-center gap-2">
+                  <span className="px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-xs">
+                    <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                    SEDANG BERLANGSUNG
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Multi-Filter Bar (6 Filter Lengkap: Search, Kelurahan, Kelompok, Bidang, Fase, Status) */}
           <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col gap-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
@@ -1175,20 +1227,16 @@ const JadwalKegiatan: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/60">
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <span className="text-slate-400 font-semibold flex items-center gap-1">
-                  <Calendar size={13} /> Rentang Tanggal:
+                  Rentang Tanggal:
                 </span>
-                <input
-                  type="date"
-                  value={startDateFilter}
-                  onChange={(e) => setStartDateFilter(e.target.value)}
-                  className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-700 dark:text-slate-300 outline-none focus:border-emerald-500 cursor-pointer"
-                />
-                <span className="text-slate-400">s/d</span>
-                <input
-                  type="date"
-                  value={endDateFilter}
-                  onChange={(e) => setEndDateFilter(e.target.value)}
-                  className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-700 dark:text-slate-300 outline-none focus:border-emerald-500 cursor-pointer"
+                <DateRangePicker
+                  startDate={startDateFilter}
+                  endDate={endDateFilter}
+                  onChange={(start, end) => {
+                    setStartDateFilter(start);
+                    setEndDateFilter(end);
+                  }}
+                  placeholder="Pilih rentang tanggal..."
                 />
                 {(timelineSearch ||
                   selectedKelurahan !== "ALL" ||
@@ -1232,57 +1280,6 @@ const JadwalKegiatan: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Banner Status Pekan KKN Aktif Saat Ini (Indikator Hijau Konsisten) */}
-          {(() => {
-            const todayDate = new Date();
-            const todayFormatted = new Intl.DateTimeFormat("id-ID", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            }).format(todayDate);
-
-            const activeItem =
-              timelineList.find((t) => t.statusPelaksanaan === "SEDANG_BERJALAN") ||
-              rawTimelineData.find((t) => t.statusPelaksanaan === "SEDANG_BERJALAN") ||
-              timelineList[0];
-
-            if (!activeItem) return null;
-
-            return (
-              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 dark:from-emerald-950/40 dark:via-teal-950/40 dark:to-emerald-950/40 border border-emerald-300/80 dark:border-emerald-700/60 rounded-3xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-start sm:items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                    <Clock size={22} className="animate-pulse" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 inline-flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                        Pekan Sedang Berlangsung (Hari Ini: {todayFormatted})
-                      </span>
-                      <span className="text-xs font-black text-slate-900 dark:text-slate-100">
-                        {activeItem.tahapMinggu} • {activeItem.tanggal}
-                      </span>
-                    </div>
-                    <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 mt-1">
-                      {activeItem.kegiatanUtama}
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                      <strong>Target Output:</strong> {activeItem.outputTarget}
-                    </p>
-                  </div>
-                </div>
-                <div className="shrink-0 flex items-center gap-2">
-                  <span className="px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-xs">
-                    <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
-                    SEDANG BERLANGSUNG
-                  </span>
-                </div>
-              </div>
-            );
-          })()}
 
           {/* Dynamic Tabular Table (10 Kolom Lengkap: No, Kelurahan, Kelompok, Tahap, Tanggal, Bidang & Kegiatan, Output, URL GDrive, Status, Aksi) */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">

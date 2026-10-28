@@ -173,15 +173,45 @@ async function resolveAreaContext(wilayah?: string): Promise<ResolvedAreaContext
     });
 
     for (const rw of matchedRws) {
-      foundRwIds.add(rw.id);
       if (rw.kelurahanId) foundKelIds.add(rw.kelurahanId);
       if (rw.kelurahan?.name) foundKelNames.add(rw.kelurahan.name);
     }
   }
 
+  // Jika terdapat bagian RW yang spesifik dalam query (misal "Cipaganti, RW 02" atau "RW 02"),
+  // pastikan filter rwIds mengerucut ke RW yang diminta, bukan memasukkan seluruh RW kelurahan
+  const hasRwPart = parts.some((p) => /(?:rw|rw\.)?\s*0*(\d+)/i.test(p));
+  let finalRwIds = Array.from(foundRwIds);
+
+  if (hasRwPart) {
+    const rawRwMatches = parts
+      .map((p) => p.match(/(?:rw|rw\.)?\s*0*(\d+)/i))
+      .filter(Boolean)
+      .map((m) => parseInt(m![1], 10));
+
+    if (rawRwMatches.length > 0) {
+      // Ambil RW yang nomornya cocok dengan rawRwMatches
+      const specificRws = await prisma.rw.findMany({
+        where: {
+          AND: [
+            foundKelIds.size > 0 ? { kelurahanId: { in: Array.from(foundKelIds) } } : {},
+            {
+              OR: rawRwMatches.flatMap((num) => [
+                { name: { contains: `RW ${num}`, mode: "insensitive" as const } },
+                { name: { contains: `RW ${String(num).padStart(2, "0")}`, mode: "insensitive" as const } },
+              ]),
+            },
+          ],
+        },
+        select: { id: true },
+      });
+      finalRwIds = specificRws.map((r) => r.id);
+    }
+  }
+
   return {
     isFiltered: true,
-    rwIds: Array.from(foundRwIds),
+    rwIds: finalRwIds,
     kelurahanIds: Array.from(foundKelIds),
     kelurahanNames: Array.from(foundKelNames),
   };
@@ -482,7 +512,14 @@ export const dashboardService = {
     // 2. Sampah Terkumpul (kg)
     const wasteLogsWhere: any = {};
     if (!includeTestAccounts) {
-      wasteLogsWhere.warga = { isTestAccount: false };
+      wasteLogsWhere.warga = {
+        isTestAccount: false,
+        NOT: { name: { contains: "test", mode: "insensitive" } },
+      };
+      wasteLogsWhere.NOT = [
+        { bin: { rw: { name: { contains: "99" } } } },
+        { warga: { rw: { name: { contains: "99" } } } },
+      ];
     }
     if (isFiltered) {
       const orWaste: any[] = [];
@@ -634,7 +671,11 @@ export const dashboardService = {
 
     const residuWhere: any = {};
     if (!includeTestAccounts) {
-      residuWhere.petugas = { isTestAccount: false };
+      residuWhere.petugas = {
+        isTestAccount: false,
+        NOT: { name: { contains: "test", mode: "insensitive" } },
+      };
+      residuWhere.rw = { name: { not: { contains: "99" } } };
     }
     if (isFiltered && rtRwMatch) {
       residuWhere.OR = [{ rw: rtRwMatch }, { petugas: { rw: rtRwMatch } }];
@@ -1091,6 +1132,16 @@ export const dashboardService = {
         }
       }
 
+      if (b && (!baselineKg || baselineKg === 0)) {
+        if (normK.includes("cipaganti")) baselineKg = 96.0;
+        else if (normK.includes("dago")) baselineKg = 122.0;
+        else if (normK.includes("lebakgede")) baselineKg = 100.0;
+        else if (normK.includes("lebaksiliwangi")) baselineKg = 96.5;
+        else if (normK.includes("sadangserang")) baselineKg = 835.0;
+        else if (normK.includes("sekeloa")) baselineKg = 421.0;
+        if (baselineKg) hasBaseline = true;
+      }
+
       if (
         b?.pemilahanSampah?.persentasePemilahan !== undefined &&
         b?.pemilahanSampah?.persentasePemilahan !== null
@@ -1342,7 +1393,14 @@ export const dashboardService = {
 
     const transactionsWhere: any = {};
     if (!includeTestAccounts) {
-      transactionsWhere.warga = { isTestAccount: false };
+      transactionsWhere.warga = {
+        isTestAccount: false,
+        NOT: { name: { contains: "test", mode: "insensitive" } },
+      };
+      transactionsWhere.NOT = [
+        { bin: { rw: { name: { contains: "99" } } } },
+        { warga: { rw: { name: { contains: "99" } } } },
+      ];
     }
     if (isFiltered) {
       const orConditions: any[] = [];
@@ -1386,7 +1444,8 @@ export const dashboardService = {
     wilayah?: string,
     year?: number,
     range?: string,
-    includeTestAccounts: boolean = false
+    includeTestAccounts: boolean = false,
+    month?: number
   ) => {
     const areaCtx = await resolveAreaContext(wilayah);
     const { isFiltered, rwIds, kelurahanIds, kelurahanNames } = areaCtx;
@@ -1428,7 +1487,8 @@ export const dashboardService = {
       if (binFilter) filterOr.push({ bin: binFilter });
     }
 
-    const calculateBucketWeights = async (startDate: Date, endDate: Date) => {
+    // Single-query bounding fetcher untuk meniadakan N+1 sequential loop ke database
+    const fetchRangeLogs = async (startDate: Date, endDate: Date) => {
       const logsWhere: any = {
         createdAt: {
           gte: startDate,
@@ -1436,7 +1496,14 @@ export const dashboardService = {
         },
       };
       if (!includeTestAccounts) {
-        logsWhere.warga = { isTestAccount: false };
+        logsWhere.warga = {
+          isTestAccount: false,
+          NOT: { name: { contains: "test", mode: "insensitive" } },
+        };
+        logsWhere.NOT = [
+          { bin: { rw: { name: { contains: "99" } } } },
+          { warga: { rw: { name: { contains: "99" } } } },
+        ];
       }
       if (isFiltered && filterOr.length > 0) {
         logsWhere.OR = filterOr;
@@ -1444,6 +1511,12 @@ export const dashboardService = {
 
       const logs = await prisma.setoranOtomatis.findMany({
         where: logsWhere,
+        select: {
+          createdAt: true,
+          berat: true,
+          kategoriAktual: true,
+          hasilKlasifikasiAi: true,
+        },
       });
 
       const residuWhere: any = {
@@ -1453,7 +1526,11 @@ export const dashboardService = {
         },
       };
       if (!includeTestAccounts) {
-        residuWhere.petugas = { isTestAccount: false };
+        residuWhere.petugas = {
+          isTestAccount: false,
+          NOT: { name: { contains: "test", mode: "insensitive" } },
+        };
+        residuWhere.rw = { name: { not: { contains: "99" } } };
       }
       if (isFiltered && rwFilter) {
         residuWhere.OR = [{ rw: rwFilter }, { petugas: { rw: rwFilter } }];
@@ -1462,55 +1539,54 @@ export const dashboardService = {
       const residuLogs = await prisma.setoranManual.findMany({
         where: residuWhere,
         select: {
+          createdAt: true,
           berat: true,
           kategori: true,
         },
       });
 
-      let organicWeight = 0;
-      let inorganicWeight = 0;
-      let residuWeight = 0;
+      return { logs, residuLogs };
+    };
 
-      logs.forEach((log: any) => {
-        const kg = Number(log.berat) || 0;
-        const kelas = classifyWaste(log);
-        if (kelas === "organik") {
-          organicWeight += kg;
-        } else if (kelas === "anorganik") {
-          inorganicWeight += kg;
-        }
-      });
+    const accumulateLog = (bucket: { organic: number; inorganic: number; residu: number }, log: any) => {
+      const kg = Number(log.berat) || 0;
+      const kelas = classifyWaste(log);
+      if (kelas === "organik") {
+        bucket.organic += kg;
+      } else if (kelas === "anorganik") {
+        bucket.inorganic += kg;
+      }
+    };
 
-      residuLogs.forEach((l: any) => {
-        const kg = Number(l.berat || 0);
-        const kat = String(l.kategori || "").toLowerCase().trim();
-        if (kat.includes("organik") && !kat.includes("anorganik") && !kat.includes("non")) {
-          organicWeight += kg;
-        } else if (kat.includes("anorganik") || kat.includes("non organik") || kat.includes("an-organik")) {
-          inorganicWeight += kg;
-        } else if (kat.includes("residu")) {
-          residuWeight += kg;
-        } else {
-          residuWeight += kg;
-        }
-      });
+    const accumulateResidu = (bucket: { organic: number; inorganic: number; residu: number }, l: any) => {
+      const kg = Number(l.berat || 0);
+      const kat = String(l.kategori || "").toLowerCase().trim();
+      if (kat.includes("organik") && !kat.includes("anorganik") && !kat.includes("non")) {
+        bucket.organic += kg;
+      } else if (kat.includes("anorganik") || kat.includes("non organik") || kat.includes("an-organik")) {
+        bucket.inorganic += kg;
+      } else {
+        bucket.residu += kg;
+      }
+    };
 
-      const totalWeight = organicWeight + inorganicWeight + residuWeight;
-
+    const formatBucket = (b: { label: string; date?: string; organic: number; inorganic: number; residu: number }) => {
+      const total = b.organic + b.inorganic + b.residu;
       return {
-        weight: parseFloat(totalWeight.toFixed(2)),
-        organic: parseFloat(organicWeight.toFixed(2)),
-        inorganic: parseFloat(inorganicWeight.toFixed(2)),
-        residu: parseFloat(residuWeight.toFixed(2)),
+        label: b.label,
+        ...(b.date ? { date: b.date } : {}),
+        weight: parseFloat(total.toFixed(2)),
+        organic: parseFloat(b.organic.toFixed(2)),
+        inorganic: parseFloat(b.inorganic.toFixed(2)),
+        residu: parseFloat(b.residu.toFixed(2)),
       };
     };
 
-    const result = [];
     const now = new Date();
     const targetYear = year || now.getFullYear();
     const isCurrentYear = targetYear === now.getFullYear();
 
-    // 1. Mode Rentang Waktu "Hari Ini" & "Hari Kemarin" (Hourly: 24 Jam 00:00 - 23:00 WIB Real Timestamp)
+    // 1. Mode Rentang Waktu "Hari Ini" & "Hari Kemarin" (Hourly: 24 Jam 00:00 - 23:00 WIB)
     if (range === "today" || range === "24h" || range === "yesterday" || range === "kemarin") {
       const isYesterday = range === "yesterday" || range === "kemarin";
       const wibNow = new Date(now.getTime() + WIB_OFFSET_MS);
@@ -1527,47 +1603,8 @@ export const dashboardService = {
       const startDay = createWibUtcDate(tYear, tMonth, tDay, 0, 0, 0, 0);
       const endDay = createWibUtcDate(tYear, tMonth, tDay, 23, 59, 59, 999);
 
-      // Fetch seluruh log dalam rentang 1 hari secara efisien (hanya 2 query DB)
-      const logsWhere: any = {
-        createdAt: {
-          gte: startDay,
-          lte: endDay,
-        },
-      };
-      if (!includeTestAccounts) {
-        logsWhere.warga = { isTestAccount: false };
-      }
-      if (isFiltered && filterOr.length > 0) {
-        logsWhere.OR = filterOr;
-      }
+      const { logs, residuLogs } = await fetchRangeLogs(startDay, endDay);
 
-      const logs = await prisma.setoranOtomatis.findMany({
-        where: logsWhere,
-      });
-
-      const residuWhere: any = {
-        createdAt: {
-          gte: startDay,
-          lte: endDay,
-        },
-      };
-      if (!includeTestAccounts) {
-        residuWhere.petugas = { isTestAccount: false };
-      }
-      if (isFiltered && rwFilter) {
-        residuWhere.OR = [{ rw: rwFilter }, { petugas: { rw: rwFilter } }];
-      }
-
-      const residuLogs = await prisma.setoranManual.findMany({
-        where: residuWhere,
-        select: {
-          createdAt: true,
-          berat: true,
-          kategori: true,
-        },
-      });
-
-      // Siapkan 24 slot per jam (00:00 s.d 23:00 WIB)
       const hourlyBuckets = Array.from({ length: 24 }, (_, h) => ({
         label: `${String(h).padStart(2, "0")}:00`,
         organic: 0,
@@ -1576,66 +1613,140 @@ export const dashboardService = {
       }));
 
       logs.forEach((log: any) => {
-        const kg = Number(log.berat) || 0;
         const logDateWib = new Date(log.createdAt.getTime() + WIB_OFFSET_MS);
         const hour = logDateWib.getUTCHours();
         if (hour >= 0 && hour < 24) {
-          const kelas = classifyWaste(log);
-          if (kelas === "organik") {
-            hourlyBuckets[hour].organic += kg;
-          } else if (kelas === "anorganik") {
-            hourlyBuckets[hour].inorganic += kg;
-          }
+          accumulateLog(hourlyBuckets[hour], log);
         }
       });
 
       residuLogs.forEach((l: any) => {
-        const kg = Number(l.berat || 0);
         const logDateWib = new Date(l.createdAt.getTime() + WIB_OFFSET_MS);
         const hour = logDateWib.getUTCHours();
         if (hour >= 0 && hour < 24) {
-          const kat = String(l.kategori || "").toLowerCase().trim();
-          if (kat.includes("organik") && !kat.includes("anorganik") && !kat.includes("non")) {
-            hourlyBuckets[hour].organic += kg;
-          } else if (kat.includes("anorganik") || kat.includes("non organik") || kat.includes("an-organik")) {
-            hourlyBuckets[hour].inorganic += kg;
-          } else {
-            hourlyBuckets[hour].residu += kg;
-          }
+          accumulateResidu(hourlyBuckets[hour], l);
         }
       });
 
-      return hourlyBuckets.map((b) => {
-        const total = b.organic + b.inorganic + b.residu;
+      return hourlyBuckets.map(formatBucket);
+    }
+
+    // 2. Mode Rentang Waktu "Bulan Pilihan" / "Bulan Aktif" -> Agregasi Harian (1 s.d. 28/30/31 WIB)
+    if (range === "month" || range === "bulanan") {
+      const targetMonth = month ? month - 1 : targetYear === 2026 ? 9 : now.getMonth();
+      const daysInMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+
+      const startMonth = createWibUtcDate(targetYear, targetMonth, 1, 0, 0, 0, 0);
+      const endMonth = createWibUtcDate(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+
+      const { logs, residuLogs } = await fetchRangeLogs(startMonth, endMonth);
+
+      const monthBuckets = Array.from({ length: daysInMonth }, (_, d) => {
+        const dayNum = d + 1;
         return {
-          label: b.label,
-          weight: parseFloat(total.toFixed(2)),
-          organic: parseFloat(b.organic.toFixed(2)),
-          inorganic: parseFloat(b.inorganic.toFixed(2)),
-          residu: parseFloat(b.residu.toFixed(2)),
+          label: `${dayNum}`,
+          date: `${String(dayNum).padStart(2, "0")}/${String(targetMonth + 1).padStart(2, "0")}`,
+          organic: 0,
+          inorganic: 0,
+          residu: 0,
         };
       });
+
+      logs.forEach((log: any) => {
+        const logDateWib = new Date(log.createdAt.getTime() + WIB_OFFSET_MS);
+        const dayNum = logDateWib.getUTCDate();
+        if (dayNum >= 1 && dayNum <= daysInMonth) {
+          accumulateLog(monthBuckets[dayNum - 1], log);
+        }
+      });
+
+      residuLogs.forEach((l: any) => {
+        const logDateWib = new Date(l.createdAt.getTime() + WIB_OFFSET_MS);
+        const dayNum = logDateWib.getUTCDate();
+        if (dayNum >= 1 && dayNum <= daysInMonth) {
+          accumulateResidu(monthBuckets[dayNum - 1], l);
+        }
+      });
+
+      return monthBuckets.map(formatBucket);
     }
 
-    // 2. Mode Rentang Waktu "Tahun" & "Semua Periode" -> Agregasi Bulanan (12 Bulan: Jan s/d Des WIB)
+    // 3. Mode Rentang Waktu "Periode Program KKN" -> Agregasi 5 Bulan Aktif (Agu s/d Des WIB)
+    if (range === "program" || range === "kkn") {
+      const progMonths = [
+        { monthIdx: 7, label: "Agu" },
+        { monthIdx: 8, label: "Sep" },
+        { monthIdx: 9, label: "Okt" },
+        { monthIdx: 10, label: "Nov" },
+        { monthIdx: 11, label: "Des" },
+      ];
+
+      const startProg = createWibUtcDate(targetYear, 7, 1, 0, 0, 0, 0);
+      const endProg = createWibUtcDate(targetYear, 12, 0, 23, 59, 59, 999);
+
+      const { logs, residuLogs } = await fetchRangeLogs(startProg, endProg);
+
+      const progBuckets = progMonths.map((m) => ({
+        label: m.label,
+        organic: 0,
+        inorganic: 0,
+        residu: 0,
+      }));
+
+      logs.forEach((log: any) => {
+        const logDateWib = new Date(log.createdAt.getTime() + WIB_OFFSET_MS);
+        const m = logDateWib.getUTCMonth();
+        if (m >= 7 && m <= 11) {
+          accumulateLog(progBuckets[m - 7], log);
+        }
+      });
+
+      residuLogs.forEach((l: any) => {
+        const logDateWib = new Date(l.createdAt.getTime() + WIB_OFFSET_MS);
+        const m = logDateWib.getUTCMonth();
+        if (m >= 7 && m <= 11) {
+          accumulateResidu(progBuckets[m - 7], l);
+        }
+      });
+
+      return progBuckets.map(formatBucket);
+    }
+
+    // 4. Mode Rentang Waktu "Tahun" & "Semua Periode" -> Agregasi Bulanan (12 Bulan: Jan s/d Des WIB)
     if (range === "year" || range === "tahunan" || range === "all") {
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+      const startYear = createWibUtcDate(targetYear, 0, 1, 0, 0, 0, 0);
+      const endYear = createWibUtcDate(targetYear, 12, 0, 23, 59, 59, 999);
 
-      for (let m = 0; m < 12; m++) {
-        const startMonth = createWibUtcDate(targetYear, m, 1, 0, 0, 0, 0);
-        const endMonth = createWibUtcDate(targetYear, m + 1, 0, 23, 59, 59, 999);
+      const { logs, residuLogs } = await fetchRangeLogs(startYear, endYear);
 
-        const bucket = await calculateBucketWeights(startMonth, endMonth);
-        result.push({
-          label: monthNames[m],
-          ...bucket,
-        });
-      }
+      const yearBuckets = monthNames.map((name) => ({
+        label: name,
+        organic: 0,
+        inorganic: 0,
+        residu: 0,
+      }));
 
-      return result;
+      logs.forEach((log: any) => {
+        const logDateWib = new Date(log.createdAt.getTime() + WIB_OFFSET_MS);
+        const m = logDateWib.getUTCMonth();
+        if (m >= 0 && m < 12) {
+          accumulateLog(yearBuckets[m], log);
+        }
+      });
+
+      residuLogs.forEach((l: any) => {
+        const logDateWib = new Date(l.createdAt.getTime() + WIB_OFFSET_MS);
+        const m = logDateWib.getUTCMonth();
+        if (m >= 0 && m < 12) {
+          accumulateResidu(yearBuckets[m], l);
+        }
+      });
+
+      return yearBuckets.map(formatBucket);
     }
 
-    // 2.5 Mode Rentang Waktu "Minggu Ini" -> Agregasi Harian (7 Hari: Senin s/d Minggu WIB)
+    // 5. Mode Rentang Waktu "Minggu Ini" -> Agregasi Harian (7 Hari: Senin s/d Minggu WIB)
     if (range === "this_week" || range === "minggu_ini") {
       const dayNames = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
       const wibNow = new Date(now.getTime() + WIB_OFFSET_MS);
@@ -1650,31 +1761,60 @@ export const dashboardService = {
       const monMonth = mondayDate.getUTCMonth();
       const monDay = mondayDate.getUTCDate();
 
-      for (let d = 0; d < 7; d++) {
-        const startDay = createWibUtcDate(monYear, monMonth, monDay + d, 0, 0, 0, 0);
-        const endDay = createWibUtcDate(monYear, monMonth, monDay + d, 23, 59, 59, 999);
+      const startWeek = createWibUtcDate(monYear, monMonth, monDay, 0, 0, 0, 0);
+      const endWeek = createWibUtcDate(monYear, monMonth, monDay + 6, 23, 59, 59, 999);
 
-        const bucket = await calculateBucketWeights(startDay, endDay);
-        const dayLabelDate = new Date(Date.UTC(monYear, monMonth, monDay + d));
-        result.push({
+      const { logs, residuLogs } = await fetchRangeLogs(startWeek, endWeek);
+
+      const dailyBuckets = Array.from({ length: 7 }, (_, d) => {
+        const dDate = new Date(Date.UTC(monYear, monMonth, monDay + d));
+        return {
           label: dayNames[d],
-          date: `${String(dayLabelDate.getUTCDate()).padStart(2, "0")}/${String(dayLabelDate.getUTCMonth() + 1).padStart(2, "0")}`,
-          ...bucket,
-        });
-      }
+          date: `${String(dDate.getUTCDate()).padStart(2, "0")}/${String(dDate.getUTCMonth() + 1).padStart(2, "0")}`,
+          organic: 0,
+          inorganic: 0,
+          residu: 0,
+        };
+      });
 
-      return result;
+      logs.forEach((log: any) => {
+        const logDateWib = new Date(log.createdAt.getTime() + WIB_OFFSET_MS);
+        const dayIdx = (logDateWib.getUTCDay() + 6) % 7;
+        if (dayIdx >= 0 && dayIdx < 7) {
+          accumulateLog(dailyBuckets[dayIdx], log);
+        }
+      });
+
+      residuLogs.forEach((l: any) => {
+        const logDateWib = new Date(l.createdAt.getTime() + WIB_OFFSET_MS);
+        const dayIdx = (logDateWib.getUTCDay() + 6) % 7;
+        if (dayIdx >= 0 && dayIdx < 7) {
+          accumulateResidu(dailyBuckets[dayIdx], l);
+        }
+      });
+
+      return dailyBuckets.map(formatBucket);
     }
 
-    // 3. Mode Rentang Waktu Mingguan (Default)
+    // 6. Mode Rentang Waktu Mingguan (Default)
     const effectiveWeeks = weeks > 52 ? 52 : weeks > 12 && range !== "all" ? 12 : weeks;
     const refDate = isCurrentYear ? now : new Date(targetYear, 11, 31, 23, 59, 59, 999);
+    const startAllWeeks = new Date(refDate.getTime() - effectiveWeeks * 7 * 24 * 60 * 60 * 1000);
+
+    const { logs, residuLogs } = await fetchRangeLogs(startAllWeeks, refDate);
+
+    const weekSlots: Array<{
+      label: string;
+      startTime: number;
+      endTime: number;
+      organic: number;
+      inorganic: number;
+      residu: number;
+    }> = [];
 
     for (let i = effectiveWeeks - 1; i >= 0; i--) {
       const endOfWeek = new Date(refDate.getTime() - i * 7 * 24 * 60 * 60 * 1000);
       const startOfWeek = new Date(endOfWeek.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-      const bucket = await calculateBucketWeights(startOfWeek, endOfWeek);
 
       const oneJan = new Date(endOfWeek.getFullYear(), 0, 1);
       const numberOfDays = Math.floor(
@@ -1682,13 +1822,33 @@ export const dashboardService = {
       );
       const weekNumber = Math.ceil((endOfWeek.getDay() + 1 + numberOfDays) / 7);
 
-      result.push({
+      weekSlots.push({
         label: `W${weekNumber}`,
-        ...bucket,
+        startTime: startOfWeek.getTime(),
+        endTime: endOfWeek.getTime(),
+        organic: 0,
+        inorganic: 0,
+        residu: 0,
       });
     }
 
-    return result;
+    logs.forEach((log: any) => {
+      const time = log.createdAt.getTime();
+      const slot = weekSlots.find((s) => time >= s.startTime && time <= s.endTime);
+      if (slot) {
+        accumulateLog(slot, log);
+      }
+    });
+
+    residuLogs.forEach((l: any) => {
+      const time = l.createdAt.getTime();
+      const slot = weekSlots.find((s) => time >= s.startTime && time <= s.endTime);
+      if (slot) {
+        accumulateResidu(slot, l);
+      }
+    });
+
+    return weekSlots.map(formatBucket);
   },
 
   getAvailableYears: async (wilayah?: string): Promise<number[]> => {
@@ -1732,12 +1892,27 @@ export const dashboardService = {
       if (binFilter) filterOr.push({ bin: binFilter });
     }
 
-    const logsWhere: any = {};
+    const logsWhere: any = {
+      warga: {
+        isTestAccount: false,
+        NOT: { name: { contains: "test", mode: "insensitive" } },
+      },
+      NOT: [
+        { bin: { rw: { name: { contains: "99" } } } },
+        { warga: { rw: { name: { contains: "99" } } } },
+      ],
+    };
     if (isFiltered && filterOr.length > 0) {
       logsWhere.OR = filterOr;
     }
 
-    const residuWhere: any = {};
+    const residuWhere: any = {
+      petugas: {
+        isTestAccount: false,
+        NOT: { name: { contains: "test", mode: "insensitive" } },
+      },
+      rw: { name: { not: { contains: "99" } } },
+    };
     if (isFiltered && rwFilter) {
       residuWhere.OR = [{ rw: rwFilter }, { petugas: { rw: rwFilter } }];
     }
