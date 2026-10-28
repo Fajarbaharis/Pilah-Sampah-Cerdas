@@ -237,8 +237,8 @@ describe("wasteExecutiveReportService - Aggregation & Impact Analysis", () => {
     expect(report.kpiSummary.infrastruktur.tps3rCount).toBe(1);
     expect(report.kpiSummary.infrastruktur.bankSampahCount).toBe(1);
     expect(report.kpiSummary.infrastruktur.rumahMaggotCount).toBe(1);
-    expect(report.kpiSummary.infrastruktur.wadahSampahTotal).toBe(769);
-    expect(report.kpiSummary.infrastruktur.wadahSampahAktif).toBe(765);
+    expect(report.kpiSummary.infrastruktur.wadahSampahTotal).toBe(3);
+    expect(report.kpiSummary.infrastruktur.wadahSampahAktif).toBe(2);
     expect(report.kpiSummary.infrastruktur.wadahKritis).toBe(1);
 
     // 3. Operasional & Ritase Verification

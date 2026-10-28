@@ -265,6 +265,15 @@ export const PoskoKknPage: React.FC = () => {
     return getRwOptionsForKelurahan(selectedKelurahan, masterRwList);
   }, [selectedKelurahan, masterRwList]);
 
+  // Auto reset RW when Kelurahan changes or is reset to ALL
+  useEffect(() => {
+    if (!isMpl && selectedKelurahan === "ALL") {
+      if (selectedRw !== "ALL") setSelectedRw("ALL");
+    } else if (selectedRw !== "ALL" && !filterRwOptions.includes(selectedRw)) {
+      setSelectedRw("ALL");
+    }
+  }, [isMpl, selectedKelurahan, filterRwOptions, selectedRw]);
+
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -2171,18 +2180,29 @@ export const PoskoKknPage: React.FC = () => {
               )}
 
               {/* Filter RW */}
-              <select
-                value={selectedRw}
-                onChange={(e) => setSelectedRw(e.target.value)}
-                className="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/10 text-slate-800 dark:text-slate-100 transition-all cursor-pointer"
-              >
-                <option value="ALL">Semua RW</option>
-                {filterRwOptions.map((rw) => (
-                  <option key={rw} value={rw}>
-                    {formatRwLabel(rw)}
-                  </option>
-                ))}
-              </select>
+              {(() => {
+                const isRwDisabled = !isMpl && selectedKelurahan === "ALL";
+                return (
+                  <select
+                    value={selectedRw}
+                    onChange={(e) => setSelectedRw(e.target.value)}
+                    disabled={isRwDisabled}
+                    title={isRwDisabled ? "Pilih kelurahan terlebih dahulu untuk memfilter RW" : "Filter RW"}
+                    aria-label="Filter RW"
+                    className="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/10 text-slate-800 dark:text-slate-100 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800/60"
+                  >
+                    <option value="ALL">
+                      {isRwDisabled ? "Pilih Kelurahan Dahulu" : "Semua RW"}
+                    </option>
+                    {!isRwDisabled &&
+                      filterRwOptions.map((rw) => (
+                        <option key={rw} value={rw}>
+                          {formatRwLabel(rw)}
+                        </option>
+                      ))}
+                  </select>
+                );
+              })()}
 
               {((!isMpl && selectedKelurahan !== "ALL") || selectedRw !== "ALL") && (
                 <button

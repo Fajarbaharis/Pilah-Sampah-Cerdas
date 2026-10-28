@@ -274,7 +274,7 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
                   <div className="bg-white/80 dark:bg-slate-800/80 p-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
                     <span className="text-[10px] text-slate-400 font-bold uppercase block">Partisipasi Warga</span>
                     <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                      {metrics.partisipasiWarga.partisipasiPersen}%
+                      {Number(metrics.partisipasiWarga.partisipasiPersen || 0).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
                     </span>
                     <span className="text-[9.5px] text-slate-400 block truncate" title={`${metrics.partisipasiWarga.wargaAktifMemilah} dari ${metrics.partisipasiWarga.totalWargaTerdaftar} warga aktif`}>
                       {metrics.partisipasiWarga.wargaAktifMemilah} dari {metrics.partisipasiWarga.totalWargaTerdaftar} warga aktif
@@ -283,7 +283,7 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
                   <div className="bg-white/80 dark:bg-slate-800/80 p-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
                     <span className="text-[10px] text-slate-400 font-bold uppercase block">Akurasi Pemilahan Sampah</span>
                     <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                      {metrics.akurasiPilahPersen ?? (metrics.wadahOrganik.kesesuaianPersen || 0)}%
+                      {Number(metrics.akurasiPilahPersen ?? (metrics.wadahOrganik.kesesuaianPersen || 0)).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
                     </span>
                     <span className="text-[9.5px] text-slate-400 block truncate" title={`${metrics.totalPatuh} tepat, ${metrics.totalTidakPatuh} tidak sesuai`}>
                       {metrics.totalPatuh} tepat, {metrics.totalTidakPatuh} tidak sesuai
@@ -297,7 +297,7 @@ export const ComplianceWidget: React.FC<ComplianceWidgetProps> = ({
                     Formula Akumulasi (50 : 50):
                   </span>
                   <span className="font-semibold text-slate-700 dark:text-slate-200">
-                    ({metrics.partisipasiWarga.partisipasiPersen}% + {metrics.akurasiPilahPersen ?? (metrics.wadahOrganik.kesesuaianPersen || 0)}%) ÷ 2 = <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{displayRate.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</strong>
+                    ({Number(metrics.partisipasiWarga.partisipasiPersen || 0).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% + {Number(metrics.akurasiPilahPersen ?? (metrics.wadahOrganik.kesesuaianPersen || 0)).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%) ÷ 2 = <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{displayRate.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</strong>
                   </span>
                 </div>
               </div>

@@ -122,6 +122,8 @@ export class BinController {
         };
 
         const lastDeposit = bin.setoranOtomatis?.[0] || null;
+        const lastDepositAt = lastDeposit?.createdAt || null;
+        const lastActivityAt = lastDepositAt || activatedAt || bin.createdAt;
         let lastActivityLog = verifiedAtStr;
         if (lastDeposit) {
           const d = new Date(lastDeposit.createdAt);
@@ -229,6 +231,10 @@ export class BinController {
           realStatus: bin.status,
           needsInspection: isInactive7Days && bin.status === "ACTIVE_BOUND",
           lastActivityLog,
+          lastDepositAt,
+          lastActivityAt,
+          lastDepositWeight: lastDeposit?.berat || 0,
+          lastDepositCategory: lastDeposit?.hasilKlasifikasiAi || null,
           activatedAt,
           createdAt: bin.createdAt,
           updatedAt: bin.updatedAt,
@@ -329,7 +335,13 @@ export class BinController {
       if (sortBy) {
         const isDesc = String(order || "desc").toLowerCase() !== "asc";
         const sb = String(sortBy).toLowerCase();
-        if (sb === "updatedat" || sb === "terbaru" || sb === "latest" || sb === "waktu") {
+        if (sb === "lastactivityat" || sb === "lastactivity" || sb === "aktivitas") {
+          mappedBins.sort((a: any, b: any) => {
+            const timeA = new Date(a.lastActivityAt || a.updatedAt || a.createdAt || 0).getTime();
+            const timeB = new Date(b.lastActivityAt || b.updatedAt || b.createdAt || 0).getTime();
+            return isDesc ? timeB - timeA : timeA - timeB;
+          });
+        } else if (sb === "updatedat" || sb === "terbaru" || sb === "latest" || sb === "waktu") {
           mappedBins.sort((a: any, b: any) => {
             const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
             const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();

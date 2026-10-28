@@ -47,26 +47,36 @@ export interface WasteTrendChartProps {
   rawOrg?: number;
   rawAnorg?: number;
   className?: string;
-  onFilterChange?: (filters: { range: string; year: string; weeks: number }) => void;
+  onFilterChange?: (filters: { range: string; year: string; month?: string; weeks?: number }) => void;
 }
 
 export interface TimeRangeOption {
   value: string;
   label: string;
-  weeksEquivalent: number;
-  periodType: "hourly" | "daily" | "weekly" | "monthly";
+  periodType: "hourly" | "daily" | "daily_month" | "monthly";
 }
 
 export const TIME_RANGE_OPTIONS: TimeRangeOption[] = [
-  { value: "today", label: "Hari Ini", weeksEquivalent: 1, periodType: "hourly" },
-  { value: "yesterday", label: "Hari Kemarin", weeksEquivalent: 1, periodType: "hourly" },
-  { value: "this_week", label: "Minggu Ini", weeksEquivalent: 1, periodType: "daily" },
-  { value: "7d", label: "7 Hari Terakhir", weeksEquivalent: 2, periodType: "weekly" },
-  { value: "4w", label: "4 Minggu Terakhir", weeksEquivalent: 4, periodType: "weekly" },
-  { value: "8w", label: "8 Minggu Terakhir", weeksEquivalent: 8, periodType: "weekly" },
-  { value: "12w", label: "12 Minggu Terakhir", weeksEquivalent: 12, periodType: "weekly" },
-  { value: "year", label: "1 Tahun Penuh", weeksEquivalent: 52, periodType: "monthly" },
-  { value: "all", label: "Semua Periode", weeksEquivalent: 100, periodType: "monthly" },
+  { value: "today", label: "Hari Ini", periodType: "hourly" },
+  { value: "this_week", label: "Minggu Ini", periodType: "daily" },
+  { value: "month", label: "Bulan Pilihan", periodType: "daily_month" },
+  { value: "program", label: "Periode Program (KKN)", periodType: "monthly" },
+  { value: "year", label: "1 Tahun Penuh", periodType: "monthly" },
+];
+
+export const MONTH_OPTIONS = [
+  { value: "1", label: "Januari" },
+  { value: "2", label: "Februari" },
+  { value: "3", label: "Maret" },
+  { value: "4", label: "April" },
+  { value: "5", label: "Mei" },
+  { value: "6", label: "Juni" },
+  { value: "7", label: "Juli" },
+  { value: "8", label: "Agustus" },
+  { value: "9", label: "September" },
+  { value: "10", label: "Oktober" },
+  { value: "11", label: "November" },
+  { value: "12", label: "Desember" },
 ];
 
 export interface YearOption {
@@ -125,6 +135,8 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, s
     } else if (label && DAY_NAMES_MAP[label]) {
       const dateStr = payload[0]?.payload?.date ? ` (${payload[0].payload.date})` : "";
       displayLabel = `Hari ${DAY_NAMES_MAP[label]}${dateStr}`;
+    } else if (payload[0]?.payload?.date) {
+      displayLabel = `Tanggal ${payload[0].payload.date}${selectedYear ? `/${selectedYear}` : ""}`;
     } else if (label?.startsWith("W")) {
       displayLabel = `Minggu ke-${label.replace(/^W/i, "")}`;
     }
@@ -186,8 +198,12 @@ export const WasteTrendChart: React.FC<WasteTrendChartProps> = ({
   const defaultYear = urlYear && yearOptions.some((y) => y.value === urlYear) ? urlYear : "2026";
   const [selectedYear, setSelectedYear] = useState<string>(defaultYear);
 
-  // Inisialisasi filter rentang waktu (default: 7 Hari Terakhir / 7d)
-  const [selectedRange, setSelectedRange] = useState<string>("7d");
+  // Inisialisasi filter rentang waktu (default: Periode Program KKN / program)
+  const [selectedRange, setSelectedRange] = useState<string>("program");
+  // Inisialisasi filter bulan pilihan (default: Oktober / 10 jika 2026, atau bulan sekarang)
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    defaultYear === "2026" ? "10" : String(new Date().getMonth() + 1)
+  );
   const [trendData, setTrendData] = useState<TrendDataItem[]>(initialData || []);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -236,15 +252,14 @@ export const WasteTrendChart: React.FC<WasteTrendChartProps> = ({
 
   // Fungsi fetch data tren pemilahan dari backend
   const fetchTrendData = useCallback(
-    async (rangeVal: string, yearVal: string) => {
-      const rangeOpt = TIME_RANGE_OPTIONS.find((opt) => opt.value === rangeVal) || TIME_RANGE_OPTIONS[3];
+    async (rangeVal: string, yearVal: string, monthVal: string) => {
       setLoading(true);
       try {
         const response = await api.get("/dashboard/trend", {
           params: {
-            weeks: rangeOpt.weeksEquivalent,
             year: yearVal,
             range: rangeVal,
+            month: rangeVal === "month" ? monthVal : undefined,
             wilayah,
           },
         });
@@ -275,8 +290,8 @@ export const WasteTrendChart: React.FC<WasteTrendChartProps> = ({
 
   // Sinkronisasi data saat mount atau saat dependencies filter berubah
   useEffect(() => {
-    fetchTrendData(selectedRange, selectedYear);
-  }, [fetchTrendData, selectedRange, selectedYear]);
+    fetchTrendData(selectedRange, selectedYear, selectedMonth);
+  }, [fetchTrendData, selectedRange, selectedYear, selectedMonth]);
 
   // Handler interaksi dropdown tahun
   const handleYearChange = (newYear: string) => {
@@ -295,19 +310,29 @@ export const WasteTrendChart: React.FC<WasteTrendChartProps> = ({
     onFilterChange?.({
       range: selectedRange,
       year: newYear,
-      weeks: currentRangeConfig.weeksEquivalent,
+      month: selectedMonth,
     });
   };
 
   // Handler interaksi dropdown rentang waktu
   const handleRangeChange = (newRange: string) => {
     setSelectedRange(newRange);
-    const rangeOpt = TIME_RANGE_OPTIONS.find((opt) => opt.value === newRange) || TIME_RANGE_OPTIONS[3];
 
     onFilterChange?.({
       range: newRange,
       year: selectedYear,
-      weeks: rangeOpt.weeksEquivalent,
+      month: selectedMonth,
+    });
+  };
+
+  // Handler interaksi dropdown bulan
+  const handleMonthChange = (newMonth: string) => {
+    setSelectedMonth(newMonth);
+
+    onFilterChange?.({
+      range: selectedRange,
+      year: selectedYear,
+      month: newMonth,
     });
   };
 
@@ -391,6 +416,24 @@ export const WasteTrendChart: React.FC<WasteTrendChartProps> = ({
         return {
           rawLabel: d.label,
           formattedLabel,
+          date: d.date,
+          organic: parseFloat(organicVal.toFixed(2)),
+          inorganic: parseFloat(inorganicVal.toFixed(2)),
+        };
+      });
+    }
+
+    // 2.7 Kasus Rentang Harian dalam Bulan ("Bulan Pilihan") -> 28 - 31 Hari
+    if (currentRangeConfig.periodType === "daily_month") {
+      if (!Array.isArray(trendData) || trendData.length === 0) return [];
+
+      return trendData.map((d) => {
+        const organicVal = Math.max(0, Number(d.organic ?? d.organik ?? 0));
+        const inorganicVal = Math.max(0, Number(d.inorganic ?? d.anorganik ?? 0));
+
+        return {
+          rawLabel: d.label,
+          formattedLabel: d.date || d.label,
           date: d.date,
           organic: parseFloat(organicVal.toFixed(2)),
           inorganic: parseFloat(inorganicVal.toFixed(2)),
@@ -484,14 +527,15 @@ export const WasteTrendChart: React.FC<WasteTrendChartProps> = ({
       case "hourly":
         return "(per jam: 00:00 - 23:00 WIB)";
       case "daily":
-        return "(per hari)";
+        return "(per hari: Sen - Min)";
+      case "daily_month":
+        return `(harian bulan ${MONTH_OPTIONS.find((m) => m.value === selectedMonth)?.label || "terpilih"})`;
       case "monthly":
-        return "(per bulan)";
-      case "weekly":
+        return selectedRange === "program" ? "(per bulan masa aktif KKN)" : "(per bulan: Jan - Des)";
       default:
-        return "(per minggu)";
+        return "(per periode)";
     }
-  }, [currentRangeConfig.periodType]);
+  }, [currentRangeConfig.periodType, selectedRange, selectedMonth]);
 
   return (
     <div
@@ -562,6 +606,32 @@ export const WasteTrendChart: React.FC<WasteTrendChartProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Dropdown Selector: Filter Bulan (Tampil hanya saat mode "Bulan Pilihan" aktif) */}
+          {selectedRange === "month" && (
+            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200/90 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold shadow-2xs hover:border-emerald-500/50 transition-all">
+              <Calendar size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-extrabold mr-0.5">
+                Bulan
+              </span>
+              <select
+                aria-label="Filter Bulan"
+                value={selectedMonth}
+                onChange={(e) => handleMonthChange(e.target.value)}
+                className="bg-transparent text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer font-bold text-xs pr-1"
+              >
+                {MONTH_OPTIONS.map((opt) => (
+                  <option
+                    key={opt.value}
+                    value={opt.value}
+                    className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold"
+                  >
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -614,29 +684,35 @@ export const WasteTrendChart: React.FC<WasteTrendChartProps> = ({
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={normalizedChartData}
-                  margin={{ top: 10, right: 15, left: 0, bottom: 5 }}
+                  margin={{ top: 12, right: 15, left: 0, bottom: 5 }}
                 >
                   <defs>
                     <linearGradient id="wasteOrgGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.28} />
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                     </linearGradient>
                     <linearGradient id="wasteInorgGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.35} />
+                      <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.28} />
                       <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
 
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.25} vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.15} vertical={false} />
 
-                  {/* Sumbu X: 24 Jam Presisi atau Format Standar */}
+                  {/* Sumbu X: Format Label Adaptif */}
                   <XAxis
                     dataKey="formattedLabel"
                     tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: "bold" }}
                     stroke="#475569"
                     tickLine={false}
                     dy={6}
-                    interval={currentRangeConfig.periodType === "hourly" ? 1 : 0}
+                    interval={
+                      currentRangeConfig.periodType === "hourly"
+                        ? 2
+                        : currentRangeConfig.periodType === "daily_month"
+                        ? "preserveStartEnd"
+                        : 0
+                    }
                   />
 
                   {/* Sumbu Y: Taat Asas SI, domain selalu mulai dari 0, di kiri cukup (kg) */}
@@ -658,30 +734,30 @@ export const WasteTrendChart: React.FC<WasteTrendChartProps> = ({
                     ]}
                   />
 
-                  {/* Series 1: Sampah Organik (Hijau) */}
+                  {/* Series 1: Sampah Organik (Hijau) - Kurva Monotone Halus Bebas Patahan */}
                   <Area
-                    type={currentRangeConfig.periodType === "hourly" ? "linear" : "monotone"}
+                    type="monotone"
                     dataKey="organic"
                     name="Sampah Organik"
                     stroke="#10b981"
                     strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#wasteOrgGrad)"
-                    dot={{ r: currentRangeConfig.periodType === "hourly" ? 2.5 : 4, fill: "#10b981", strokeWidth: 1.5, stroke: "#ffffff" }}
-                    activeDot={{ r: 5, fill: "#10b981", strokeWidth: 2, stroke: "#ffffff" }}
+                    dot={false}
+                    activeDot={{ r: 6, fill: "#10b981", strokeWidth: 2.5, stroke: "#ffffff" }}
                   />
 
-                  {/* Series 2: Sampah Anorganik (Kuning/Amber) */}
+                  {/* Series 2: Sampah Anorganik (Kuning/Amber) - Kurva Monotone Halus Bebas Patahan */}
                   <Area
-                    type={currentRangeConfig.periodType === "hourly" ? "linear" : "monotone"}
+                    type="monotone"
                     dataKey="inorganic"
                     name="Sampah Anorganik"
                     stroke="#f59e0b"
                     strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#wasteInorgGrad)"
-                    dot={{ r: currentRangeConfig.periodType === "hourly" ? 2.5 : 4, fill: "#f59e0b", strokeWidth: 1.5, stroke: "#ffffff" }}
-                    activeDot={{ r: 5, fill: "#f59e0b", strokeWidth: 2, stroke: "#ffffff" }}
+                    dot={false}
+                    activeDot={{ r: 6, fill: "#f59e0b", strokeWidth: 2.5, stroke: "#ffffff" }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
