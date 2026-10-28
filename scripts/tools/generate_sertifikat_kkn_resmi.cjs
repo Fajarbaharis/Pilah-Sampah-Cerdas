@@ -392,7 +392,7 @@ function buildStudentHtml(s) {
       border: 1px solid #CBD5E1;
       border-radius: 6px;
       padding: 4px 8px;
-      background: rgba(255, 255, 255, 0.95);
+      background: #FFFFFF;
       display: flex;
       align-items: center;
       gap: 8px;

@@ -14,7 +14,7 @@
  * - 4 Kolom Mahasiswa (Nama, NIM, Program Studi, SKS diambil) 100% sejajar, proporsional, dan bebas teks tumpang tindih
  */
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Award,
@@ -23,6 +23,14 @@ import {
   GraduationCap,
   ShieldCheck,
   FileDown,
+  Sparkles,
+  Download,
+  X,
+  CheckCircle2,
+  ExternalLink,
+  FileSpreadsheet,
+  Layers,
+  Info,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../../store/useAuthStore";
@@ -35,6 +43,98 @@ export const SertifikatKknPage: React.FC = () => {
   const [, setIsLoadingLive] = useState<boolean>(true);
   const [, setIsLiveDatabase] = useState<boolean>(false);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [showCanvaModal, setShowCanvaModal] = useState<boolean>(false);
+  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Click outside listener for search autocomplete
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Export dataset specifically formatted for Canva "Bulk Create" (Buat Massal)
+  const handleDownloadCanvaCsv = () => {
+    const headers = [
+      "NIM",
+      "Nama_Lengkap",
+      "Program_Studi",
+      "SKS",
+      "Kelompok",
+      "Wilayah_RW",
+      "DPL_Nama",
+      "Nomor_Sertifikat",
+      "ID_Sertifikat",
+      "Total_Jam_KKN",
+      "Nilai_Personal",
+      "Nilai_Proker",
+      "Nilai_Laporan",
+      "Nilai_Paper",
+      "Nilai_Video",
+      "Nilai_Akhir",
+      "Predikat",
+      "Tanggal_Terbit",
+    ];
+
+    const escapeCsv = (val: any) => {
+      const str = String(val ?? "");
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+
+    const rows = studentsData.map((s) => {
+      const nomor = s.nomorSertifikat && !s.nomorSertifikat.includes("DRAFT")
+        ? s.nomorSertifikat
+        : `KKNT/${String(s.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`;
+      const tgl = s.tanggalTerbit && s.tanggalTerbit !== "Menunggu Penilaian"
+        ? s.tanggalTerbit
+        : "10 November 2026";
+      const totalNilai = s.nilai && s.nilai.total > 0 ? s.nilai.total.toFixed(2) : "-";
+      const predikat = s.nilai?.predikat || "Belum Dinilai";
+
+      return [
+        escapeCsv(s.nim),
+        escapeCsv(s.nama.toUpperCase()),
+        escapeCsv(s.prodi),
+        escapeCsv(s.sks),
+        escapeCsv(s.kelompok),
+        escapeCsv(s.rw),
+        escapeCsv(s.dpl),
+        escapeCsv(nomor),
+        escapeCsv(s.idSertifikat),
+        escapeCsv("450 Jam"),
+        escapeCsv(s.nilai?.personal !== null ? s.nilai.personal.toFixed(1) : "-"),
+        escapeCsv(s.nilai?.proker !== null ? s.nilai.proker.toFixed(1) : "-"),
+        escapeCsv(s.nilai?.laporan !== null ? s.nilai.laporan.toFixed(1) : "-"),
+        escapeCsv(s.nilai?.paper !== null ? s.nilai.paper.toFixed(1) : "-"),
+        escapeCsv(s.nilai?.video !== null ? s.nilai.video.toFixed(1) : "-"),
+        escapeCsv(totalNilai),
+        escapeCsv(predikat),
+        escapeCsv(tgl),
+      ].join(",");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `DATA_CANVA_BULK_CREATE_KKN_UNIKOM_${studentsData.length}_MAHASISWA.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Berhasil mengunduh dataset Canva (${studentsData.length} Mahasiswa)!`);
+  };
 
   // Sync live database from API if available
   useEffect(() => {
@@ -402,9 +502,22 @@ export const SertifikatKknPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Single Primary Action: [Unduh PDF] */}
+          {/* Action Buttons: [Format Canva Bulk] & [Unduh PDF] */}
           <div className="flex items-center gap-2">
+            {!isMahasiswa && (
+              <button
+                type="button"
+                onClick={() => setShowCanvaModal(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
+                title="Format Canva Resmi & Panduan Buat Massal (Bulk Create)"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>Format Canva (Bulk Create)</span>
+              </button>
+            )}
+
             <button
+              type="button"
               onClick={handleDirectDownloadPdf}
               disabled={isDownloading}
               className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
@@ -471,16 +584,102 @@ export const SertifikatKknPage: React.FC = () => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-              {/* Search Input */}
-              <div className="md:col-span-5 relative">
+              {/* Search Input with Instant Autocomplete Popover */}
+              <div className="md:col-span-5 relative" ref={searchContainerRef}>
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Cari nama, NIM, atau prodi mahasiswa..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  onFocus={() => setIsSearchFocused(true)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setIsSearchFocused(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && filteredStudents.length > 0) {
+                      handleSelectStudent(filteredStudents[0]);
+                      setIsSearchFocused(false);
+                    } else if (e.key === "Escape") {
+                      setIsSearchFocused(false);
+                    }
+                  }}
+                  className="w-full pl-9 pr-8 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setIsSearchFocused(false);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full cursor-pointer"
+                    title="Hapus pencarian"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                {/* Instant Autocomplete Suggestions Dropdown */}
+                {isSearchFocused && searchQuery.trim().length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-2xl border border-blue-200 z-50 max-h-72 overflow-y-auto divide-y divide-slate-100">
+                    <div className="px-3 py-1.5 bg-slate-50 text-[10.5px] font-bold text-slate-500 uppercase tracking-wider flex justify-between items-center sticky top-0 z-10 border-b border-slate-100">
+                      <span>Hasil Pencarian ({filteredStudents.length} Mahasiswa)</span>
+                      <span className="text-[10px] text-blue-600 font-semibold">Klik nama untuk melihat sertifikat</span>
+                    </div>
+                    {filteredStudents.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-500">
+                        Tidak ada mahasiswa yang cocok dengan kata kunci "<strong>{searchQuery}</strong>".
+                      </div>
+                    ) : (
+                      filteredStudents.slice(0, 10).map((s) => (
+                        <button
+                          key={s.nim}
+                          type="button"
+                          onClick={() => {
+                            handleSelectStudent(s);
+                            setIsSearchFocused(false);
+                          }}
+                          className={`w-full text-left px-3.5 py-2.5 hover:bg-blue-50/80 transition-colors flex items-center justify-between gap-3 cursor-pointer ${
+                            s.nim === selectedStudent.nim ? "bg-blue-50/70 font-semibold border-l-4 border-blue-600" : ""
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-slate-900 truncate flex items-center gap-2">
+                              <span>{s.nama}</span>
+                              {s.nim === selectedStudent.nim && (
+                                <span className="text-[9.5px] font-bold bg-blue-600 text-white px-1.5 py-0.2 rounded-sm">
+                                  Aktif
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                              NIM: <strong className="font-mono text-slate-700">{s.nim}</strong> &bull; {s.prodi}
+                            </div>
+                            <div className="text-[10px] text-blue-700 truncate">
+                              {s.kelompok}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 block">
+                              {s.sks} SKS
+                            </span>
+                            {s.sudahDinilai && s.nilai?.total > 0 && (
+                              <span className="text-[10px] font-bold text-emerald-700 block mt-1">
+                                {s.nilai.total.toFixed(1)} ({s.nilai.predikat.split(" ")[0]})
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                    {filteredStudents.length > 10 && (
+                      <div className="px-3 py-1.5 text-center text-[11px] text-slate-400 bg-slate-50">
+                        + {filteredStudents.length - 10} mahasiswa lainnya. Ketik lebih spesifik untuk menyaring.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Filter Kelompok */}
@@ -499,7 +698,7 @@ export const SertifikatKknPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Quick Student Selector Dropdown */}
+              {/* Quick Student Selector Dropdown with Always-Synced Value */}
               <div className="md:col-span-3">
                 <select
                   value={selectedStudent.nim}
@@ -509,6 +708,12 @@ export const SertifikatKknPage: React.FC = () => {
                   }}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-blue-300 bg-blue-50/50 text-blue-900 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
                 >
+                  {/* Jaminan Opsi Aktif Selalu Tersedia agar tidak nyangkut */}
+                  {!filteredStudents.some((x) => x.nim === selectedStudent.nim) && (
+                    <option key={selectedStudent.nim} value={selectedStudent.nim}>
+                      {selectedStudent.nim} - {selectedStudent.nama} ({selectedStudent.sks} SKS)
+                    </option>
+                  )}
                   {filteredStudents.map((s) => (
                     <option key={s.nim} value={s.nim}>
                       {s.nim} - {s.nama} ({s.sks} SKS)
@@ -679,7 +884,7 @@ export const SertifikatKknPage: React.FC = () => {
                   Wakil Rektor I UNIKOM<br />Bidang Akademik dan Kemahasiswaan
                 </div>
 
-                <div className="my-1 border border-slate-300 rounded-md p-1 bg-white/95 flex items-center gap-2 w-44 md:w-52 h-11 md:h-13 shadow-2xs">
+                <div className="my-1 border border-slate-300 rounded-md p-1 bg-white flex items-center gap-2 w-44 md:w-52 h-11 md:h-13 shadow-2xs">
                   <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 p-0.5">
                     <QrSvgComponent idSertifikat={selectedStudent.idSertifikat} />
                   </div>
@@ -882,6 +1087,150 @@ export const SertifikatKknPage: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* ── MODAL PANDUAN & INTEGRASI CANVA BULK CREATE ────────────── */}
+      {showCanvaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-700 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-amber-300">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">Integrasi Canva Resmi: Cetak Massal Vektor</h3>
+                  <p className="text-xs text-purple-100">
+                    Solusi cetak massal 100% murni Canva tanpa sistem tempel/raster text overlay
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCanvaModal(false)}
+                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-5 text-slate-700 text-xs leading-relaxed">
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-start gap-3">
+                <Info className="w-5 h-5 text-purple-700 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="font-bold text-purple-950 text-xs">
+                    Mengapa Menggunakan Canva Bulk Create?
+                  </h4>
+                  <p className="text-[11.5px] text-purple-900 leading-normal">
+                    Dengan fitur <strong>Buat Massal (Bulk Create)</strong> langsung di platform Canva, seluruh sertifikat dicetak menggunakan engine vektor asli Canva. Font, garis emas, nomor sertifikat, dan nilai mahasiswa akan 100% presisi, tajam, dan bebas dari distorsi atau kesan "gambar ditimpa teks".
+                  </p>
+                </div>
+              </div>
+
+              {/* 1-Click Action Button */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div>
+                  <div className="font-bold text-slate-900 text-xs">
+                    Unduh Dataset Lengkap ({studentsData.length} Mahasiswa)
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    File CSV berformat UTF-8 BOM siap impor ke template Canva resmi UNIKOM
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadCanvaCsv}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-sm transition-all cursor-pointer shrink-0"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Unduh CSV Canva</span>
+                </button>
+              </div>
+
+              {/* 5 Langkah Mudah */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-purple-700" />
+                  Langkah-Langkah Pembuatan di Canva:
+                </h4>
+
+                <div className="space-y-2.5">
+                  <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-white">
+                    <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-800 font-bold flex items-center justify-center text-xs shrink-0">
+                      1
+                    </span>
+                    <div>
+                      <strong className="text-slate-900 block">Buka Template Desain Canva</strong>
+                      <span className="text-[11.5px] text-slate-600">
+                        Buka proyek master sertifikat KKN Tematik Batch I di akun Canva Anda (2 Halaman: Sertifikat &amp; Transkrip).
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-white">
+                    <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-800 font-bold flex items-center justify-center text-xs shrink-0">
+                      2
+                    </span>
+                    <div>
+                      <strong className="text-slate-900 block">Pilih Fitur Buat Massal (Bulk Create)</strong>
+                      <span className="text-[11.5px] text-slate-600">
+                        Pada menu bar samping kiri Canva, klik <strong>Aplikasi (Apps)</strong>, cari dan pilih <strong>Buat Massal (Bulk Create)</strong>.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-white">
+                    <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-800 font-bold flex items-center justify-center text-xs shrink-0">
+                      3
+                    </span>
+                    <div>
+                      <strong className="text-slate-900 block">Unggah Berkas CSV</strong>
+                      <span className="text-[11.5px] text-slate-600">
+                        Pilih opsi <strong>Unggah CSV</strong>, lalu masukkan berkas CSV yang diunduh dari tombol di atas.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-white">
+                    <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-800 font-bold flex items-center justify-center text-xs shrink-0">
+                      4
+                    </span>
+                    <div>
+                      <strong className="text-slate-900 block">Hubungkan Data ke Elemen Teks</strong>
+                      <span className="text-[11.5px] text-slate-600">
+                        Klik kanan pada teks nama di kanvas &rarr; pilih <strong>Hubungkan Data (Connect Data)</strong> &rarr; pilih kolom <code>Nama_Lengkap</code>. Ulangi untuk <code>NIM</code>, <code>Program_Studi</code>, <code>Nomor_Sertifikat</code>, dan <code>Nilai_Akhir</code>.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-white">
+                    <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-800 font-bold flex items-center justify-center text-xs shrink-0">
+                      5
+                    </span>
+                    <div>
+                      <strong className="text-slate-900 block">Hasilkan Seluruh Halaman Sekaligus</strong>
+                      <span className="text-[11.5px] text-slate-600">
+                        Klik <strong>Lanjutkan</strong> lalu klik <strong>Hasilkan Halaman</strong>. Canva akan otomatis mencetak {studentsData.length} sertifikat secara terpisah dengan resolusi tinggi siap cetak.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCanvaModal(false)}
+                className="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

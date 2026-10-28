@@ -2007,9 +2007,9 @@ const Dashboard: React.FC = () => {
           trendUp: true,
         },
         partisipanKkn: {
-          value: totalPartisipanKknVal.toLocaleString("id-ID"),
-          trend: "Terdaftar KKN",
-          trendLabel: kknTrendLabel,
+          value: mhsCount.toLocaleString("id-ID"),
+          trend: "Mahasiswa Aktif",
+          trendLabel: dplCount > 0 ? `${mhsCount} Mahasiswa • ${dplCount} DPL Binaan` : `${mhsCount} Mahasiswa`,
           trendUp: true,
         },
         totalPengguna: {
@@ -2641,7 +2641,7 @@ const Dashboard: React.FC = () => {
         <KpiCard
           iconName="graduation-cap"
           color="indigo"
-          label="Partisipan Mahasiswa KKN"
+          label="Mahasiswa KKN Aktif"
           value={stats?.partisipanKkn?.value}
           trend={stats?.partisipanKkn?.trend}
           trendLabel={stats?.partisipanKkn?.trendLabel}
