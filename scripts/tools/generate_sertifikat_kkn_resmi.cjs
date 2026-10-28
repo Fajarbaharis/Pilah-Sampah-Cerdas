@@ -563,11 +563,7 @@ function buildStudentHtml(s) {
     <div class="cert-inner">
       <div class="header-block">
         <h1 class="univ-title">UNIVERSITAS KOMPUTER INDONESIA</h1>
-        <div class="univ-tagline-container">
-          <div class="tagline-line"></div>
-          <p class="univ-tagline">ILMU &bull; TEKNOLOGI &bull; KREATIVITAS &bull; UNTUK INDONESIA</p>
-          <div class="tagline-line"></div>
-        </div>
+        
       </div>
 
       <div class="title-wrapper">
@@ -649,11 +645,7 @@ function buildStudentHtml(s) {
     <div class="cert-inner">
       <div class="header-block">
         <h1 class="univ-title">UNIVERSITAS KOMPUTER INDONESIA</h1>
-        <div class="univ-tagline-container">
-          <div class="tagline-line"></div>
-          <p class="univ-tagline">ILMU &bull; TEKNOLOGI &bull; KREATIVITAS &bull; UNTUK INDONESIA</p>
-          <div class="tagline-line"></div>
-        </div>
+        
       </div>
 
       <div class="title-wrapper">
