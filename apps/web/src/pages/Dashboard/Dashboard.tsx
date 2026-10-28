@@ -37,6 +37,7 @@ import type { ComplianceMetricsResult } from "../../services/complianceService";
 import { WasteImpactSummaryTable, type WasteImpactFilterState } from "../../components/dashboard/WasteImpactSummaryTable";
 import { WasteImpactTrendChart } from "../../components/dashboard/WasteImpactTrendChart";
 import { BaselineSection } from "../../components/dashboard/BaselineSection";
+import { UnduhLaporanButton } from "../../components/dashboard/UnduhLaporanButton";
 import {
   getDateRangeForDay,
   getDateRangeForMonth,
@@ -2554,6 +2555,15 @@ const Dashboard: React.FC = () => {
               <RefreshCw size={15} className={refreshing || loading ? "animate-spin" : ""} />
               <span>Perbarui Data</span>
             </button>
+            <UnduhLaporanButton
+              reportType="waste"
+              filters={{
+                wilayah: selectedWilayah,
+                timeFilter,
+                startDate,
+                endDate,
+              }}
+            />
           </div>
         </div>
 

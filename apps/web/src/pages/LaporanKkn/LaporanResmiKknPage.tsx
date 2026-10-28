@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -232,19 +233,34 @@ export interface LaporanSummaryResponse {
 const STORAGE_KEY = "berseka_kkn_report_custom_config_v7";
 
 export const LaporanResmiKknPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const hasAutoPrintedRef = useRef<boolean>(false);
+
   const [data, setData] = useState<LaporanSummaryResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isPrintFlow, setIsPrintFlow] = useState<boolean>(false);
 
   // Switcher Tampilan: "dashboard" (Kartu) vs "document" (Dokumen)
-  const [viewMode, setViewMode] = useState<"dashboard" | "document">("dashboard");
+  const [viewMode, setViewMode] = useState<"dashboard" | "document">(() => {
+    return searchParams.get("view") === "document" || searchParams.get("action") === "print"
+      ? "document"
+      : "dashboard";
+  });
 
   // Filter States
-  const [selectedPeriode, setSelectedPeriode] = useState<string>("2026-041027-Universitas Komputer Indonesia - 1");
-  const [selectedKelurahan, setSelectedKelurahan] = useState<string>("Semua Kelurahan");
-  const [selectedRw, setSelectedRw] = useState<string>("");
-  const [selectedKelompok, setSelectedKelompok] = useState<string>("");
+  const [selectedPeriode, setSelectedPeriode] = useState<string>(() => {
+    return searchParams.get("periode") || "2026-041027-Universitas Komputer Indonesia - 1";
+  });
+  const [selectedKelurahan, setSelectedKelurahan] = useState<string>(() => {
+    return searchParams.get("kelurahan") || "Semua Kelurahan";
+  });
+  const [selectedRw, setSelectedRw] = useState<string>(() => {
+    return searchParams.get("rw") || "";
+  });
+  const [selectedKelompok, setSelectedKelompok] = useState<string>(() => {
+    return searchParams.get("kelompok") || "";
+  });
 
   // Dynamic Report Configuration (Customizable & Persisted)
   const [reportConfig, setReportConfig] = useState<ReportCustomConfig>(() => {
@@ -300,6 +316,18 @@ export const LaporanResmiKknPage: React.FC = () => {
   useEffect(() => {
     fetchLaporanData();
   }, [selectedPeriode, selectedKelurahan]);
+  // Auto-print ketika dibuka langsung dari tombol Unduh Laporan di Dashboard
+  useEffect(() => {
+    if (data && !loading && searchParams.get("action") === "print" && !hasAutoPrintedRef.current) {
+      hasAutoPrintedRef.current = true;
+      setViewMode("document");
+      const timer = setTimeout(() => {
+        handlePrint();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [data, loading, searchParams]);
+
 
   useEffect(() => {
     const handler = setTimeout(() => {

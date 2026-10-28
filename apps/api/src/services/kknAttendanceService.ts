@@ -18,7 +18,7 @@ import { auditTrailService } from "./auditTrailService.js";
 import { smartZoneService, UNIKOM_CENTRAL_ZONE, type ZoneCheckResult } from "./smartZoneService.js";
 export { UNIKOM_CENTRAL_ZONE };
 import { evaluateSortingStatus } from "../utils/sortingEvaluation.js";
-import { isTestKelompok, isTestStudent, isTestUser } from "../utils/filterTestingUtils.js";
+import { isTestKelompok, isTestStudent } from "../utils/filterTestingUtils.js";
 
 /**
  * Helper: Memeriksa apakah batas area kerja polygon sudah aktif/berlaku berdasarkan bulan WIB saat ini.
@@ -44,9 +44,7 @@ async function buildGeofence(
 ): Promise<{ latitude: number; longitude: number; radius: number; polygon?: any }> {
   // QC-36: Advance Scheduling — batas polygon hanya dipakai jika bulan efektif sudah tiba
   const activePolygon =
-    schedule.polygon && isPolygonEffective(schedule.effectiveMonth)
-      ? schedule.polygon
-      : undefined;
+    schedule.polygon && isPolygonEffective(schedule.effectiveMonth) ? schedule.polygon : undefined;
 
   // 1. Prioritas Utama: Titik Posko KKN resmi milik kelompok (Primary Posko / Multi-Posko)
   if (schedule.kelompokId) {
@@ -305,7 +303,7 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 //   - Daily cap: 8 jam = 480 menit = 28800 detik
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 
+/**
  * Hitung total durasi pause (ms) dari jedaLogs manual dengan:
  * 1. Proteksi Boundary: Dicocokkan ke rentang waktu aktif [sessionStartMs, sessionEndMs].
  * 2. Interval Merging: Menghilangkan double-counting akibat interval overlapping.
@@ -565,12 +563,7 @@ export function calculateTotalJedaMinutes(att: {
 }): number {
   if (!att?.attendedAt) return 0;
   const statusUpper = String(att.status ?? "").toUpperCase();
-  const nonActiveStatuses = [
-    "SAKIT",
-    "IZIN",
-    "TIDAK_ADA_KEGIATAN",
-    "SKIP_KEGIATAN",
-  ];
+  const nonActiveStatuses = ["SAKIT", "IZIN", "TIDAK_ADA_KEGIATAN", "SKIP_KEGIATAN"];
   if (nonActiveStatuses.some((s) => statusUpper.includes(s))) return 0;
 
   // Sesi yang tidak memiliki durasi aktual sama sekali dan statusnya ALPA/ALPHA tanpa jam masuk riil
@@ -1113,7 +1106,11 @@ export class KknAttendanceService {
     };
   }
 
-  async getWargaDampingan(userId: string, role?: string, filters?: { rwId?: number; search?: string }) {
+  async getWargaDampingan(
+    userId: string,
+    role?: string,
+    filters?: { rwId?: number; search?: string }
+  ) {
     let studentProfile: any = null;
     let groupStudentIds: string[] = [userId];
     let targetRwIds: number[] = [];
@@ -1144,11 +1141,15 @@ export class KknAttendanceService {
         const rawCakupan = studentProfile.kelompok.cakupanRw;
         const parsedCakupan = typeof rawCakupan === "string" ? JSON.parse(rawCakupan) : rawCakupan;
         if (Array.isArray(parsedCakupan) && parsedCakupan.length > 0) {
-          const rwNumbers = parsedCakupan.map((r: any) => String(r).replace(/[^\d]/g, "").trim()).filter(Boolean);
+          const rwNumbers = parsedCakupan
+            .map((r: any) => String(r).replace(/[^\d]/g, "").trim())
+            .filter(Boolean);
           if (rwNumbers.length > 0) {
             const matchedRws = await prisma.rw.findMany({
               where: {
-                ...(studentProfile.assignedRw?.kelurahanId ? { kelurahanId: studentProfile.assignedRw.kelurahanId } : {}),
+                ...(studentProfile.assignedRw?.kelurahanId
+                  ? { kelurahanId: studentProfile.assignedRw.kelurahanId }
+                  : {}),
                 OR: rwNumbers.flatMap((num) => [
                   { name: { equals: num, mode: "insensitive" } },
                   { name: { equals: `RW ${num}`, mode: "insensitive" } },
@@ -1175,11 +1176,25 @@ export class KknAttendanceService {
           ? [
               { kelompokKknId: studentProfile.kelompokId },
               { bins: { some: { status: "ACTIVE_BOUND", kelompokId: studentProfile.kelompokId } } },
-              { binOwnerships: { some: { bin: { status: "ACTIVE_BOUND", kelompokId: studentProfile.kelompokId } } } },
+              {
+                binOwnerships: {
+                  some: { bin: { status: "ACTIVE_BOUND", kelompokId: studentProfile.kelompokId } },
+                },
+              },
             ]
           : []),
-        { bins: { some: { status: "ACTIVE_BOUND", registeredByStudentId: { in: groupStudentIds } } } },
-        { binOwnerships: { some: { bin: { status: "ACTIVE_BOUND", registeredByStudentId: { in: groupStudentIds } } } } }
+        {
+          bins: {
+            some: { status: "ACTIVE_BOUND", registeredByStudentId: { in: groupStudentIds } },
+          },
+        },
+        {
+          binOwnerships: {
+            some: {
+              bin: { status: "ACTIVE_BOUND", registeredByStudentId: { in: groupStudentIds } },
+            },
+          },
+        }
       );
     }
 
@@ -1204,7 +1219,9 @@ export class KknAttendanceService {
         },
         kelompokKkn: { select: { id: true, name: true, kelurahan: true } },
         rw: { include: { kelurahan: { include: { kecamatan: true } } } },
-        households: { include: { rw: { include: { kelurahan: { include: { kecamatan: true } } } } } },
+        households: {
+          include: { rw: { include: { kelurahan: { include: { kecamatan: true } } } } },
+        },
         pointHistory: true,
         wargaViolations: true,
         setoranOtomatis: {
@@ -1247,11 +1264,11 @@ export class KknAttendanceService {
     let mapped = wargaList.map((u: any) => {
       const allBins = [
         ...(u.bins || []),
-        ...(u.binOwnerships?.map((bo: any) => bo.bin) || [])
+        ...(u.binOwnerships?.map((bo: any) => bo.bin) || []),
       ].filter(Boolean);
 
       const uniqueBinsMap = new Map();
-      allBins.forEach(b => {
+      allBins.forEach((b) => {
         if (!uniqueBinsMap.has(b.id)) uniqueBinsMap.set(b.id, b);
       });
       const uniqueBins = Array.from(uniqueBinsMap.values());
@@ -1269,15 +1286,22 @@ export class KknAttendanceService {
         }
       });
       const allSetoranLogs = Array.from(setoranLogsMap.values());
-      allSetoranLogs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      allSetoranLogs.sort(
+        (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
 
       const binOrganik = uniqueBins.find((b: any) => isOrganikBin(b));
       const binAnorganik = uniqueBins.find((b: any) => isAnorganikBin(b));
       const primaryBin = binOrganik || binAnorganik || uniqueBins[0];
       const household = u.households?.[0];
 
-      const resolvedRwId: number | null = u.rwId || household?.rwId || primaryBin?.rwId || studentProfile?.assignedRwId || null;
-      const rwName = u.rw?.name || household?.rw?.name || primaryBin?.rw?.name || (resolvedRwId ? `RW 0${resolvedRwId}` : "");
+      const resolvedRwId: number | null =
+        u.rwId || household?.rwId || primaryBin?.rwId || studentProfile?.assignedRwId || null;
+      const rwName =
+        u.rw?.name ||
+        household?.rw?.name ||
+        primaryBin?.rw?.name ||
+        (resolvedRwId ? `RW 0${resolvedRwId}` : "");
       const kelName =
         u.rw?.kelurahan?.name ||
         household?.rw?.kelurahan?.name ||
@@ -1316,7 +1340,8 @@ export class KknAttendanceService {
       if (
         !registeredStudentId &&
         studentProfile?.kelompokId &&
-        (binKelompokId === studentProfile.kelompokId || u.kelompokKknId === studentProfile.kelompokId)
+        (binKelompokId === studentProfile.kelompokId ||
+          u.kelompokKknId === studentProfile.kelompokId)
       ) {
         if (studentProfile?.isKetua) {
           registeredStudentId = userId;
@@ -1394,8 +1419,14 @@ export class KknAttendanceService {
         registeredByStudentId: registeredStudentId || "",
         registeredByStudent: registeredStudentName || "",
         pendampingName: registeredStudentName || "",
-        pendamping: registeredStudentId && registeredStudentName ? { id: registeredStudentId, name: registeredStudentName } : null,
-        pendampingKkn: registeredStudentId && registeredStudentName ? { id: registeredStudentId, name: registeredStudentName } : null,
+        pendamping:
+          registeredStudentId && registeredStudentName
+            ? { id: registeredStudentId, name: registeredStudentName }
+            : null,
+        pendampingKkn:
+          registeredStudentId && registeredStudentName
+            ? { id: registeredStudentId, name: registeredStudentName }
+            : null,
         recentLogs: allSetoranLogs.slice(0, 10).map((log: any) => {
           const sortingStatus = evaluateSortingStatus(
             log.confidenceAi,
@@ -1406,7 +1437,8 @@ export class KknAttendanceService {
           return {
             ...log,
             weightKg: Number(log.berat || 0),
-            category: (log.hasilKlasifikasiAi || "").toLowerCase() === "organik" ? "Organik" : "Anorganik",
+            category:
+              (log.hasilKlasifikasiAi || "").toLowerCase() === "organik" ? "Organik" : "Anorganik",
             ai_confidence: sortingStatus.ai_confidence,
             aiConfidence: sortingStatus.aiConfidence,
             discrepancy_status: sortingStatus.discrepancy_status,
@@ -1423,12 +1455,13 @@ export class KknAttendanceService {
     }
     if (filters?.search && filters.search.trim()) {
       const q = filters.search.toLowerCase().trim();
-      mapped = mapped.filter((w: any) =>
-        (w.name && w.name.toLowerCase().includes(q)) ||
-        (w.wargaName && w.wargaName.toLowerCase().includes(q)) ||
-        (w.phone && w.phone.toLowerCase().includes(q)) ||
-        (w.address && w.address.toLowerCase().includes(q)) ||
-        (w.rw && String(w.rw).toLowerCase().includes(q))
+      mapped = mapped.filter(
+        (w: any) =>
+          (w.name && w.name.toLowerCase().includes(q)) ||
+          (w.wargaName && w.wargaName.toLowerCase().includes(q)) ||
+          (w.phone && w.phone.toLowerCase().includes(q)) ||
+          (w.address && w.address.toLowerCase().includes(q)) ||
+          (w.rw && String(w.rw).toLowerCase().includes(q))
       );
     }
     return mapped;
@@ -2394,7 +2427,9 @@ export class KknAttendanceService {
             where: {
               date: { gte: startOfDay },
               isActive: true,
-              ...(st?.kelompokId ? { OR: [{ kelompokId: st.kelompokId }, { kelompokId: null }] } : {}),
+              ...(st?.kelompokId
+                ? { OR: [{ kelompokId: st.kelompokId }, { kelompokId: null }] }
+                : {}),
             },
             orderBy: { createdAt: "desc" },
           });
@@ -2496,7 +2531,6 @@ export class KknAttendanceService {
 
       let coIsInside = false;
       let coNearestDist = 999999;
-      let coNearestRadius = 500;
       let coNearestName = "Posko KKN";
 
       if (coGroupPoskos.length > 0) {
@@ -2504,7 +2538,6 @@ export class KknAttendanceService {
           const d = calculateDistance(latitude, longitude, gp.latitude, gp.longitude);
           if (d < coNearestDist) {
             coNearestDist = d;
-            coNearestRadius = gp.radius;
             coNearestName = gp.nama;
           }
           if (d <= gp.radius + coBuffer) {
@@ -2523,7 +2556,6 @@ export class KknAttendanceService {
         );
         if (dist < coNearestDist) {
           coNearestDist = dist;
-          coNearestRadius = coGeofence.radius;
           coNearestName = coSchedule?.title || "Posko Utama";
         }
         if (
@@ -2565,7 +2597,6 @@ export class KknAttendanceService {
 
       if (!coIsInside) {
         const distanceInt = Math.round(coNearestDist);
-        const allowedRadius = coNearestRadius + coBuffer;
 
         // Evaluasi toleransi kepulangan (Graceful Checkout di Luar Posko):
         // 1. Waktu saat ini di WIB sudah >= 15:30 WIB (menjelang/pasca 16:00 WIB selesai operasional posko)
@@ -2581,7 +2612,9 @@ export class KknAttendanceService {
         let isScheduleEnded = false;
         if (coSchedule) {
           if ((coSchedule as any)?.endTime) {
-            const [endH, endM] = String((coSchedule as any).endTime).split(":").map(Number);
+            const [endH, endM] = String((coSchedule as any).endTime)
+              .split(":")
+              .map(Number);
             if (!isNaN(endH) && !isNaN(endM) && timeInMinsWib >= endH * 60 + endM) {
               isScheduleEnded = true;
             }
@@ -2845,9 +2878,7 @@ export class KknAttendanceService {
             click_action: "FLUTTER_NOTIFICATION_CLICK",
           },
         })
-        .catch((err) =>
-          console.warn("[FCM] Gagal mengirim notif checkout tidak memenuhi:", err)
-        );
+        .catch((err) => console.warn("[FCM] Gagal mengirim notif checkout tidak memenuhi:", err));
     }
     websocketService.broadcastStudentCheckout({
       attendanceId: updated.id,
@@ -3901,11 +3932,13 @@ export class KknAttendanceService {
     });
 
     const config = await dplService.getConfigTargets();
-    const ruleTargetHarian = (config.attendanceMinDurationHours ?? 0) * 60
-      + (config.attendanceMinDurationMinutes ?? 0);
-    const TARGET_HARIAN_MINUTES = ruleTargetHarian > 0
-      ? ruleTargetHarian
-      : (config.attendanceMinDefaultMinutes ?? (config.targetHarianJam ? config.targetHarianJam * 60 : 30));
+    const ruleTargetHarian =
+      (config.attendanceMinDurationHours ?? 0) * 60 + (config.attendanceMinDurationMinutes ?? 0);
+    const TARGET_HARIAN_MINUTES =
+      ruleTargetHarian > 0
+        ? ruleTargetHarian
+        : (config.attendanceMinDefaultMinutes ??
+          (config.targetHarianJam ? config.targetHarianJam * 60 : 30));
     const TARGET_HARIAN_HOURS = TARGET_HARIAN_MINUTES / 60;
     const TARGET_TOTAL_HOURS =
       Number(config.targetTotalJam) || TARGET_HARIAN_HOURS * Number(config.targetTotalHari || 50);
@@ -3938,7 +3971,11 @@ export class KknAttendanceService {
           daySafety++;
           const curWib = new Date(cur.getTime() + 7 * 60 * 60 * 1000);
           const dateKey = curWib.toISOString().slice(0, 10);
-          const leaveType = String(leave.type || "").toUpperCase().includes("SAKIT") ? "SAKIT" : "IZIN";
+          const leaveType = String(leave.type || "")
+            .toUpperCase()
+            .includes("SAKIT")
+            ? "SAKIT"
+            : "IZIN";
           approvedLeaveDays.set(dateKey, { type: leaveType, reason: leave.reason });
           cur.setDate(cur.getDate() + 1);
         }
@@ -3976,18 +4013,26 @@ export class KknAttendanceService {
 
         const isLeaveDate = approvedLeaveDays.has(dateKey);
         const leaveInfo = approvedLeaveDays.get(dateKey);
-        const isLeaveStatus = att.status === "SAKIT" || att.status === "IZIN" || att.status === "IZIN_DPL";
+        const isLeaveStatus =
+          att.status === "SAKIT" || att.status === "IZIN" || att.status === "IZIN_DPL";
         const isApprovedLeave = isLeaveDate || isLeaveStatus;
-        const leaveType = leaveInfo?.type || (String(att.status).toUpperCase().includes("SAKIT") ? "SAKIT" : "IZIN");
+        const leaveType =
+          leaveInfo?.type ||
+          (String(att.status).toUpperCase().includes("SAKIT") ? "SAKIT" : "IZIN");
 
         return {
           id: att.id,
           scheduleId: att.scheduleId,
-          scheduleTitle: att.schedule?.title || (isApprovedLeave ? `Izin/Sakit Resmi: ${leaveInfo?.reason || "-"}` : "Kegiatan KKN"),
+          scheduleTitle:
+            att.schedule?.title ||
+            (isApprovedLeave ? `Izin/Sakit Resmi: ${leaveInfo?.reason || "-"}` : "Kegiatan KKN"),
           attendedAt: att.attendedAt,
           checkOutAt: att.checkOutAt,
           durationMinutes: durationMins,
-          durationFormatted: isApprovedLeave && durationMins === 0 ? "0 Jam (Dispensasi)" : `${Math.floor(durationMins / 60)} Jam ${durationMins % 60} Menit`,
+          durationFormatted:
+            isApprovedLeave && durationMins === 0
+              ? "0 Jam (Dispensasi)"
+              : `${Math.floor(durationMins / 60)} Jam ${durationMins % 60} Menit`,
           isMinTargetMet: isApprovedLeave ? true : durationMins >= TARGET_HARIAN_MINUTES,
           status: isApprovedLeave ? leaveType : att.status,
           dateKey,
@@ -4029,8 +4074,7 @@ export class KknAttendanceService {
         const wibDate = new Date(checkInDate.getTime() + 7 * 60 * 60 * 1000);
         const dateKey = wibDate.toISOString().slice(0, 10);
         const isToday =
-          dateKey === todayDateKey ||
-          new Date(pm.checkInAt).toDateString() === now.toDateString();
+          dateKey === todayDateKey || new Date(pm.checkInAt).toDateString() === now.toDateString();
         const hasCheckedOut = !!pm.checkOutAt;
 
         let durationMins = 0;
@@ -4049,12 +4093,15 @@ export class KknAttendanceService {
         const isApprovedLeave = isLeaveDate;
         const leaveType = leaveInfo?.type || "HADIR_MEMENUHI";
 
-        const pmStatus = durationMins >= TARGET_HARIAN_MINUTES ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI";
+        const pmStatus =
+          durationMins >= TARGET_HARIAN_MINUTES ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI";
 
         rawSessions.push({
           id: `mandiri-${pm.id}`,
           scheduleId: null,
-          scheduleTitle: pm.deskripsiKegiatan ? `Mandiri: ${pm.deskripsiKegiatan.slice(0, 40)}` : "Presensi Mandiri Posko",
+          scheduleTitle: pm.deskripsiKegiatan
+            ? `Mandiri: ${pm.deskripsiKegiatan.slice(0, 40)}`
+            : "Presensi Mandiri Posko",
           attendedAt: pm.checkInAt,
           checkOutAt: pm.checkOutAt,
           durationMinutes: durationMins,
@@ -4071,31 +4118,40 @@ export class KknAttendanceService {
 
       // 2. Deduplikasi cerdas per hari kalender (WIB: UTC+7)
       // Mencegah record duplikat (misal bridging/sync GPS vs Mandiri) melipatgandakan hitungan hari hadir maupun jam kerja mahasiswa.
-      const dailyMap = new Map<string, {
-        dateKey: string;
-        primarySession: typeof rawSessions[0];
-        effectiveDuration: number;
-        effectiveStatus: string;
-        isTargetMet: boolean;
-        isAlpa: boolean;
-        isApprovedLeave: boolean;
-        leaveType?: string;
-        isToday: boolean;
-        hasCheckedOut: boolean;
-        hasOngoingSession: boolean;
-      }>();
+      const dailyMap = new Map<
+        string,
+        {
+          dateKey: string;
+          primarySession: (typeof rawSessions)[0];
+          effectiveDuration: number;
+          effectiveStatus: string;
+          isTargetMet: boolean;
+          isAlpa: boolean;
+          isApprovedLeave: boolean;
+          leaveType?: string;
+          isToday: boolean;
+          hasCheckedOut: boolean;
+          hasOngoingSession: boolean;
+        }
+      >();
 
       for (const sess of rawSessions) {
         const isSessOngoing = sess.isToday && !sess.hasCheckedOut;
         if (!dailyMap.has(sess.dateKey)) {
-          const isTargetMet = sess.isApprovedLeave || sess.durationMinutes >= TARGET_HARIAN_MINUTES || sess.status === "HADIR_MEMENUHI";
+          const isTargetMet =
+            sess.isApprovedLeave ||
+            sess.durationMinutes >= TARGET_HARIAN_MINUTES ||
+            sess.status === "HADIR_MEMENUHI";
           dailyMap.set(sess.dateKey, {
             dateKey: sess.dateKey,
             primarySession: sess,
             effectiveDuration: sess.durationMinutes,
             effectiveStatus: sess.status,
             isTargetMet,
-            isAlpa: (sess.status === "ALPA" || sess.status === "ALPHA") && sess.durationMinutes === 0 && !sess.isApprovedLeave,
+            isAlpa:
+              (sess.status === "ALPA" || sess.status === "ALPHA") &&
+              sess.durationMinutes === 0 &&
+              !sess.isApprovedLeave,
             isApprovedLeave: !!sess.isApprovedLeave,
             leaveType: sess.leaveType,
             isToday: sess.isToday,
@@ -4123,15 +4179,27 @@ export class KknAttendanceService {
               day.effectiveStatus = sess.leaveType || sess.status;
               day.primarySession = sess;
             }
-          } else if (sess.status === "HADIR_MEMENUHI" || day.effectiveStatus === "ALPA" || day.effectiveStatus === "ALPHA") {
+          } else if (
+            sess.status === "HADIR_MEMENUHI" ||
+            day.effectiveStatus === "ALPA" ||
+            day.effectiveStatus === "ALPHA"
+          ) {
             day.effectiveStatus = sess.status;
             day.primarySession = sess;
           }
 
-          if (day.isApprovedLeave || day.effectiveDuration >= TARGET_HARIAN_MINUTES || day.effectiveStatus === "HADIR_MEMENUHI") {
+          if (
+            day.isApprovedLeave ||
+            day.effectiveDuration >= TARGET_HARIAN_MINUTES ||
+            day.effectiveStatus === "HADIR_MEMENUHI"
+          ) {
             day.isTargetMet = true;
           }
-          if (day.effectiveDuration > 0 || (day.effectiveStatus !== "ALPA" && day.effectiveStatus !== "ALPHA") || day.isApprovedLeave) {
+          if (
+            day.effectiveDuration > 0 ||
+            (day.effectiveStatus !== "ALPA" && day.effectiveStatus !== "ALPHA") ||
+            day.isApprovedLeave
+          ) {
             day.isAlpa = false;
           }
         }
@@ -4192,12 +4260,16 @@ export class KknAttendanceService {
           checkOutAt: prim.checkOutAt,
           durationMinutes: day.effectiveDuration,
           durationFormatted: `${Math.floor(day.effectiveDuration / 60)} Jam ${day.effectiveDuration % 60} Menit`,
-          isMinTargetMet: day.isApprovedLeave ? true : (day.isToday && !day.hasCheckedOut) ? false : day.isTargetMet,
+          isMinTargetMet: day.isApprovedLeave
+            ? true
+            : day.isToday && !day.hasCheckedOut
+              ? false
+              : day.isTargetMet,
           status: day.isApprovedLeave
-            ? (day.leaveType || "IZIN")
-            : (day.isToday && !day.hasCheckedOut)
-            ? "BERLANGSUNG"
-            : day.effectiveStatus,
+            ? day.leaveType || "IZIN"
+            : day.isToday && !day.hasCheckedOut
+              ? "BERLANGSUNG"
+              : day.effectiveStatus,
           isDispensasi: day.isApprovedLeave,
           isToday: day.isToday,
           isOngoing: day.isToday && !day.hasCheckedOut,
@@ -4474,7 +4546,9 @@ export class KknAttendanceService {
           const isSelesai = todayMandiri.status === "SELESAI";
           const durasiMenit = todayMandiri.durasiMenit ?? 0;
           const statusBridge = isSelesai
-            ? (durasiMenit >= 240 ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI")
+            ? durasiMenit >= 240
+              ? "HADIR_MEMENUHI"
+              : "HADIR_TIDAK_MEMENUHI"
             : "BERLANGSUNG";
 
           const bridgedAtt = await prisma.activityAttendance.upsert({
@@ -4511,7 +4585,10 @@ export class KknAttendanceService {
           });
           activeSched.attendances = [bridgedAtt];
         } catch (bridgeErr) {
-          console.warn("[getKegiatanAktif] Auto-bridge mandiri to ActivityAttendance warning:", bridgeErr);
+          console.warn(
+            "[getKegiatanAktif] Auto-bridge mandiri to ActivityAttendance warning:",
+            bridgeErr
+          );
         }
       }
     }
@@ -4629,17 +4706,10 @@ export class KknAttendanceService {
         } else if (att.status === "HADIR_MEMENUHI") {
           statusKehadiran = "HADIR_MEMENUHI";
           isMemenuhiDurasi = true;
-        } else if (
-          att.status === "HADIR_TIDAK_MEMENUHI" ||
-          att.status === "SELESAI_TELAT"
-        ) {
+        } else if (att.status === "HADIR_TIDAK_MEMENUHI" || att.status === "SELESAI_TELAT") {
           statusKehadiran = "HADIR_TIDAK_MEMENUHI";
           isMemenuhiDurasi = false;
-        } else if (
-          att.checkOutAt ||
-          att.status === "HADIR" ||
-          att.status === "SELESAI"
-        ) {
+        } else if (att.checkOutAt || att.status === "HADIR" || att.status === "SELESAI") {
           statusKehadiran = isMemenuhi ? "HADIR_MEMENUHI" : "HADIR_TIDAK_MEMENUHI";
           isMemenuhiDurasi = isMemenuhi;
         } else if (att.status === "BERLANGSUNG") {
@@ -4847,10 +4917,14 @@ export class KknAttendanceService {
         jedaLogs: (att?.jedaLogs as any[]) || [],
         attendedAt: att?.attendedAt
           ? att.attendedAt.toISOString()
-          : (todayMandiri?.checkInAt ? todayMandiri.checkInAt.toISOString() : null),
+          : todayMandiri?.checkInAt
+            ? todayMandiri.checkInAt.toISOString()
+            : null,
         checkOutAt: att?.checkOutAt
           ? att.checkOutAt.toISOString()
-          : (todayMandiri?.checkOutAt ? todayMandiri.checkOutAt.toISOString() : null),
+          : todayMandiri?.checkOutAt
+            ? todayMandiri.checkOutAt.toISOString()
+            : null,
         earliestCheckoutTime,
         earliestCheckoutTimeString,
         canCheckoutNow,
@@ -5164,8 +5238,10 @@ export class KknAttendanceService {
       ? `[Early Check-In Pagi ${String(currentHour).padStart(2, "0")}:${String(currentMinute).padStart(2, "0")} WIB - Menunggu Verifikasi DPL]`
       : "";
     const mergedDeskripsi = deskripsiKegiatan
-      ? (earlyFlag ? `${earlyFlag} ${deskripsiKegiatan}` : deskripsiKegiatan)
-      : (earlyFlag || undefined);
+      ? earlyFlag
+        ? `${earlyFlag} ${deskripsiKegiatan}`
+        : deskripsiKegiatan
+      : earlyFlag || undefined;
 
     // Upsert session di activityAttendance
     let attendance;
@@ -5886,7 +5962,8 @@ export class KknAttendanceService {
                 ? cutoff20Wib
                 : nowUtc;
 
-            const autoCutNote = "Diselesaikan otomatis oleh sistem (Batas maksimal 20:00 WIB) - Perlu Review DPL";
+            const autoCutNote =
+              "Diselesaikan otomatis oleh sistem (Batas maksimal 20:00 WIB) - Perlu Review DPL";
             const updatedDeskripsi = att.deskripsiKegiatan
               ? `${att.deskripsiKegiatan} (${autoCutNote})`
               : autoCutNote;
@@ -5944,7 +6021,10 @@ export class KknAttendanceService {
             }
           }
         } catch (studentErr) {
-          console.error(`[AutoCheckout] Gagal auto-checkout mahasiswa ${att.studentId}:`, studentErr);
+          console.error(
+            `[AutoCheckout] Gagal auto-checkout mahasiswa ${att.studentId}:`,
+            studentErr
+          );
         }
       }
 
@@ -5963,7 +6043,15 @@ export class KknAttendanceService {
               const pmDate = pm.checkInAt ? new Date(pm.checkInAt) : nowUtc;
               const pmWib = new Date(pmDate.getTime() + 7 * 3600000);
               const pmCutoff = new Date(
-                Date.UTC(pmWib.getUTCFullYear(), pmWib.getUTCMonth(), pmWib.getUTCDate(), 13, 0, 0, 0)
+                Date.UTC(
+                  pmWib.getUTCFullYear(),
+                  pmWib.getUTCMonth(),
+                  pmWib.getUTCDate(),
+                  13,
+                  0,
+                  0,
+                  0
+                )
               );
               const coTime = nowUtc.getTime() > pmCutoff.getTime() ? pmCutoff : nowUtc;
               await db.presensiMandiri.update({
@@ -5971,7 +6059,10 @@ export class KknAttendanceService {
                 data: {
                   status: "SELESAI",
                   checkOutAt: coTime,
-                  durasiMenit: Math.max(1, Math.floor((coTime.getTime() - pmDate.getTime()) / 60000)),
+                  durasiMenit: Math.max(
+                    1,
+                    Math.floor((coTime.getTime() - pmDate.getTime()) / 60000)
+                  ),
                 },
               });
             } catch {}
@@ -6034,13 +6125,20 @@ export class KknAttendanceService {
     let statusDisplay = attendance.status;
 
     // Cek apakah sesi ini adalah sesi lampau atau sesi hari ini yang sedang berlangsung
-    const schedDate = attendance.schedule?.date ? new Date(attendance.schedule.date) : attendance.attendedAt;
-    const schedWib = schedDate ? new Date(schedDate.getTime() + 7 * 3600000).toISOString().slice(0, 10) : "";
+    const schedDate = attendance.schedule?.date
+      ? new Date(attendance.schedule.date)
+      : attendance.attendedAt;
+    const schedWib = schedDate
+      ? new Date(schedDate.getTime() + 7 * 3600000).toISOString().slice(0, 10)
+      : "";
     const todayWib = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
     const isPastSession = schedWib.length > 0 && schedWib < todayWib;
     const isOngoingToday = !jamPulang && !isPastSession;
 
-    if (isOngoingToday && ["BERLANGSUNG", "HADIR", "DALAM_RADIUS", "TERJEDA", "DI_ZONA"].includes(attendance.status)) {
+    if (
+      isOngoingToday &&
+      ["BERLANGSUNG", "HADIR", "DALAM_RADIUS", "TERJEDA", "DI_ZONA"].includes(attendance.status)
+    ) {
       finalStatus = attendance.status === "TERJEDA" ? "TERJEDA" : "BERLANGSUNG";
       statusDisplay = attendance.status === "TERJEDA" ? "Terjeda" : "Sedang Berlangsung";
     } else if (
@@ -6335,11 +6433,13 @@ export class KknAttendanceService {
 
     // Load rule engine configs lebih awal untuk evaluasi target durasi kueri
     const ruleConfigs = await configService.getRuleEngineConfigs().catch(() => null);
-    const ruleTargetMins5655 = (ruleConfigs?.attendanceMinDurationHours ?? 0) * 60
-      + (ruleConfigs?.attendanceMinDurationMinutes ?? 0);
-    const targetMinMenit = ruleTargetMins5655 > 0
-      ? ruleTargetMins5655
-      : (ruleConfigs?.attendanceMinDefaultMinutes ?? 30);
+    const ruleTargetMins5655 =
+      (ruleConfigs?.attendanceMinDurationHours ?? 0) * 60 +
+      (ruleConfigs?.attendanceMinDurationMinutes ?? 0);
+    const targetMinMenit =
+      ruleTargetMins5655 > 0
+        ? ruleTargetMins5655
+        : (ruleConfigs?.attendanceMinDefaultMinutes ?? 30);
 
     // 3. Filter Status
     if (params.status && params.status !== "ALL") {
@@ -6528,7 +6628,9 @@ export class KknAttendanceService {
             ...(!params.includeTestAccounts ? { user: { isTestAccount: false } } : {}),
           },
           include: {
-            user: { select: { id: true, name: true, phone: true, isTestAccount: true, fotoProfil: true } },
+            user: {
+              select: { id: true, name: true, phone: true, isTestAccount: true, fotoProfil: true },
+            },
             assignedRw: { select: { id: true, name: true } },
             kelompok: {
               select: {
@@ -6569,7 +6671,8 @@ export class KknAttendanceService {
                     name: s.kelompok.name,
                     kelurahan: s.kelompok.kelurahan,
                     cakupanRw: (s.kelompok as any).cakupanRw || [],
-                    dplName: (s.kelompok as any).dpl?.name || (s.kelompok as any).dplNamaMentah || "-",
+                    dplName:
+                      (s.kelompok as any).dpl?.name || (s.kelompok as any).dplNamaMentah || "-",
                   }
                 : null,
               kelompokName: s.kelompok?.name || "-",
@@ -6875,7 +6978,8 @@ export class KknAttendanceService {
       const durasiFormatted =
         hours === 0 ? `${mins} Menit` : mins === 0 ? `${hours} Jam` : `${hours} Jam ${mins} Menit`;
 
-      const jedaMins = isLeave || (!hasRealCheckIn && isAlpha) ? 0 : calculateTotalJedaMinutes(att as any);
+      const jedaMins =
+        isLeave || (!hasRealCheckIn && isAlpha) ? 0 : calculateTotalJedaMinutes(att as any);
       const jedaFormatted = formatDurasiMenitIndo(jedaMins);
 
       const kknGroup = att.student?.studentProfile?.kelompok || att.schedule?.kelompok;

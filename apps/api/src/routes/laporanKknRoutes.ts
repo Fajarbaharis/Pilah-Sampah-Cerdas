@@ -14,7 +14,7 @@ import { roleMiddleware } from "../middlewares/roleMiddleware.js";
 
 const router = Router();
 
-const ALLOWED_ROLES = ["PIMPINAN", "PEMIMPIN", "SUPER_USER", "DEVELOPER"];
+const ALLOWED_ROLES = ["PIMPINAN", "PEMIMPIN", "SUPER_USER", "DEVELOPER", "ADMIN_DLH", "CAMAT", "LURAH", "PANITIA_TASKFORCE"];
 
 /**
  * @swagger

@@ -31,11 +31,7 @@ import {
 import { calculateNilaiEkonomi } from "./pemanfaatanService.js";
 import { evaluateSortingStatus } from "../utils/sortingEvaluation.js";
 import { isTestPosko, isTestProker, isTestKelompok } from "../utils/filterTestingUtils.js";
-import {
-  extractProkerEndDate,
-  isProkerExpired,
-  getTodayWibDateString,
-} from "../utils/prokerDateUtils.js";
+import { isProkerExpired, getTodayWibDateString } from "../utils/prokerDateUtils.js";
 
 export function normalizeProkerKategori(kategori?: string | null): string {
   if (!kategori) return "Lainnya";
@@ -263,8 +259,7 @@ export class KknService {
       targetRwIds = [student.assignedRwId];
     } else if (student?.kelompok) {
       const rawCakupan = student.kelompok.cakupanRw;
-      const parsedCakupan =
-        typeof rawCakupan === "string" ? JSON.parse(rawCakupan) : rawCakupan;
+      const parsedCakupan = typeof rawCakupan === "string" ? JSON.parse(rawCakupan) : rawCakupan;
       if (Array.isArray(parsedCakupan) && parsedCakupan.length > 0) {
         const rwNumbers = parsedCakupan
           .map((r: any) => String(r).replace(/[^\d]/g, "").trim())
@@ -343,10 +338,7 @@ export class KknService {
       totalWargaDampingan = wargaDampingan.length;
 
       wargaDampinganBinAktif = wargaDampingan.filter((w) => {
-        const allBins = [
-          ...(w.bins || []),
-          ...(w.binOwnerships?.map((bo: any) => bo.bin) || []),
-        ];
+        const allBins = [...(w.bins || []), ...(w.binOwnerships?.map((bo: any) => bo.bin) || [])];
         return allBins.some((b) => b && (b.status === "ACTIVE_BOUND" || b.status === "ACTIVE"));
       }).length;
 
@@ -700,7 +692,9 @@ export class KknService {
         user: {
           include: {
             rw: { include: { kelurahan: { include: { kecamatan: true } } } },
-            households: { include: { rw: { include: { kelurahan: { include: { kecamatan: true } } } } } },
+            households: {
+              include: { rw: { include: { kelurahan: { include: { kecamatan: true } } } } },
+            },
             pointHistory: true,
             wargaViolations: true,
             pendampingStudent: { select: { id: true, name: true } },
@@ -742,8 +736,6 @@ export class KknService {
         uniqueUsers.get(b.user.id).bins.push(b);
       }
     });
-
-
 
     let list = Array.from(uniqueUsers.values()).map(({ u, bins: userBins }) => {
       const household = u.households?.[0];
@@ -838,7 +830,8 @@ export class KknService {
       if (
         !registeredStudentId &&
         studentProfile?.kelompokId &&
-        (binKelompokId === studentProfile.kelompokId || u.kelompokKknId === studentProfile.kelompokId)
+        (binKelompokId === studentProfile.kelompokId ||
+          u.kelompokKknId === studentProfile.kelompokId)
       ) {
         if (studentProfile?.isKetua) {
           registeredStudentId = kknUserId;
@@ -849,11 +842,6 @@ export class KknService {
       }
 
       const resolvedRwId = u.rwId || primaryBin?.rwId || household?.rwId || effectiveRwId || null;
-      const isMyAssignedCitizen =
-        effectiveRwId != null &&
-        (u.rwId === effectiveRwId ||
-          household?.rwId === effectiveRwId ||
-          primaryBin?.rwId === effectiveRwId);
 
       const resolvedMahasiswaId = registeredStudentId || "";
       const resolvedPendampingName = registeredStudentName || "";
@@ -892,8 +880,7 @@ export class KknService {
         name: u.name,
         phone: u.phone,
         address:
-          u.address ||
-          (u.rw?.name ? `RW ${u.rw.name}, ${resolvedKelurahan}` : "Alamat tercatat"),
+          u.address || (u.rw?.name ? `RW ${u.rw.name}, ${resolvedKelurahan}` : "Alamat tercatat"),
         latitude: lat,
         longitude: lng,
         lat: lat,
@@ -979,7 +966,9 @@ export class KknService {
       include: {
         role: true,
         rw: { include: { kelurahan: { include: { kecamatan: true } } } },
-        households: { include: { rw: { include: { kelurahan: { include: { kecamatan: true } } } } } },
+        households: {
+          include: { rw: { include: { kelurahan: { include: { kecamatan: true } } } } },
+        },
         pointHistory: true,
         pendampingStudent: { select: { id: true, name: true } },
         kelompokKkn: { select: { id: true, name: true, kelurahan: true } },
@@ -1725,11 +1714,6 @@ export class KknService {
             : null;
 
       const resolvedRwId = w.rwId || household?.rwId || primaryBin?.rwId || targetRwId || null;
-      const isMyAssignedCitizen =
-        studentAssignedRwId != null &&
-        (w.rwId === studentAssignedRwId ||
-          household?.rwId === studentAssignedRwId ||
-          primaryBin?.rwId === studentAssignedRwId);
 
       const resolvedMahasiswaId = registeredStudentId || "";
       const resolvedPendampingName = registeredStudentName || "";
@@ -2474,7 +2458,8 @@ export class KknService {
         const updateUserData: any = {};
         if (resolvedRwId && !warga.rwId) updateUserData.rwId = resolvedRwId;
         if (!warga.pendampingStudentId && kknUserId) updateUserData.pendampingStudentId = kknUserId;
-        if (!warga.kelompokKknId && student?.kelompokId) updateUserData.kelompokKknId = student.kelompokId;
+        if (!warga.kelompokKknId && student?.kelompokId)
+          updateUserData.kelompokKknId = student.kelompokId;
 
         if (Object.keys(updateUserData).length > 0) {
           warga = await tx.user.update({
@@ -3554,7 +3539,9 @@ export class KknService {
 
     if (leaveType === "SAKIT") {
       const maxRetroactiveDays = 7;
-      const minSakitDate = new Date(Date.now() + 7 * 60 * 60 * 1000 - maxRetroactiveDays * 24 * 60 * 60 * 1000)
+      const minSakitDate = new Date(
+        Date.now() + 7 * 60 * 60 * 1000 - maxRetroactiveDays * 24 * 60 * 60 * 1000
+      )
         .toISOString()
         .slice(0, 10);
       if (startWib < minSakitDate) {
@@ -4840,10 +4827,8 @@ export class KknService {
           continue;
         }
 
-        const endDate = extractProkerEndDate(candidate.waktuPelaksanaan);
         const parsed = parseProkerDeskripsi(candidate.deskripsi);
         const judul = parsed.judul || "Program Kerja";
-
 
         // 🛡️ Proteksi Integritas Lapangan:
         // Cek apakah mahasiswa telah mengunggah logbook kegiatan terkait program kerja ini.
@@ -4984,7 +4969,9 @@ export class KknService {
           { status: "DITOLAK" },
         ];
       } else if (u === "BELUM_DISETUJUI" || u === "MENUNGGU" || u === "PENDING") {
-        whereClause.status = { notIn: ["DITERIMA", "SEDANG_BERJALAN", "SELESAI", "DITOLAK", "DISETUJUI"] };
+        whereClause.status = {
+          notIn: ["DITERIMA", "SEDANG_BERJALAN", "SELESAI", "DITOLAK", "DISETUJUI"],
+        };
         whereClause.OR = [
           { statusUsulan: { in: ["BELUM_DISETUJUI", "MENUNGGU", "PENDING"] } },
           { statusUsulan: null },
@@ -5180,7 +5167,11 @@ export class KknService {
         };
       })
       .filter((p) => {
-        if (roleName.includes("MAHASISWA") || roleName.includes("DPL") || (user as any).isTestAccount) {
+        if (
+          roleName.includes("MAHASISWA") ||
+          roleName.includes("DPL") ||
+          (user as any).isTestAccount
+        ) {
           return true;
         }
         return !isTestProker(p) && !isTestKelompok({ name: p.kelompokName });
@@ -5840,8 +5831,15 @@ export class KknService {
     }
     targetRwId = targetRwId || 1;
 
-    const { programKerjaId, fasilitasId, teknologi, bahanBaku, beratInputKg, fotoDokumentasiUrl, kategori } =
-      payload;
+    const {
+      programKerjaId,
+      fasilitasId,
+      teknologi,
+      bahanBaku,
+      beratInputKg,
+      fotoDokumentasiUrl,
+      kategori,
+    } = payload;
 
     let programName = "LOGBOOK_HARIAN";
 
@@ -6355,7 +6353,15 @@ export class KknService {
       // 1. Validasi warga
       const warga = await tx.user.findUnique({
         where: { id: wargaId },
-        select: { id: true, name: true, phone: true, address: true, rwId: true, pendampingStudentId: true, kelompokKknId: true },
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          address: true,
+          rwId: true,
+          pendampingStudentId: true,
+          kelompokKknId: true,
+        },
       });
       if (!warga) {
         throw new Error("WARGA_NOT_FOUND");
@@ -6776,14 +6782,8 @@ export class KknService {
     reason?: string;
     ticketNumber?: string;
   }) {
-    const {
-      requesterUserId,
-      requesterRole,
-      wargaId,
-      targetStudentId,
-      reason,
-      ticketNumber,
-    } = params;
+    const { requesterUserId, requesterRole, wargaId, targetStudentId, reason, ticketNumber } =
+      params;
 
     if (!wargaId || typeof wargaId !== "string" || !wargaId.trim()) {
       throw new Error("WARGA_NOT_FOUND");
@@ -6877,10 +6877,7 @@ export class KknService {
       }
 
       // 4. Deteksi Pendamping Saat Ini & Cek Redundansi
-      const allBins = [
-        ...warga.bins,
-        ...warga.binOwnerships.map((bo) => bo.bin),
-      ];
+      const allBins = [...warga.bins, ...warga.binOwnerships.map((bo) => bo.bin)];
 
       const currentStudentId =
         warga.pendampingStudentId ||
@@ -6916,20 +6913,14 @@ export class KknService {
       // Bersihkan ghost bin virtual (BSK-MEMBER-) jika sebelumnya sempat terbentuk
       await tx.bin.deleteMany({
         where: {
-          OR: [
-            { userId: cleanWargaId },
-            { binOwnerships: { some: { userId: cleanWargaId } } },
-          ],
+          OR: [{ userId: cleanWargaId }, { binOwnerships: { some: { userId: cleanWargaId } } }],
           qrCode: { startsWith: "BSK-MEMBER-" },
         },
       });
 
       const binUpdate = await tx.bin.updateMany({
         where: {
-          OR: [
-            { userId: cleanWargaId },
-            { binOwnerships: { some: { userId: cleanWargaId } } },
-          ],
+          OR: [{ userId: cleanWargaId }, { binOwnerships: { some: { userId: cleanWargaId } } }],
         },
         data: {
           registeredByStudentId: targetStudent.userId,

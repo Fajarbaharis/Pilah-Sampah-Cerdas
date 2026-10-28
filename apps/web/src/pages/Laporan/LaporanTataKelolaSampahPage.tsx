@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -82,11 +83,18 @@ const MONTH_NAMES = [
 ];
 
 export const LaporanTataKelolaSampahPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const hasAutoPrintedRef = useRef<boolean>(false);
+
   const [data, setData] = useState<WasteReportData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isPrintFlow, setIsPrintFlow] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<"dashboard" | "document">("dashboard");
+  const [viewMode, setViewMode] = useState<"dashboard" | "document">(() => {
+    return searchParams.get("view") === "document" || searchParams.get("action") === "print"
+      ? "document"
+      : "dashboard";
+  });
 
   // Pengaturan Naskah Dokumen Dinamis
   const [reportConfig, setReportConfig] = useState<ReportCustomConfig>(() => {
@@ -100,10 +108,22 @@ export const LaporanTataKelolaSampahPage: React.FC = () => {
   });
 
   // Filter Parameters (Identik Laporan KKN)
-  const [selectedBatch, setSelectedBatch] = useState<string>("2026-041027-Universitas Komputer Indonesia - 1");
-  const [selectedWilayah, setSelectedWilayah] = useState<string>("ALL");
-  const [selectedRw, setSelectedRw] = useState<string>("");
-  const [tableSource, setTableSource] = useState<"ALL" | "WARGA_APP" | "PETUGAS_LAPANGAN">("ALL");
+  const [selectedBatch, setSelectedBatch] = useState<string>(() => {
+    return searchParams.get("batch") || searchParams.get("periode") || "2026-041027-Universitas Komputer Indonesia - 1";
+  });
+  const [selectedWilayah, setSelectedWilayah] = useState<string>(() => {
+    const raw = searchParams.get("wilayah") || searchParams.get("kelurahan");
+    if (!raw || raw === "Semua Wilayah" || raw === "ALL") return "ALL";
+    return raw.replace(/^Kel\.\s*/i, "").trim() || "ALL";
+  });
+  const [selectedRw, setSelectedRw] = useState<string>(() => {
+    return searchParams.get("rw") || "";
+  });
+  const [tableSource, setTableSource] = useState<"ALL" | "WARGA_APP" | "PETUGAS_LAPANGAN">(() => {
+    const s = searchParams.get("sourceType");
+    if (s === "WARGA_APP" || s === "PETUGAS_LAPANGAN") return s;
+    return "ALL";
+  });
   const [tableSearch, setTableSearch] = useState<string>("");
   const [tableSortAsc, setTableSortAsc] = useState<boolean>(true);
 
@@ -237,8 +257,10 @@ export const LaporanTataKelolaSampahPage: React.FC = () => {
       const params: Record<string, string> = {
         wilayah: selectedWilayah,
         sourceType: tableSource,
-        periode: "semua",
+        periode: searchParams.get("periode") || "semua",
       };
+      if (searchParams.get("startDate")) params.startDate = searchParams.get("startDate")!;
+      if (searchParams.get("endDate")) params.endDate = searchParams.get("endDate")!;
 
       if (selectedRw && selectedRw !== "Semua RW" && selectedRw.trim() !== "") {
         params.rw = selectedRw.trim();
@@ -261,6 +283,18 @@ export const LaporanTataKelolaSampahPage: React.FC = () => {
   useEffect(() => {
     fetchReportData();
   }, [selectedWilayah, selectedRw, selectedBatch, tableSource, reportPeriodMode, reportMonth, reportYear, startDate, endDate]);
+  // Auto-print ketika dibuka langsung dari tombol Unduh Laporan di Dashboard
+  useEffect(() => {
+    if (data && !loading && searchParams.get("action") === "print" && !hasAutoPrintedRef.current) {
+      hasAutoPrintedRef.current = true;
+      setViewMode("document");
+      const timer = setTimeout(() => {
+        handlePrint();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [data, loading, searchParams]);
+
 
   // Aksi Cetak PDF Resmi Langsung
   const handlePrint = () => {

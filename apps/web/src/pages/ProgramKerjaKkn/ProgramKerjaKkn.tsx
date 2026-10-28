@@ -23,7 +23,6 @@ import {
   RotateCcw,
   Check,
   AlertCircle,
-  ListFilter,
   Users,
   GraduationCap,
   Phone,
@@ -34,7 +33,6 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Filter,
 } from "lucide-react";
 import {
   ResponsiveContainer,
