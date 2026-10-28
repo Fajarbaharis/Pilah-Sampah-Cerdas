@@ -1,0 +1,655 @@
+[
+  {
+    "noUrut": 1,
+    "userId": "36324bdd-a81d-436e-a304-296e0a5498c2",
+    "kelompokId": "731c2eea-f699-4dcc-88e9-3aada9c115d2",
+    "nama": "Iyan Andriana, S.T., M.T.",
+    "nip": "4127.70.03.009",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 1 Cipaganti",
+    "kelurahan": "Cipaganti",
+    "cakupanRw": [
+      "1"
+    ],
+    "wilayahDampingan": "RW 1 Kelurahan Cipaganti, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/001/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277003009",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 2,
+    "userId": "23bb7cd5-cd2b-4a04-b192-96e7e23ac876",
+    "kelompokId": "51457bd7-515a-477c-b569-f5566cde0b1e",
+    "nama": "Prof. Dra. Umi Narimawati, S.E., M.Si., M.Pd.",
+    "nip": "4127.34.02.015",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 1 Dago",
+    "kelurahan": "Dago",
+    "cakupanRw": [
+      "1",
+      "2",
+      "7",
+      "8"
+    ],
+    "wilayahDampingan": "RW 1, 2, 7, dan 8 Kelurahan Dago, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/002/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273402015",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 3,
+    "userId": "c1b70ac5-bab9-4f16-9465-53a05d4132e2",
+    "kelompokId": "ae539829-7a39-4c4d-91bb-d89f07fae9e5",
+    "nama": "Muhammad Aksan Ipaenin, S.T., M.Sc.",
+    "nip": "4127.99.90.268",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 1 Lebak Gede",
+    "kelurahan": "Lebak Gede",
+    "cakupanRw": [
+      "1",
+      "12",
+      "13"
+    ],
+    "wilayahDampingan": "RW 1, 12, dan 13 Kelurahan Lebak Gede, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/003/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41279990268",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 4,
+    "userId": "7fa730a1-8e3e-4bf7-aca3-c9ff8e5c2731",
+    "kelompokId": "48cd6304-4a83-4aff-b53e-0481969bb31f",
+    "nama": "Fenny Febrianty, S.S., M.Pd.",
+    "nip": "4127.20.04.004",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 1 Lebak Siliwangi",
+    "kelurahan": "Lebak Siliwangi",
+    "cakupanRw": [
+      "7"
+    ],
+    "wilayahDampingan": "RW 7 Kelurahan Lebak Siliwangi, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/004/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41272004004",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 5,
+    "userId": "b7aa7846-679f-4ed7-8a29-e9e061f9f795",
+    "kelompokId": "3b5cf9da-4209-4796-8ece-8a606c625711",
+    "nama": "Dr. Agus Mulyana, S.Kom., M.T.",
+    "nip": "4127.70.05.017",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 1 Sadang Serang",
+    "kelurahan": "Sadang Serang",
+    "cakupanRw": [
+      "21"
+    ],
+    "wilayahDampingan": "RW 21 Kelurahan Sadang Serang, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/005/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277005017",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 6,
+    "userId": "960918f8-4ea0-4d10-b59a-7ba9537983be",
+    "kelompokId": "8b492f05-6f8b-4294-914b-6d846638380c",
+    "nama": "Adam Mukharil Bachtiar, S.Kom., M.T., Ph.D.",
+    "nip": "4127.70.06.024",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 1 Sekeloa",
+    "kelurahan": "Sekeloa",
+    "cakupanRw": [
+      "1",
+      "2"
+    ],
+    "wilayahDampingan": "RW 1, dan 2 Kelurahan Sekeloa, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/006/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277006024",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 7,
+    "userId": "b23921b2-934c-49f1-82c5-ad4b8820ae33",
+    "kelompokId": "2eb79edc-a9c2-4752-b916-b3965d12826f",
+    "nama": "Arif Try Cahyadi, S.Ds., M.Ds.",
+    "nip": "4127.32.06.087",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 10 Sadang Serang",
+    "kelurahan": "Sadang Serang",
+    "cakupanRw": [
+      "14",
+      "17"
+    ],
+    "wilayahDampingan": "RW 14, dan 17 Kelurahan Sadang Serang, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/007/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273206087",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 8,
+    "userId": "b21709fa-0e8e-47b9-b2f1-75a8c8735777",
+    "kelompokId": "fe5ebdf2-0f50-4de4-b4d7-52b5ee3957cb",
+    "nama": "Ayub Subandi, S.Si., M.T., Ph.D.",
+    "nip": "4127.70.05.030",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 11 Sadang Serang",
+    "kelurahan": "Sadang Serang",
+    "cakupanRw": [
+      "16",
+      "19"
+    ],
+    "wilayahDampingan": "RW 16, dan 19 Kelurahan Sadang Serang, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/008/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277005030",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 9,
+    "userId": "4131542e-3057-41c4-ae0c-ba7c02ad43e7",
+    "kelompokId": "c5d0fffd-ce42-4bcc-832d-e1e58d635cc2",
+    "nama": "Hanhan Maulana, M.Kom., Ph.D.",
+    "nip": "4127.70.06.134",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 2 Cipaganti",
+    "kelurahan": "Cipaganti",
+    "cakupanRw": [
+      "2",
+      "3"
+    ],
+    "wilayahDampingan": "RW 2, dan 3 Kelurahan Cipaganti, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/009/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277006134",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 10,
+    "userId": "e28a2445-32e9-42ab-a8df-13da3dae6c95",
+    "kelompokId": "8df1e559-3c7c-4ff1-a50b-62a45bc9ecde",
+    "nama": "Assoc. Prof. Dr. Agus Riyanto, S.T., M.T",
+    "nip": "4127.70.03.007",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 2 Dago",
+    "kelurahan": "Dago",
+    "cakupanRw": [
+      "3",
+      "5",
+      "6"
+    ],
+    "wilayahDampingan": "RW 3, 5, dan 6 Kelurahan Dago, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/010/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277003007",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 11,
+    "userId": "bcd95488-0d5e-4437-981e-f6044feb8621",
+    "kelompokId": "5dadc022-c5d6-4075-87ee-18c39e02d689",
+    "nama": "Assoc. Prof. Dr. Wartika, S.Kom., M.T.",
+    "nip": "4127.70.26.002",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 2 Lebak Gede",
+    "kelurahan": "Lebak Gede",
+    "cakupanRw": [
+      "4",
+      "7",
+      "14"
+    ],
+    "wilayahDampingan": "RW 4, 7, dan 14 Kelurahan Lebak Gede, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/011/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277026002",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 12,
+    "userId": "c9759769-cd11-45e3-9436-ed6f6c200092",
+    "kelompokId": "df1ea770-6909-4b29-a243-60c10eb6f4e7",
+    "nama": "Dr. Tatik Fidowaty, S.IP., M.Si.",
+    "nip": "4127.35.31.009",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 2 Lebak Siliwangi",
+    "kelurahan": "Lebak Siliwangi",
+    "cakupanRw": [
+      "5",
+      "7"
+    ],
+    "wilayahDampingan": "RW 5, dan 7 Kelurahan Lebak Siliwangi, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/012/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273531009",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 13,
+    "userId": "548779aa-0876-4391-a3e4-af1876e9756a",
+    "kelompokId": "8572a0af-e28b-4399-972a-5b039eb62388",
+    "nama": "Amilia Widya, S.Pd., M.T.",
+    "nip": "4127.70.17.015",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 2 Sadang Serang",
+    "kelurahan": "Sadang Serang",
+    "cakupanRw": [
+      "15"
+    ],
+    "wilayahDampingan": "RW 15 Kelurahan Sadang Serang, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/013/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277017015",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 14,
+    "userId": "aa4139a9-8d32-49ea-8860-3f2515d970b9",
+    "kelompokId": "c341eef0-23e9-4841-add4-2a54f390da36",
+    "nama": "Dr. Eng. Siswanti Zuraida, S.Pd., M.T.",
+    "nip": "4127.88.80.717",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 2 Sekeloa",
+    "kelurahan": "Sekeloa",
+    "cakupanRw": [
+      "3",
+      "4"
+    ],
+    "wilayahDampingan": "RW 3, dan 4 Kelurahan Sekeloa, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/014/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41278880717",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 15,
+    "userId": "c04485a2-fd88-432e-9910-5db1b2bf597f",
+    "kelompokId": "84598750-abd0-4bdf-8720-a2812408550a",
+    "nama": "Assoc. Prof. Dr. Rini Maulina, S.Sn., M.Sn.",
+    "nip": "4127.32.06.011",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 3 Cipaganti",
+    "kelurahan": "Cipaganti",
+    "cakupanRw": [
+      "4",
+      "5"
+    ],
+    "wilayahDampingan": "RW 4, dan 5 Kelurahan Cipaganti, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/015/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273206011",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 16,
+    "userId": "b434bad0-6fc3-45e4-aa7e-ff72bc534c19",
+    "kelompokId": "b1102bf4-a4bf-4f9b-8fac-e11c10318cb6",
+    "nama": "Assoc. Prof. Dr. Raeni Dwi Santy, S.E., M.Si., CIMA, CDMP",
+    "nip": "4127.34.02.006",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 3 Dago",
+    "kelurahan": "Dago",
+    "cakupanRw": [
+      "4",
+      "9",
+      "10"
+    ],
+    "wilayahDampingan": "RW 4, 9, dan 10 Kelurahan Dago, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/016/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273402006",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 17,
+    "userId": "a607b2ac-d857-4444-a5f2-795cb498a47c",
+    "kelompokId": "68026488-cfba-4667-8e78-114e3676b1cc",
+    "nama": "Myrna Dwi Rahmatya, S.Kom., M.Kom.",
+    "nip": "4127.70.26.111",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 3 Lebak Gede",
+    "kelurahan": "Lebak Gede",
+    "cakupanRw": [
+      "8",
+      "9",
+      "10",
+      "11"
+    ],
+    "wilayahDampingan": "RW 8, 9, 10, dan 11 Kelurahan Lebak Gede, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/017/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277026111",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 18,
+    "userId": "0c2c2374-9904-4d8b-846f-6daa54a2c7a6",
+    "kelompokId": "06c1ffe6-ce7e-476b-b7eb-cbd02c58b6e7",
+    "nama": "Dr. Nungki Heriyati, S.S., M.I.Kom., M.A.",
+    "nip": "4127.20.03.020",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 3 Lebak Siliwangi",
+    "kelurahan": "Lebak Siliwangi",
+    "cakupanRw": [
+      "6",
+      "8"
+    ],
+    "wilayahDampingan": "RW 6, dan 8 Kelurahan Lebak Siliwangi, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/018/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41272003020",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 19,
+    "userId": "69072929-5984-4243-bc19-c6b2c241419b",
+    "kelompokId": "31646fb5-a25e-484a-9137-08e209a3422c",
+    "nama": "Wahyudi, S.H., M.H.",
+    "nip": "4127.33.00.019",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 3 Sadang Serang",
+    "kelurahan": "Sadang Serang",
+    "cakupanRw": [
+      "18",
+      "19"
+    ],
+    "wilayahDampingan": "RW 18, dan 19 Kelurahan Sadang Serang, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/019/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273300019",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 20,
+    "userId": "50477a6f-08f5-4bcf-980f-5125c8f54426",
+    "kelompokId": "937c9190-5051-4025-95a4-e681bfaf3c6d",
+    "nama": "Dr. Olih Solihin, S.Sos., M.I.Kom.",
+    "nip": "4127.35.30.016",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 3 Sekeloa",
+    "kelurahan": "Sekeloa",
+    "cakupanRw": [
+      "5",
+      "6",
+      "7"
+    ],
+    "wilayahDampingan": "RW 5, 6, dan 7 Kelurahan Sekeloa, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/020/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273530016",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 21,
+    "userId": "25cd4693-6b38-4072-8554-767fa928d09f",
+    "kelompokId": "ba31fa0a-9314-4fa3-aed7-22a3f54b37b8",
+    "nama": "Rangga Sidik, S.Kom., M.Kom., M.Eng.",
+    "nip": "4127.70.26.113",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 4 Cipaganti",
+    "kelurahan": "Cipaganti",
+    "cakupanRw": [
+      "6",
+      "7"
+    ],
+    "wilayahDampingan": "RW 6, dan 7 Kelurahan Cipaganti, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/021/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277026113",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 22,
+    "userId": "2e166c65-75a4-43a5-9b33-1ef00fdcf6ed",
+    "kelompokId": "905fa0d6-e950-4ea8-bad6-cf7634b9f44e",
+    "nama": "Dr. Linna Ismawati, S.E., M.Si.",
+    "nip": "4127.34.02.008",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 4 Dago",
+    "kelurahan": "Dago",
+    "cakupanRw": [
+      "11",
+      "12",
+      "13"
+    ],
+    "wilayahDampingan": "RW 11, 12, dan 13 Kelurahan Dago, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/022/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273402008",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 23,
+    "userId": "27fc4dee-d5fe-4d9a-ab6c-2965ef2156c2",
+    "kelompokId": "c795ec26-571b-459f-9a6c-03e107987ae4",
+    "nama": "Alif Finandhita, S.Kom., M.T.",
+    "nip": "4127.70.06.025",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 4 Lebak Gede",
+    "kelurahan": "Lebak Gede",
+    "cakupanRw": [
+      "2",
+      "3",
+      "15"
+    ],
+    "wilayahDampingan": "RW 2, 3, dan 15 Kelurahan Lebak Gede, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/023/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277006025",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 24,
+    "userId": "e0ca8b4f-16f3-4759-8f25-9eeeaf505c54",
+    "kelompokId": "f77909ff-3f89-4b31-b8f8-bd52d4e34348",
+    "nama": "Richi Dwi Agustia, S.Kom., M.Kom.",
+    "nip": "4127.70.06.132",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 4 Sadang Serang",
+    "kelurahan": "Sadang Serang",
+    "cakupanRw": [
+      "9",
+      "10",
+      "11"
+    ],
+    "wilayahDampingan": "RW 9, 10, dan 11 Kelurahan Sadang Serang, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/024/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277006132",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 25,
+    "userId": "72f601dd-144e-41e0-8e77-114865828eb0",
+    "kelompokId": "a88c047b-537f-4d1f-aa7e-f4d981387556",
+    "nama": "Hery Dwi Yulianto, S.T., M.Kom.",
+    "nip": "4127.70.67.004",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 4 Sekeloa",
+    "kelurahan": "Sekeloa",
+    "cakupanRw": [
+      "8",
+      "9",
+      "10"
+    ],
+    "wilayahDampingan": "RW 8, 9, dan 10 Kelurahan Sekeloa, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/025/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277067004",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 26,
+    "userId": "ddf9f3d1-295b-4117-a523-b009b7d2e580",
+    "kelompokId": "8d683a77-37a5-4d57-8936-5335088bde1d",
+    "nama": "Assoc. Prof. Dr. Manap Solihat, Drs., M.Si.",
+    "nip": "4127.35.30.007",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 5 Sadang Serang",
+    "kelurahan": "Sadang Serang",
+    "cakupanRw": [
+      "3",
+      "4"
+    ],
+    "wilayahDampingan": "RW 3, dan 4 Kelurahan Sadang Serang, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/026/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273530007",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 27,
+    "userId": "4cc072a3-5d84-4909-b7d9-cb2a6d2533af",
+    "kelompokId": "119d1aeb-827f-48b6-8006-40f21119b83c",
+    "nama": "John Adler, S.Si., M.Si.",
+    "nip": "4127.70.05.007",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 5 Sekeloa",
+    "kelurahan": "Sekeloa",
+    "cakupanRw": [
+      "11",
+      "12",
+      "13"
+    ],
+    "wilayahDampingan": "RW 11, 12, dan 13 Kelurahan Sekeloa, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/027/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277005007",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 28,
+    "userId": "fcee1578-6ddd-4982-851e-61fb1af2592f",
+    "kelompokId": "d8b4bfe8-a26f-453c-ab7e-5cb57577eff0",
+    "nama": "Cherry Dharmawan, S.Sn., M.Sn.",
+    "nip": "4127.32.04.002",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 6 Sadang Serang",
+    "kelurahan": "Sadang Serang",
+    "cakupanRw": [
+      "1",
+      "2",
+      "5"
+    ],
+    "wilayahDampingan": "RW 1, 2, dan 5 Kelurahan Sadang Serang, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/028/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273204002",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 29,
+    "userId": "21e6ccd8-c6ae-4bb2-84a0-e34e6e699834",
+    "kelompokId": "5a647f92-2fb8-4966-8aca-418130277d91",
+    "nama": "Dr. Henike Primawanti, S.IP., M.I.Pol.",
+    "nip": "4127.35.32.011",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 6 Sekeloa",
+    "kelurahan": "Sekeloa",
+    "cakupanRw": [
+      "14",
+      "15",
+      "16"
+    ],
+    "wilayahDampingan": "RW 14, 15, dan 16 Kelurahan Sekeloa, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/029/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273532011",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 30,
+    "userId": "1398aa33-69b4-4b90-bace-88d5107698c8",
+    "kelompokId": "942cbbfc-88cc-42d3-9b50-29e52044a19b",
+    "nama": "Assoc. Prof. Dr. Sri Dewi Anggadini, S.E., M.Si., Ak., CA",
+    "nip": "4127.34.03.003",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 7 Sadang Serang",
+    "kelurahan": "Sadang Serang",
+    "cakupanRw": [
+      "12",
+      "13"
+    ],
+    "wilayahDampingan": "RW 12, dan 13 Kelurahan Sadang Serang, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/030/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273403003",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 31,
+    "userId": "617c285a-1e51-409f-8408-a375462158c5",
+    "kelompokId": "368cc2b6-167a-4ea3-9674-296eec3f99c8",
+    "nama": "Dr. H. Tatang Supriyadi, S.E., M.M.",
+    "nip": "4127.34.02.075",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 8 Sadang Serang",
+    "kelurahan": "Sadang Serang",
+    "cakupanRw": [
+      "6",
+      "7",
+      "8"
+    ],
+    "wilayahDampingan": "RW 6, 7, dan 8 Kelurahan Sadang Serang, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/031/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41273402075",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  },
+  {
+    "noUrut": 32,
+    "userId": "498b6072-2b92-40ac-a7bf-f22589a7c414",
+    "kelompokId": "f9405023-e5a3-46fe-89b1-accde9fbca7a",
+    "nama": "Dr. Wendi Zarman, M.Si.",
+    "nip": "4127.70.05.010",
+    "peran": "Dosen Pembimbing Lapangan (DPL)",
+    "kelompok": "Kelompok 9 Sadang Serang",
+    "kelurahan": "Sadang Serang",
+    "cakupanRw": [
+      "19",
+      "20"
+    ],
+    "wilayahDampingan": "RW 19, dan 20 Kelurahan Sadang Serang, Kecamatan Coblong, Kota Bandung",
+    "nomorSertifikat": "KKNT-DPL/032/UNIKOM/BATCH-1/XI/2026",
+    "idSertifikat": "BRSK-2026-DPL-41277005010",
+    "tanggalTerbit": "06 November 2026",
+    "status": "TERVERIFIKASI",
+    "totalMahasiswa": 0
+  }
+]

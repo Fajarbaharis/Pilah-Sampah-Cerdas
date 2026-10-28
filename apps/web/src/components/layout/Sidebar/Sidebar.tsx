@@ -262,8 +262,11 @@ const checkRouteActive = (
     if (nilaiLaporanAliases.includes(tPath) && nilaiLaporanAliases.includes(cPath)) return true;
 
     const nilaiRekapAliases = ["/penilaian/rekapitulasi-nilai-akhir", "/penilaian-kkn/rekap"];
-    const sertifikatAliases = ["/sertifikat-kkn", "/penilaian-kkn/sertifikat", "/penilaian/sertifikat"];
-    if (sertifikatAliases.includes(tPath) && sertifikatAliases.includes(cPath)) return true;
+    const sertifikatMhsAliases = ["/e-sertifikat/mahasiswa", "/sertifikat-kkn", "/penilaian-kkn/sertifikat", "/penilaian/sertifikat"];
+    if (sertifikatMhsAliases.includes(tPath) && sertifikatMhsAliases.includes(cPath)) return true;
+
+    const sertifikatDplAliases = ["/e-sertifikat/dpl", "/sertifikat-dpl", "/sertifikat/dpl"];
+    if (sertifikatDplAliases.includes(tPath) && sertifikatDplAliases.includes(cPath)) return true;
     if (nilaiRekapAliases.includes(tPath) && nilaiRekapAliases.includes(cPath)) return true;
 
     const baselineAliases = [
@@ -1445,29 +1448,68 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
                 "PIMPINAN",
               ] as UserRole[],
             },
-            ...(isStaging
-              ? [
-                  {
-                    to: "/sertifikat-kkn",
-                    label: "E-Sertifikat KKN",
-                    badge: "QC Staging",
-                    allowed: [
-                      "DEVELOPER",
-                      "DPL",
-                      "DOSEN_PEMBIMBING",
-                      "MPL",
-                      "ADMIN_DLH",
-                      "LURAH",
-                      "CAMAT",
-                      "RW",
-                      "SUPER_USER",
-                      "PANITIA_TASKFORCE",
-                      "PIMPINAN",
-                      "MAHASISWA_KKN",
-                    ] as UserRole[],
-                  },
-                ]
-              : []),
+          ],
+        },
+        {
+          type: "group",
+          label: "E-Sertifikat",
+          icon: Award,
+          allowed: [
+            "DEVELOPER",
+            "SUPER_USER",
+            "DPL",
+            "DOSEN_PEMBIMBING",
+            "DOSEN_PENDAMPING",
+            "DOSEN_PENDAMPING_LAPANGAN",
+            "MPL",
+            "ADMIN_DLH",
+            "LURAH",
+            "CAMAT",
+            "RW",
+            "PANITIA_TASKFORCE",
+            "PIMPINAN",
+            "MAHASISWA_KKN",
+          ] as UserRole[],
+          children: [
+            {
+              to: "/e-sertifikat/mahasiswa",
+              label: "Sertifikat Mahasiswa",
+              allowed: [
+                "DEVELOPER",
+                "SUPER_USER",
+                "DPL",
+                "DOSEN_PEMBIMBING",
+                "DOSEN_PENDAMPING",
+                "DOSEN_PENDAMPING_LAPANGAN",
+                "MPL",
+                "ADMIN_DLH",
+                "LURAH",
+                "CAMAT",
+                "RW",
+                "PANITIA_TASKFORCE",
+                "PIMPINAN",
+                "MAHASISWA_KKN",
+              ] as UserRole[],
+            },
+            {
+              to: "/e-sertifikat/dpl",
+              label: isMpl ? "Sertifikat Pendamping" : "Sertifikat DPL",
+              allowed: [
+                "DEVELOPER",
+                "SUPER_USER",
+                "DPL",
+                "DOSEN_PEMBIMBING",
+                "DOSEN_PENDAMPING",
+                "DOSEN_PENDAMPING_LAPANGAN",
+                "PANITIA_TASKFORCE",
+                "PIMPINAN",
+                "MPL",
+                "ADMIN_DLH",
+                "CAMAT",
+                "LURAH",
+                "RW",
+              ] as UserRole[],
+            },
           ],
         },
         {

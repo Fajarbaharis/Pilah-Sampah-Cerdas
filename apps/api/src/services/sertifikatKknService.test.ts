@@ -20,6 +20,9 @@ vi.mock("../lib/prisma.js", () => ({
     penilaianKknMahasiswa: {
       findMany: vi.fn(),
     },
+    kelompokKkn: {
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -166,5 +169,54 @@ describe("sertifikatKknService - Integrity & Scoping Test Suite", () => {
 
     const result = await sertifikatKknService.verifySertifikat("NON-EXISTENT-ID");
     expect(result.isValid).toBe(false);
+  });
+
+  it("should retrieve DPL certificates and scope correctly for DPL user", async () => {
+    const mockKelompok = [
+      {
+        id: "kel-4",
+        name: "Kelompok 4 Dago",
+        kelurahan: "Dago",
+        cakupanRw: ["11", "12", "13"],
+        dplId: "dpl-linna",
+        dpl: {
+          name: "Dr. Linna Ismawati, S.E., M.Si.",
+          nip: "4127.34.02.008",
+        },
+        _count: { students: 10 },
+      },
+    ];
+
+    vi.mocked((prisma as any).kelompokKkn.findMany).mockResolvedValueOnce(mockKelompok);
+
+    const dplList = await sertifikatKknService.getDplSertifikatList({ peran: "DPL", id: "dpl-linna" });
+    expect(dplList.length).toBe(1);
+    expect(dplList[0].nama).toBe("Dr. Linna Ismawati, S.E., M.Si.");
+    expect(dplList[0].idSertifikat).toBe("BRSK-2026-DPL-41273402008");
+    expect(dplList[0].peran).toBe("Dosen Pembimbing Lapangan (DPL)");
+  });
+
+  it("should verify valid DPL certificate", async () => {
+    const mockKelompok = [
+      {
+        id: "kel-4",
+        name: "Kelompok 4 Dago",
+        kelurahan: "Dago",
+        cakupanRw: ["11", "12", "13"],
+        dplId: "dpl-linna",
+        dpl: {
+          name: "Dr. Linna Ismawati, S.E., M.Si.",
+          nip: "4127.34.02.008",
+        },
+        _count: { students: 10 },
+      },
+    ];
+
+    vi.mocked((prisma as any).kelompokKkn.findMany).mockResolvedValueOnce(mockKelompok);
+
+    const res = await sertifikatKknService.verifyDplSertifikat("BRSK-2026-DPL-41273402008");
+    expect(res.isValid).toBe(true);
+    expect(res.verifikasiStatus).toBe("TERVERIFIKASI_SAH");
+    expect(res.dpl?.nama).toBe("Dr. Linna Ismawati, S.E., M.Si.");
   });
 });

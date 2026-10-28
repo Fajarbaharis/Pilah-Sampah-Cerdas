@@ -12,6 +12,7 @@
 
 import api from "../utils/api";
 import fallbackStudentsRaw from "../data/students_certificates_data.json";
+import fallbackDplRaw from "../data/dpl_certificates_data.json";
 
 export interface StudentCertData {
   noUrut: number;
@@ -36,6 +37,25 @@ export interface StudentCertData {
     total: number;
     predikat: string;
   };
+}
+
+
+export interface DplCertData {
+  noUrut: number;
+  userId: string;
+  kelompokId: string;
+  nama: string;
+  nip: string;
+  peran: string;
+  kelompok: string;
+  kelurahan: string;
+  cakupanRw: string[];
+  wilayahDampingan: string;
+  nomorSertifikat: string;
+  idSertifikat: string;
+  tanggalTerbit: string;
+  status: string;
+  totalMahasiswa?: number;
 }
 
 export interface VerificationResult {
@@ -166,6 +186,110 @@ export const sertifikatKknService = {
     return {
       isValid: false,
       message: "Sertifikat tidak ditemukan atau kode verifikasi tidak sah.",
+    };
+  },
+
+  /**
+   * Mengambil daftar e-sertifikat penghargaan DPL dari database live atau fallback lokal
+   */
+  getDplSertifikatList: async (params?: { kelurahan?: string; search?: string; forceRefresh?: boolean }): Promise<DplCertData[]> => {
+    try {
+      const queryParams: any = { ...params };
+      if (params?.forceRefresh) {
+        queryParams._t = Date.now();
+      }
+      const res = await api.get("/sertifikat-kkn/dpl/list", { params: queryParams });
+      if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+        return res.data.data as DplCertData[];
+      }
+    } catch (err) {
+      console.warn("[sertifikatKknService.getDplSertifikatList] Live API query failed, fallback to local data:", err);
+    }
+    // Fallback data terverifikasi
+    let list = fallbackDplRaw as unknown as DplCertData[];
+    if (params?.kelurahan && params.kelurahan !== "ALL" && params.kelurahan !== "all") {
+      list = list.filter((d) => d.kelurahan.toLowerCase() === params.kelurahan?.toLowerCase());
+    }
+    if (params?.search && params.search.trim()) {
+      const q = params.search.toLowerCase().trim();
+      list = list.filter(
+        (d) =>
+          d.nama.toLowerCase().includes(q) ||
+          d.nip.toLowerCase().includes(q) ||
+          d.kelompok.toLowerCase().includes(q) ||
+          d.kelurahan.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  },
+
+  /**
+   * Mengambil detail sertifikat DPL berdasarkan NIP atau idSertifikat dari API live
+   */
+  getDplSertifikatByNip: async (nip: string): Promise<DplCertData | null> => {
+    try {
+      const res = await api.get(`/sertifikat-kkn/dpl/detail/${encodeURIComponent(nip)}`);
+      if (res.data?.success && res.data?.data) {
+        return res.data.data as DplCertData;
+      }
+    } catch (err) {
+      console.warn(`[sertifikatKknService.getDplSertifikatByNip] Failed to fetch DPL ${nip} from API:`, err);
+    }
+    // Fallback
+    const cleanKey = String(nip).trim().toLowerCase();
+    const cleanNumbersOnly = cleanKey.replace(/[^0-9]/g, "");
+    const local = (fallbackDplRaw as unknown as DplCertData[]).find((d) => {
+      const targetNipClean = d.nip.replace(/[^0-9]/g, "").toLowerCase();
+      return (
+        d.idSertifikat.toLowerCase() === cleanKey ||
+        d.nip.toLowerCase() === cleanKey ||
+        (cleanNumbersOnly && targetNipClean === cleanNumbersOnly) ||
+        d.userId === nip
+      );
+    });
+    return local || null;
+  },
+
+  /**
+   * Memverifikasi keabsahan sertifikat DPL melalui QR Code secara publik
+   */
+  verifyDplSertifikat: async (idSertifikat: string): Promise<any> => {
+    try {
+      const res = await api.get(`/sertifikat-kkn/dpl/verify/${encodeURIComponent(idSertifikat)}`);
+      if (res.data) {
+        return res.data;
+      }
+    } catch (err: any) {
+      console.warn(`[sertifikatKknService.verifyDplSertifikat] API verification failed for ${idSertifikat}:`, err);
+      if (err.response?.data) return err.response.data;
+    }
+
+    const found = (fallbackDplRaw as unknown as DplCertData[]).find(
+      (d) =>
+        d.idSertifikat.toLowerCase() === idSertifikat.toLowerCase() ||
+        d.nip.replace(/[^0-9]/g, "") === idSertifikat.replace(/[^0-9]/g, "")
+    );
+
+    if (found) {
+      return {
+        isValid: true,
+        verifikasiStatus: "TERVERIFIKASI_SAH",
+        penerbit: {
+          institusi: "Universitas Komputer Indonesia (UNIKOM)",
+          lembaga: "Direktorat Riset & Pengabdian Masyarakat (LPPM)",
+          kegiatan: "KKN Tematik Berseka - Pengelolaan Sampah Berkelanjutan Batch I",
+          tahunAkademik: "2026/2027",
+          penandatangan: "Prof. Dr. Ir. H. Eddy Soeryanto Soegoto, M.T.",
+          jabatan: "Rektor Universitas Komputer Indonesia",
+          tanggalTerbit: found.tanggalTerbit || "06 November 2026",
+        },
+        dpl: found,
+      };
+    }
+
+    return {
+      isValid: false,
+      message: "Sertifikat penghargaan DPL tidak ditemukan atau kode verifikasi tidak valid.",
     };
   },
 };

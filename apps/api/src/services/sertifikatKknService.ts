@@ -21,6 +21,49 @@
  */
 
 import { prisma } from "../lib/prisma.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export interface DplCertData {
+  noUrut: number;
+  userId: string;
+  kelompokId: string;
+  nama: string;
+  nip: string;
+  peran: string;
+  kelompok: string;
+  kelurahan: string;
+  cakupanRw: string[];
+  wilayahDampingan: string;
+  nomorSertifikat: string;
+  idSertifikat: string;
+  tanggalTerbit: string;
+  status: string;
+  totalMahasiswa?: number;
+}
+
+function getBundledDplData(): DplCertData[] {
+  try {
+    const candidates = [
+      path.resolve(__dirname, "../data/dpl_certificates_data.json"),
+      path.resolve(__dirname, "../../src/data/dpl_certificates_data.json"),
+      path.resolve(process.cwd(), "apps/api/src/data/dpl_certificates_data.json"),
+      path.resolve(process.cwd(), "apps/api/dist/data/dpl_certificates_data.json"),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        return JSON.parse(fs.readFileSync(p, "utf-8"));
+      }
+    }
+  } catch (err) {
+    console.warn("[sertifikatKknService] Gagal membaca data cadangan DPL:", err);
+  }
+  return [];
+}
 
 export interface StudentCertData {
   noUrut: number;
@@ -350,6 +393,165 @@ export const sertifikatKknService = {
         tanggalTerbit: found.tanggalTerbit || "10 November 2026",
       },
       mahasiswa: found,
+    };
+  },
+
+  /**
+   * Mengambil daftar e-sertifikat penghargaan DPL dari database live
+   */
+  getDplSertifikatList: async (
+    user?: any,
+    filters?: { kelurahan?: string; search?: string }
+  ): Promise<DplCertData[]> => {
+    const userRole = String(user?.peran || user?.role || "").toUpperCase();
+    const userId = user?.id || user?.userId;
+
+    let whereKelompok: any = {
+      dplId: { not: null },
+      name: {
+        not: { contains: "TEST" },
+      },
+    };
+
+    // Scoping ketat jika yang login adalah DPL
+    if (["DPL", "DOSEN_PEMBIMBING", "DOSEN_PENDAMPING", "DOSEN_PENDAMPING_LAPANGAN"].includes(userRole)) {
+      whereKelompok.dplId = userId;
+    }
+
+    let list: DplCertData[] = [];
+    try {
+      const dbKelompok = await prisma.kelompokKkn.findMany({
+        where: whereKelompok,
+        include: {
+          dpl: true,
+          _count: {
+            select: {
+              students: true,
+            },
+          },
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+
+      if (dbKelompok && dbKelompok.length > 0) {
+        let counter = 1;
+        list = dbKelompok
+          .filter((k) => k.dpl && !k.name.toLowerCase().includes("uji coba"))
+          .map((k) => {
+            const noUrutStr = String(counter).padStart(3, "0");
+            const cleanNip = (k.dpl?.nip || "").replace(/[^0-9]/g, "") || `DPL${counter}`;
+            const cakupanRw = Array.isArray(k.cakupanRw) ? (k.cakupanRw as string[]) : [];
+            const wilayahText = `${formatRwList(cakupanRw, k.kelurahan)}, Kecamatan Coblong, Kota Bandung`;
+
+            const item: DplCertData = {
+              noUrut: counter,
+              userId: k.dplId || "",
+              kelompokId: k.id,
+              nama: k.dpl?.name || k.dplNamaMentah || "Dosen Pembimbing Lapangan",
+              nip: k.dpl?.nip || "-",
+              peran: "Dosen Pembimbing Lapangan (DPL)",
+              kelompok: k.name,
+              kelurahan: k.kelurahan || "Coblong",
+              cakupanRw: cakupanRw,
+              wilayahDampingan: wilayahText,
+              nomorSertifikat: `KKNT-DPL/${noUrutStr}/UNIKOM/BATCH-1/XI/2026`,
+              idSertifikat: `BRSK-2026-DPL-${cleanNip}`,
+              tanggalTerbit: "06 November 2026",
+              status: "TERVERIFIKASI",
+              totalMahasiswa: k._count?.students || 0,
+            };
+            counter++;
+            return item;
+          });
+      }
+    } catch (err) {
+      console.warn("[sertifikatKknService.getDplSertifikatList] DB query fallback to bundled:", err);
+    }
+
+    // Jika DB kosong atau offline, gunakan data cadangan terverifikasi
+    if (list.length === 0) {
+      list = getBundledDplData();
+      if (["DPL", "DOSEN_PEMBIMBING", "DOSEN_PENDAMPING", "DOSEN_PENDAMPING_LAPANGAN"].includes(userRole)) {
+        list = list.filter((d) => d.userId === userId || d.nip === user?.nip);
+      }
+    }
+
+    // Filter
+    if (filters?.kelurahan && filters.kelurahan !== "ALL" && filters.kelurahan !== "all") {
+      list = list.filter((d) => d.kelurahan.toLowerCase() === filters.kelurahan?.toLowerCase());
+    }
+    if (filters?.search && filters.search.trim()) {
+      const q = filters.search.toLowerCase().trim();
+      list = list.filter(
+        (d) =>
+          d.nama.toLowerCase().includes(q) ||
+          d.nip.toLowerCase().includes(q) ||
+          d.kelompok.toLowerCase().includes(q) ||
+          d.kelurahan.toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  },
+
+  /**
+   * Mengambil detail sertifikat penghargaan DPL berdasarkan NIP atau idSertifikat
+   */
+  getDplSertifikatByNipOrId: async (nipOrId: string, user?: any): Promise<DplCertData> => {
+    const list = await sertifikatKknService.getDplSertifikatList(user);
+    const cleanKey = String(nipOrId).trim().toLowerCase();
+    const cleanNumbersOnly = cleanKey.replace(/[^0-9]/g, "");
+
+    const found = list.find((d) => {
+      const targetNipClean = d.nip.replace(/[^0-9]/g, "").toLowerCase();
+      return (
+        d.idSertifikat.toLowerCase() === cleanKey ||
+        d.nip.toLowerCase() === cleanKey ||
+        (cleanNumbersOnly && targetNipClean === cleanNumbersOnly) ||
+        d.userId === nipOrId
+      );
+    });
+
+    if (!found) {
+      throw new Error(`Data sertifikat DPL untuk identitas ${nipOrId} tidak ditemukan.`);
+    }
+    return found;
+  },
+
+  /**
+   * Verifikasi Publik Sertifikat Penghargaan DPL
+   */
+  verifyDplSertifikat: async (idSertifikat: string) => {
+    const cleanId = String(idSertifikat).trim();
+    const list = await sertifikatKknService.getDplSertifikatList();
+    const found = list.find(
+      (d) =>
+        d.idSertifikat.toLowerCase() === cleanId.toLowerCase() ||
+        d.nip.replace(/[^0-9]/g, "") === cleanId.replace(/[^0-9]/g, "")
+    );
+
+    if (!found) {
+      return {
+        isValid: false,
+        message: "Sertifikat penghargaan DPL tidak ditemukan atau kode verifikasi tidak valid.",
+      };
+    }
+
+    return {
+      isValid: true,
+      verifikasiStatus: "TERVERIFIKASI_SAH",
+      penerbit: {
+        institusi: "Universitas Komputer Indonesia (UNIKOM)",
+        lembaga: "Direktorat Riset & Pengabdian Masyarakat (LPPM)",
+        kegiatan: "KKN Tematik Berseka - Pengelolaan Sampah Berkelanjutan Batch I",
+        tahunAkademik: "2026/2027",
+        penandatangan: "Prof. Dr. Ir. H. Eddy Soeryanto Soegoto, M.T.",
+        jabatan: "Rektor Universitas Komputer Indonesia",
+        tanggalTerbit: found.tanggalTerbit || "06 November 2026",
+      },
+      dpl: found,
     };
   },
 };

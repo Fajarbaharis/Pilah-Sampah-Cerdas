@@ -4,7 +4,7 @@
  * Copyright (c) 2026 PT Makerindo. All rights reserved.
  *
  * Halaman Verifikasi Keabsahan E-Sertifikat Resmi KKN Tematik UNIKOM
- * Terbuka untuk umum (publik) saat QR Code pada sertifikat discan
+ * Terbuka untuk umum (publik) saat QR Code pada sertifikat mahasiswa / DPL discan
  */
 
 import React, { useMemo } from "react";
@@ -17,13 +17,14 @@ import {
   Building,
   User,
   GraduationCap,
-  ExternalLink,
   ArrowLeft,
   FileCheck,
   QrCode,
   FileText,
+  MapPin,
 } from "lucide-react";
 import studentsDataRaw from "../../data/students_certificates_data.json";
+import dplDataRaw from "../../data/dpl_certificates_data.json";
 
 interface StudentCertData {
   noUrut: number;
@@ -48,7 +49,25 @@ interface StudentCertData {
   };
 }
 
+interface DplCertData {
+  noUrut: number;
+  userId: string;
+  kelompokId: string;
+  nama: string;
+  nip: string;
+  peran: string;
+  kelompok: string;
+  kelurahan: string;
+  cakupanRw: string[];
+  wilayahDampingan: string;
+  nomorSertifikat: string;
+  idSertifikat: string;
+  tanggalTerbit: string;
+  status: string;
+}
+
 const studentsData = studentsDataRaw as StudentCertData[];
+const dplData = dplDataRaw as DplCertData[];
 
 export const VerifikasiSertifikatPage: React.FC = () => {
   const { idSertifikat } = useParams<{ idSertifikat: string }>();
@@ -56,13 +75,31 @@ export const VerifikasiSertifikatPage: React.FC = () => {
   // Find student by idSertifikat or NIM
   const student = useMemo(() => {
     if (!idSertifikat) return null;
+    const clean = idSertifikat.toLowerCase().trim();
     return (
       studentsData.find(
         (s) =>
-          s.idSertifikat.toLowerCase() === idSertifikat.toLowerCase() ||
-          s.nim === idSertifikat ||
+          s.idSertifikat.toLowerCase() === clean ||
+          s.nim.toLowerCase() === clean ||
           s.idSertifikat.endsWith(idSertifikat)
       ) || null
+    );
+  }, [idSertifikat]);
+
+  // Find DPL by idSertifikat or NIP
+  const dpl = useMemo(() => {
+    if (!idSertifikat) return null;
+    const clean = idSertifikat.toLowerCase().trim();
+    const cleanNumbers = clean.replace(/[^0-9]/g, "");
+    return (
+      dplData.find((d) => {
+        const dNipClean = d.nip.replace(/[^0-9]/g, "").toLowerCase();
+        return (
+          d.idSertifikat.toLowerCase() === clean ||
+          d.nip.toLowerCase() === clean ||
+          (cleanNumbers && dNipClean === cleanNumbers)
+        );
+      }) || null
     );
   }, [idSertifikat]);
 
@@ -73,7 +110,7 @@ export const VerifikasiSertifikatPage: React.FC = () => {
         {/* Header Branding */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <img src="/logos/unikom.png" alt="UNIKOM" className="w-12 h-12 object-contain" />
+            <img src="/logos/unikom.png" alt="UNIKOM" className="w-12 h-12 object-contain" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
             <div>
               <h1 className="text-sm font-extrabold tracking-wider text-slate-100 uppercase">
                 UNIVERSITAS KOMPUTER INDONESIA
@@ -84,7 +121,7 @@ export const VerifikasiSertifikatPage: React.FC = () => {
             </div>
           </div>
           <Link
-            to="/sertifikat-kkn"
+            to={dpl ? "/e-sertifikat/dpl" : "/e-sertifikat/mahasiswa"}
             className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-all"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -93,70 +130,47 @@ export const VerifikasiSertifikatPage: React.FC = () => {
         </div>
 
         {student ? (
-          /* Card Verifikasi Berhasil */
+          /* Card Verifikasi Berhasil - Mahasiswa */
           <div className="bg-slate-800/90 backdrop-blur-md rounded-2xl border border-emerald-500/40 p-6 md:p-8 shadow-2xl space-y-6">
             
             {/* Verification Badge Banner */}
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-[11px] font-bold tracking-wider text-emerald-400 uppercase block">
-                  Status Dokumen Sah &bull; Terdaftar Resmi
+                  DOKUMEN RESMI TERVERIFIKASI SAH
                 </span>
-                <h2 className="text-base font-bold text-white">
-                  E-Sertifikat Kelulusan KKN Tematik Batch I
+                <h2 className="text-sm font-bold text-white truncate">
+                  E-Sertifikat Kelulusan KKN Tematik Batch I UNIKOM
                 </h2>
-                <p className="text-xs text-slate-300">
-                  Divalidasi secara kriptografis oleh LPPM UNIKOM &amp; Sistem Berseka
-                </p>
+                <span className="text-xs text-slate-300 font-mono">
+                  No: {student.nomorSertifikat}
+                </span>
               </div>
             </div>
 
-            {/* Student & Credential Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/60 space-y-1">
-                <span className="text-slate-400 text-[11px]">Nama Lengkap Mahasiswa</span>
-                <p className="text-sm font-bold text-white">{student.nama}</p>
-                <div className="pt-2 flex items-center justify-between text-slate-300 border-t border-slate-800">
-                  <span>NIM: <strong className="text-white">{student.nim}</strong></span>
-                  <span className="bg-blue-900/60 text-blue-300 font-bold px-2 py-0.5 rounded text-[10px]">
-                    {student.sks} SKS
-                  </span>
+            {/* Identitas Mahasiswa */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50 space-y-2">
+                <span className="text-[11px] text-slate-400 font-medium block">Penerima Sertifikat</span>
+                <p className="text-sm font-bold text-white uppercase">{student.nama}</p>
+                <div className="text-slate-300 space-y-0.5">
+                  <p>NIM: <span className="font-mono font-semibold text-amber-300">{student.nim}</span></p>
+                  <p>Program Studi: <span className="font-semibold text-white">{student.prodi}</span></p>
+                  <p>Beban Studi: <span className="font-semibold text-emerald-300">{student.sks} SKS</span></p>
                 </div>
               </div>
 
-              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/60 space-y-1">
-                <span className="text-slate-400 text-[11px]">Program Studi</span>
-                <p className="text-sm font-bold text-white">{student.prodi}</p>
-                <div className="pt-2 flex items-center justify-between text-slate-300 border-t border-slate-800">
-                  <span>Kelompok:</span>
-                  <span className="font-semibold text-white">{student.kelompok}</span>
+              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50 space-y-2">
+                <span className="text-[11px] text-slate-400 font-medium block">Wilayah & Kelompok</span>
+                <p className="text-sm font-bold text-white">{student.kelompok}</p>
+                <div className="text-slate-300 space-y-0.5">
+                  <p>Penempatan: <span className="font-semibold text-white">{student.rw}</span></p>
+                  <p>DPL: <span className="font-semibold text-white">{student.dpl}</span></p>
+                  <p>Status: <span className="font-semibold text-emerald-400">Lulus Memenuhi Kriteria</span></p>
                 </div>
-              </div>
-
-              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/60 space-y-1">
-                <span className="text-slate-400 text-[11px]">Nomor Registrasi Sertifikat</span>
-                <p className="text-xs font-mono font-bold text-amber-300">{student.nomorSertifikat}</p>
-                <span className="text-[10px] text-slate-500 font-mono block">
-                  ID: {student.idSertifikat}
-                </span>
-              </div>
-
-              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/60 space-y-1">
-                <span className="text-slate-400 text-[11px]">Nilai Akhir &amp; Predikat</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-emerald-400">
-                    {student.nilai.total.toFixed(2)}
-                  </span>
-                  <span className="bg-emerald-900/60 text-emerald-300 px-2 py-0.5 rounded text-[11px] font-bold">
-                    {student.nilai.predikat}
-                  </span>
-                </div>
-                <span className="text-[10px] text-slate-400 block pt-1 border-t border-slate-800">
-                  Dosen Pembimbing: {student.dpl}
-                </span>
               </div>
             </div>
 
@@ -164,7 +178,7 @@ export const VerifikasiSertifikatPage: React.FC = () => {
             <div className="bg-slate-900/40 rounded-xl p-4 border border-slate-800 space-y-3">
               <h3 className="text-xs font-bold text-slate-300 flex items-center gap-2">
                 <FileCheck className="w-4 h-4 text-blue-400" />
-                Rekapitulasi 5 Aspek Luaran KKN
+                Rekapitulasi 5 Aspek Luaran KKN (Skor Akhir: {student.nilai.total.toFixed(2)} &bull; {student.nilai.predikat})
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
                 <div className="bg-slate-800/80 p-2 rounded-lg border border-slate-700/50">
@@ -195,16 +209,80 @@ export const VerifikasiSertifikatPage: React.FC = () => {
               <div>
                 <span>Diterbitkan di Bandung, {student.tanggalTerbit}</span>
                 <p className="font-semibold text-slate-200">
-                  Prof. Dr. Hj. Umi Narimawati, Dra., S.E., M.Si.
+                  Prof. Dr. Hj. Aelina Surya, Dra.
                 </p>
                 <span className="text-[11px] text-slate-400">Wakil Rektor I Bidang Akademik dan Kemahasiswaan UNIKOM</span>
               </div>
               <Link
-                to={`/sertifikat-kkn?nim=${student.nim}`}
+                to={'/e-sertifikat/mahasiswa?nim=' + student.nim}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all"
               >
                 <Award className="w-4 h-4" />
                 Buka E-Sertifikat
+              </Link>
+            </div>
+          </div>
+        ) : dpl ? (
+          /* Card Verifikasi Berhasil - DPL */
+          <div className="bg-slate-800/90 backdrop-blur-md rounded-2xl border border-emerald-500/40 p-6 md:p-8 shadow-2xl space-y-6">
+            
+            {/* Verification Badge Banner */}
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[11px] font-bold tracking-wider text-emerald-400 uppercase block">
+                  PIAGAM RESMI TERVERIFIKASI SAH
+                </span>
+                <h2 className="text-sm font-bold text-white truncate">
+                  Piagam Penghargaan Dosen Pembimbing Lapangan (DPL) KKN Tematik
+                </h2>
+                <span className="text-xs text-slate-300 font-mono">
+                  No: {dpl.nomorSertifikat}
+                </span>
+              </div>
+            </div>
+
+            {/* Identitas DPL */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50 space-y-2">
+                <span className="text-[11px] text-slate-400 font-medium block">Penerima Piagam</span>
+                <p className="text-sm font-bold text-white uppercase">{dpl.nama}</p>
+                <div className="text-slate-300 space-y-0.5">
+                  <p>NIP: <span className="font-mono font-semibold text-amber-300">{dpl.nip}</span></p>
+                  <p>Peran: <span className="font-semibold text-emerald-300">{dpl.peran}</span></p>
+                  <p>Status: <span className="font-semibold text-emerald-400">Pembimbingan Resmi Terlaksana</span></p>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50 space-y-2">
+                <span className="text-[11px] text-slate-400 font-medium block">Kelompok & Wilayah Binaan</span>
+                <p className="text-sm font-bold text-white">{dpl.kelompok}</p>
+                <div className="text-slate-300 space-y-1">
+                  <div className="flex items-start gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                    <span>{dpl.wilayahDampingan}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Penandatangan Resmi */}
+            <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+              <div>
+                <span>Diterbitkan di Bandung, {dpl.tanggalTerbit}</span>
+                <p className="font-semibold text-slate-200">
+                  Prof. Dr. Ir. H. Eddy Soeryanto Soegoto, M.T.
+                </p>
+                <span className="text-[11px] text-slate-400">Rektor Universitas Komputer Indonesia</span>
+              </div>
+              <Link
+                to={'/e-sertifikat/dpl?nip=' + dpl.nip}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all"
+              >
+                <Award className="w-4 h-4" />
+                Buka Piagam DPL
               </Link>
             </div>
           </div>
@@ -216,21 +294,29 @@ export const VerifikasiSertifikatPage: React.FC = () => {
             </div>
             <h2 className="text-base font-bold text-white">Sertifikat Tidak Ditemukan</h2>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
-              ID Sertifikat atau NIM <code className="bg-slate-900 px-2 py-0.5 rounded text-amber-300 font-mono">{idSertifikat}</code> tidak terdaftar di basis data kelulusan resmi KKN Tematik UNIKOM.
+              ID Sertifikat atau Nomor Identitas <code className="bg-slate-900 px-2 py-0.5 rounded text-amber-300 font-mono">{idSertifikat}</code> tidak terdaftar di basis data resmi KKN Tematik UNIKOM.
             </p>
-            <Link
-              to="/sertifikat-kkn"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold"
-            >
-              Lihat Daftar Sertifikat Resmi
-            </Link>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Link
+                to="/e-sertifikat/mahasiswa"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+              >
+                Sertifikat Mahasiswa
+              </Link>
+              <Link
+                to="/e-sertifikat/dpl"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold"
+              >
+                Sertifikat DPL
+              </Link>
+            </div>
           </div>
         )}
 
         {/* Footer Security Note */}
         <div className="text-center text-[11px] text-slate-500 space-y-1">
           <p>
-            Dokumen ini dilindungi tanda tangan elektronik dan enkripsi hash sesuai UU ITE &bull; Hak Cipta &copy; 2026 UNIKOM &amp; BERSEKA
+            Dokumen ini dilindungi tanda tangan elektronik dan enkripsi hash resmi &bull; Hak Cipta &copy; 2026 UNIKOM &amp; BERSEKA
           </p>
         </div>
       </div>
