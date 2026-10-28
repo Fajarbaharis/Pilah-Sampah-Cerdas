@@ -269,7 +269,7 @@ export const sertifikatKknService = {
           total: Number(totalScore.toFixed(2)),
           predikat: calculatePredikat(totalScore),
         };
-        nomorSertifikat = `KKNT/${String(counter).padStart(3, "0")}/UNIKOM/BATCH-1/XI/2026`;
+        nomorSertifikat = `KKNT-MHS/${String(counter).padStart(3, "0")}/UNIKOM/BATCH-1/XI/2026`;
         tanggalTerbit = "10 November 2026";
       } else {
         // REAL KONDISI: Belum selesai dinilai/difinalisasi oleh DPL
@@ -284,7 +284,7 @@ export const sertifikatKknService = {
           total: 0,
           predikat: "Belum Dinilai",
         };
-        nomorSertifikat = `KKNT/DRAFT/${String(counter).padStart(3, "0")}/UNIKOM/2026`;
+        nomorSertifikat = `KKNT-MHS/DRAFT/${String(counter).padStart(3, "0")}/UNIKOM/2026`;
         tanggalTerbit = "Menunggu Penilaian";
       }
 

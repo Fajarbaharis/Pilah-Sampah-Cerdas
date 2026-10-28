@@ -114,7 +114,7 @@ describe("sertifikatKknService - Integrity & Scoping Test Suite", () => {
     expect(bani?.sudahDinilai).toBe(false);
     expect(bani?.nilai.total).toBe(0);
     expect(bani?.nilai.predikat).toBe("Belum Dinilai");
-    expect(bani?.nomorSertifikat).toContain("KKNT/DRAFT/");
+    expect(bani?.nomorSertifikat).toContain("KKNT-MHS/DRAFT/");
     expect(bani?.prodi).toBe("S1 Manajemen");
     expect(bani?.rw).toBe("RW 11, 12, dan 13 Kelurahan Dago");
     expect(bani?.idSertifikat).toBe("BRSK-2026-KKN-21224142");
