@@ -527,9 +527,7 @@ export const kknAttendanceController = {
       const dplUserId = isDpl ? currentUserId : undefined;
       const mplUserId = isMpl ? currentUserId : undefined;
       const isMahasiswa = roleName === "MAHASISWA_KKN";
-      const studentId = isMahasiswa
-        ? currentUserId
-        : (req.query.studentId as string | undefined);
+      const studentId = isMahasiswa ? currentUserId : (req.query.studentId as string | undefined);
       const kelompokId = req.query.kelompokId as string | undefined;
       const kelurahan = req.query.kelurahan as string | undefined;
       const rw = req.query.rw as string | undefined;

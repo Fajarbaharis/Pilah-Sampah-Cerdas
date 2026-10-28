@@ -312,20 +312,12 @@ export class CronService {
         for (const w of wargaList) {
           if (w.fcmToken) {
             await notificationIntegrationService
-              .sendPushNotification(
-                w.fcmToken,
-                title,
-                message,
-                "JADWAL_PEMILAHAN",
-                {
-                  event: "SCHEDULE_NOTIFICATION",
-                  window,
-                  click_action: "FLUTTER_NOTIFICATION_CLICK",
-                }
-              )
-              .catch((err) =>
-                console.error("[CronService] Error sending push to warga:", err)
-              );
+              .sendPushNotification(w.fcmToken, title, message, "JADWAL_PEMILAHAN", {
+                event: "SCHEDULE_NOTIFICATION",
+                window,
+                click_action: "FLUTTER_NOTIFICATION_CLICK",
+              })
+              .catch((err) => console.error("[CronService] Error sending push to warga:", err));
           }
         }
       }
@@ -360,21 +352,13 @@ export class CronService {
 
         if (p.fcmToken) {
           await notificationIntegrationService
-            .sendPushNotification(
-              p.fcmToken,
-              petugasTitle,
-              petugasMessage,
-              "JADWAL_PENGANGKUTAN",
-              {
-                event: "SCHEDULE_NOTIFICATION",
-                window,
-                targetBinsCount: String(targetBins.length),
-                click_action: "FLUTTER_NOTIFICATION_CLICK",
-              }
-            )
-            .catch((err) =>
-              console.error("[CronService] Error sending push to petugas:", err)
-            );
+            .sendPushNotification(p.fcmToken, petugasTitle, petugasMessage, "JADWAL_PENGANGKUTAN", {
+              event: "SCHEDULE_NOTIFICATION",
+              window,
+              targetBinsCount: String(targetBins.length),
+              click_action: "FLUTTER_NOTIFICATION_CLICK",
+            })
+            .catch((err) => console.error("[CronService] Error sending push to petugas:", err));
         }
       }
     } catch (e) {
