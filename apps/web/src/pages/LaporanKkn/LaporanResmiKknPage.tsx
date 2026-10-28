@@ -241,11 +241,11 @@ export const LaporanResmiKknPage: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isPrintFlow, setIsPrintFlow] = useState<boolean>(false);
 
-  // Switcher Tampilan: "dashboard" (Kartu) vs "document" (Dokumen)
+  // Switcher Tampilan: Langsung default "document" (Dokumen) sesuai arahan (Tab Kartu di-hide sementara)
   const [viewMode, setViewMode] = useState<"dashboard" | "document">(() => {
-    return searchParams.get("view") === "document" || searchParams.get("action") === "print"
-      ? "document"
-      : "dashboard";
+    return searchParams.get("view") === "dashboard"
+      ? "dashboard"
+      : "document";
   });
 
   // Filter States
@@ -694,16 +694,14 @@ export const LaporanResmiKknPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Switcher Mode Tampilan (Kartu | Dokumen) Menggantikan Badge Lama */}
+            {/* Switcher Mode Tampilan (Tab Kartu di-hide sementara, langsung aktif Tab Dokumen) */}
             <div className="inline-flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700">
+              {/* Tab Kartu disembunyikan sementara sesuai arahan (langsung ke Dokumen) */}
               <button
                 type="button"
                 onClick={() => setViewMode("dashboard")}
-                className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === "dashboard"
-                    ? "bg-white dark:bg-slate-900 text-[#009966] dark:text-emerald-400 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
+                className="hidden"
+                aria-hidden="true"
               >
                 <LayoutDashboard size={13} />
                 <span>Kartu</span>
@@ -711,11 +709,7 @@ export const LaporanResmiKknPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode("document")}
-                className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === "document"
-                    ? "bg-white dark:bg-slate-900 text-[#009966] dark:text-emerald-400 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all bg-white dark:bg-slate-900 text-[#009966] dark:text-emerald-400 shadow-xs cursor-default"
               >
                 <FileText size={13} />
                 <span>Dokumen</span>
