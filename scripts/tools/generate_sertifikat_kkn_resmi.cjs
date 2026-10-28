@@ -593,9 +593,7 @@ function buildStudentHtml(s) {
       <div class="bio-text">NIM: ${s.nim}</div>
       <div class="bio-text">Program Studi: ${s.prodi}</div>
 
-      <div class="sks-pill">
-        SKS diambil: ${s.sks} SKS
-      </div>
+      
 
       <div class="narration">
         Telah mengikuti Kuliah Kerja Nyata (KKN) Tematik Batch I Universitas Komputer Indonesia pada periode Juli–Oktober 2026 dengan total beban kegiatan 450 jam.
@@ -624,10 +622,7 @@ function buildStudentHtml(s) {
     <div class="page1-bottom">
       <div style="width: 250px;"></div>
 
-      <div class="footer-note">
-        Rincian penilaian tercantum pada halaman belakang.<br>
-        <span style="font-size:7pt; letter-spacing:1px;">UNIVERSITAS KOMPUTER INDONESIA &bull; LPPM</span>
-      </div>
+      
 
       <div class="sig-block">
         <div class="sig-date">Bandung, ${tanggalTerbit}</div>
@@ -647,99 +642,7 @@ function buildStudentHtml(s) {
     </div>
   </div>
 
-  <!-- ==================== HALAMAN 2 ==================== -->
-  <div class="cert-sheet">
-    <div class="cert-inner">
-      <div class="header-block">
-        <h1 class="univ-title">UNIVERSITAS KOMPUTER INDONESIA</h1>
-        <div class="univ-tagline-container">
-          <div class="tagline-line"></div>
-          <p class="univ-tagline">ILMU &bull; TEKNOLOGI &bull; KREATIVITAS &bull; UNTUK INDONESIA</p>
-          <div class="tagline-line"></div>
-        </div>
-      </div>
-
-      <div class="title-wrapper">
-        <div class="title-line"></div>
-        <h2 class="page2-title">REKAP PENILAIAN PESERTA</h2>
-        <div class="title-line"></div>
-      </div>
-
-      <div class="title-sub1" style="font-size: 13.5pt;">KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026</div>
-      <div class="cert-number">Nomor sertifikat: ${nomorSert}</div>
-
-      <div class="student-card-4col">
-        <div class="card-col">
-          <div class="card-label">Nama:</div>
-          <div class="card-val">${formattedName}</div>
-        </div>
-        <div class="card-divider"></div>
-        <div class="card-col">
-          <div class="card-label">NIM:</div>
-          <div class="card-val">${s.nim}</div>
-        </div>
-        <div class="card-divider"></div>
-        <div class="card-col">
-          <div class="card-label">Program Studi:</div>
-          <div class="card-val">${s.prodi.toUpperCase()}</div>
-        </div>
-        <div class="card-divider"></div>
-        <div class="card-col">
-          <div class="card-label">SKS diambil:</div>
-          <div class="card-val">${s.sks} SKS</div>
-        </div>
-      </div>
-
-      <table class="aspects-table">
-        <thead>
-          <tr>
-            <th>No.</th>
-            <th>Aspek</th>
-            <th>Nilai</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="col-no">1</td>
-            <td class="col-aspect">Nilai personal</td>
-            <td class="col-val">${s.nilai.personal !== null && s.nilai.personal > 0 ? s.nilai.personal.toFixed(1) : '-'}</td>
-          </tr>
-          <tr>
-            <td class="col-no">2</td>
-            <td class="col-aspect">Program kerja kelompok</td>
-            <td class="col-val">${s.nilai.proker !== null && s.nilai.proker > 0 ? s.nilai.proker.toFixed(1) : '-'}</td>
-          </tr>
-          <tr>
-            <td class="col-no">3</td>
-            <td class="col-aspect">Laporan akhir</td>
-            <td class="col-val">${s.nilai.laporan !== null && s.nilai.laporan > 0 ? s.nilai.laporan.toFixed(1) : '-'}</td>
-          </tr>
-          <tr>
-            <td class="col-no">4</td>
-            <td class="col-aspect">Paper</td>
-            <td class="col-val">${s.nilai.paper !== null && s.nilai.paper > 0 ? s.nilai.paper.toFixed(1) : '-'}</td>
-          </tr>
-          <tr>
-            <td class="col-no">5</td>
-            <td class="col-aspect">Video</td>
-            <td class="col-val">${s.nilai.video !== null && s.nilai.video > 0 ? s.nilai.video.toFixed(1) : '-'}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      
-    </div>
-
-    <div class="page2-bottom">
-      <div class="page2-legal">
-        Nilai diisi berdasarkan hasil penilaian resmi. Jumlah SKS mengikuti pengambilan peserta dan ketentuan akademik.
-      </div>
-      <div class="page2-footer-id">
-        ${s.idSertifikat} &bull; Halaman 2 dari 2
-      </div>
-    </div>
-  </div>
-
+  
 </body>
 </html>`;
 }

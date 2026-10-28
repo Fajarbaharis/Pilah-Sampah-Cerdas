@@ -639,7 +639,7 @@ export const SertifikatDplPage: React.FC = () => {
                 KULIAH KERJA NYATA TEMATIK BATCH I TAHUN AKADEMIK 2026/2027
               </div>
               <div className="cert-number text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-1">
-                Nomor: {selectedDpl.nomorSertifikat}
+                {selectedDpl.nomorSertifikat.startsWith("Nomor:") ? selectedDpl.nomorSertifikat : `Nomor: ${selectedDpl.nomorSertifikat}`}
               </div>
 
               <div className="cert-given-to font-playfair text-[10px] md:text-[11.5pt] italic text-[#0A2540] mt-2">
