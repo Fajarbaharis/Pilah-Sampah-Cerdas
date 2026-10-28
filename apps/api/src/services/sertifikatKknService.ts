@@ -163,8 +163,8 @@ export const sertifikatKknService = {
     for (const s of dbStudents) {
       const nim = String(s.nim || "").trim();
       const nama = s.user?.name || s.user?.nama || "Mahasiswa KKN";
-      let prodi = s.jurusan || "S1 Manajemen";
-      if (!prodi.toLowerCase().startsWith("s1") && !prodi.toLowerCase().startsWith("d3")) {
+      let prodi = s.jurusan ? s.jurusan.trim() : "Program Studi Mahasiswa";
+      if (!prodi.toLowerCase().startsWith("s1") && !prodi.toLowerCase().startsWith("d3") && !prodi.toLowerCase().startsWith("d4")) {
         prodi = `S1 ${prodi}`;
       }
       const sks = s.sks && s.sks > 0 ? s.sks : 11;
@@ -172,7 +172,7 @@ export const sertifikatKknService = {
       const dpl = s.kelompok?.dpl?.name || s.kelompok?.dpl?.nama || s.kelompok?.dplNamaMentah || "Dosen Pembimbing Lapangan";
 
       // Format Wilayah RW
-      let rw = "Kelurahan Dago";
+      let rw = s.kelompok?.kelurahan ? `Kelurahan ${s.kelompok.kelurahan}` : "Kecamatan Coblong";
       if (s.assignedRw) {
         rw = `RW ${String(s.assignedRw.nomorRw).padStart(2, "0")} Kelurahan ${s.assignedRw.kelurahan?.namaKelurahan || "Coblong"}`;
       } else if (s.kelompok?.cakupanRw && s.kelompok.cakupanRw.length > 0) {

@@ -238,7 +238,7 @@ export const SertifikatKknPage: React.FC = () => {
     }
   };
 
-  // Direct Official High-Res PDF Download with seamless print fallback
+  // Direct Official High-Res PDF Download with strict validation & seamless vector print fallback
   const handleDirectDownloadPdf = async () => {
     setIsDownloading(true);
     const safeName = selectedStudent.nama.replace(/[^a-zA-Z0-9]/g, '_');
@@ -246,32 +246,50 @@ export const SertifikatKknPage: React.FC = () => {
     const directUrl = `/certificates/${fileName}`;
 
     try {
-      // Check if pre-generated official PDF exists
-      const res = await fetch(directUrl, { method: "HEAD" });
-      if (res.ok) {
-        const link = document.createElement("a");
-        link.href = directUrl;
-        link.download = fileName;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success(`Mengunduh berkas PDF resmi: ${selectedStudent.nama}`);
-        setIsDownloading(false);
-        return;
+      // Check if pre-generated official PDF exists and verify it's genuine binary PDF (never SPA HTML fallback)
+      const res = await fetch(directUrl);
+      const contentType = res.headers.get("content-type") || "";
+
+      if (res.ok && contentType.toLowerCase().includes("application/pdf")) {
+        const blob = await res.blob();
+        // Verify magic bytes %PDF
+        const header = await blob.slice(0, 5).text();
+        if (header.startsWith("%PDF")) {
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = blobUrl;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+          toast.success(`Berhasil mengunduh PDF resmi: ${selectedStudent.nama}`);
+          setIsDownloading(false);
+          return;
+        }
       }
     } catch (err) {
-      console.warn("[SertifikatKknPage] Direct PDF check fallback:", err);
+      console.warn("[SertifikatKknPage] Direct PDF fetch fallback:", err);
     }
 
     setIsDownloading(false);
+    toast("Membuka dialog Cetak / Simpan sebagai PDF vektor (Pilih 'Save as PDF' - Ukuran A4 Landscape)...", {
+      icon: "🖨️",
+      duration: 4000,
+    });
+    setTimeout(() => {
+      window.print();
+    }, 300);
+  };
+
+  const handlePrintCertificate = () => {
     toast("Membuka dialog Simpan PDF / Cetak. Pilih 'Save as PDF' dengan ukuran A4 Landscape untuk hasil vektor presisi.", {
       icon: "🖨️",
       duration: 3500,
     });
     setTimeout(() => {
       window.print();
-    }, 400);
+    }, 300);
   };
 
   const handleCopyId = () => {
@@ -634,16 +652,27 @@ export const SertifikatKknPage: React.FC = () => {
                 </button>
               )}
 
-              {/* Unduh / Cetak PDF Button */}
+              {/* Cetak / Simpan PDF Vektor Button */}
+              <button
+                type="button"
+                onClick={handlePrintCertificate}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-xs font-bold shadow-2xs transition cursor-pointer"
+                title="Cetak Langsung atau Simpan sebagai PDF Vektor (A4 Landscape)"
+              >
+                <Printer className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                <span>Cetak / Simpan PDF</span>
+              </button>
+
+              {/* Unduh Berkas PDF Resmi Button */}
               <button
                 type="button"
                 onClick={handleDirectDownloadPdf}
                 disabled={isDownloading}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#009966] hover:bg-[#008055] text-white text-xs font-bold shadow-xs transition cursor-pointer disabled:opacity-60"
-                title="Cetak atau Unduh PDF Vektor Resolusi Cetak"
+                title="Unduh Berkas PDF Resmi Resolusi Cetak"
               >
                 <FileDown className="w-4 h-4" />
-                <span>{isDownloading ? "Menyiapkan..." : "Unduh / Cetak PDF"}</span>
+                <span>{isDownloading ? "Menyiapkan PDF..." : "Unduh PDF Resmi"}</span>
               </button>
             </div>
           }
