@@ -614,13 +614,7 @@ export const SertifikatDplPage: React.FC = () => {
                 <h1 className="cert-univ-title font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
                   UNIVERSITAS KOMPUTER INDONESIA
                 </h1>
-                <div className="flex items-center gap-3 mt-1 w-full justify-center">
-                  <div className="h-[1px] bg-[#C5A059] flex-1 max-w-[70px] md:max-w-[90px]" />
-                  <p className="cert-univ-tagline text-[7px] md:text-[8pt] font-bold text-[#0A2540] tracking-[2.5px] uppercase m-0">
-                    ILMU &bull; TEKNOLOGI &bull; KREATIVITAS &bull; UNTUK INDONESIA
-                  </p>
-                  <div className="h-[1px] bg-[#C5A059] flex-1 max-w-[70px] md:max-w-[90px]" />
-                </div>
+                
               </div>
 
               {/* Title PIAGAM PENGHARGAAN */}
