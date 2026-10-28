@@ -2126,7 +2126,7 @@ export const DashboardEksekutifKkn: React.FC = () => {
                       return (
                         <div className="bg-slate-900 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow-lg">
                           <span>{d.label}: </span>
-                          <span className="text-emerald-400 font-extrabold">{d.count} ({d.percentage}%)</span>
+                          <span className="text-emerald-400 font-extrabold">{Number(d.percentage).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%</span>
                         </div>
                       );
                     }
@@ -2139,7 +2139,7 @@ export const DashboardEksekutifKkn: React.FC = () => {
             {/* Inner Center Text */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="text-2xl font-black text-slate-900 dark:text-slate-100 leading-none">
-                {data?.presensiMahasiswa?.percentageHadir ?? 0}%
+                {Number(data?.presensiMahasiswa?.percentageHadir ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%
               </span>
               <span className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-1">
                 Hadir
@@ -2161,7 +2161,7 @@ export const DashboardEksekutifKkn: React.FC = () => {
                   </span>
                 </div>
                 <span className="font-bold text-slate-900 dark:text-slate-100 text-xs shrink-0">
-                  {item.count} <span className="text-slate-500 dark:text-slate-400 font-normal">({item.percentage}%)</span>
+                  {Number(item.percentage).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%
                 </span>
               </div>
             ))}

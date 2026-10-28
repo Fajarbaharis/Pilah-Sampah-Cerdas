@@ -160,7 +160,7 @@ export const WasteImpactSummaryTable: React.FC<WasteImpactSummaryTableProps> = (
 
   // Internal state jika tidak dikontrol penuh oleh parent
   const [internalSource, setInternalSource] = useState<WasteSourceType>("ALL");
-  const [internalPeriod, setInternalPeriod] = useState<WastePeriodMode>("DAILY");
+  const [internalPeriod, setInternalPeriod] = useState<WastePeriodMode>("MONTHLY");
   const [datePreset, setDatePreset] = useState<"TODAY" | "YESTERDAY" | "CUSTOM">("YESTERDAY");
   const [selectedDate, setSelectedDate] = useState<string>(yesterdayStr);
   const [monthPreset, setMonthPreset] = useState<"CURRENT" | "PREVIOUS" | "CUSTOM">("CURRENT");
@@ -470,27 +470,29 @@ export const WasteImpactSummaryTable: React.FC<WasteImpactSummaryTableProps> = (
               <div className="inline-flex items-center bg-white dark:bg-slate-900 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
                 <button
                   type="button"
+                  onClick={() => handlePeriodSelect("MONTHLY")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activePeriod === "MONTHLY"
+                      ? "bg-emerald-600 text-white shadow-xs font-extrabold"
+                      : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                  }`}
+                  title="Tampilan evaluasi bulanan standar ISO (30 Hari)"
+                >
+                  <CalendarDays size={13} />
+                  <span>Per Bulan</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => handlePeriodSelect("DAILY")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     activePeriod === "DAILY"
                       ? "bg-emerald-600 text-white shadow-xs font-extrabold"
                       : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                   }`}
+                  title="Tampilan data transaksi tanggal terpilih"
                 >
                   <Clock size={13} />
                   <span>Per Hari</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePeriodSelect("MONTHLY")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    activePeriod === "MONTHLY"
-                      ? "bg-indigo-600 text-white shadow-xs font-extrabold"
-                      : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-                  }`}
-                >
-                  <CalendarDays size={13} />
-                  <span>Per Bulan</span>
                 </button>
               </div>
             </div>
@@ -803,26 +805,26 @@ export const WasteImpactSummaryTable: React.FC<WasteImpactSummaryTableProps> = (
                   <td className="py-3 px-3 text-center font-bold text-slate-700 dark:text-slate-300 border-r border-slate-200/60 dark:border-slate-800/60 font-mono tabular-nums">
                     {item.baselineKg !== null && item.baselineKg !== undefined ? (
                       <span className="font-extrabold text-slate-800 dark:text-slate-100">
-                        {Number(item.baselineKg).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                        {Number(item.baselineKg).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     ) : (
                       <span className="text-slate-400 italic text-[11px] font-sans">Belum ada data</span>
                     )}
                   </td>
 
-                  {/* Berat Aktual Terpilih */}
+                  {/* Aktual */}
                   <td className="py-3 px-3 text-center font-bold text-slate-800 dark:text-slate-100 border-r border-slate-200/60 dark:border-slate-800/60 font-mono tabular-nums">
                     <div className="flex flex-col items-center justify-center">
                       <span className="font-extrabold text-slate-800 dark:text-slate-100">
-                        {Number(item.actualKg || 0).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                        {Number(item.actualKg || 0).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                       {item.actualKg === 0 ? (
                         <span className="text-[9.5px] font-medium text-amber-600 dark:text-amber-400 font-sans mt-0.5">
-                          (Belum ada transaksi)
+                          (belum ada transaksi)
                         </span>
                       ) : activePeriod === "MONTHLY" && item.dailyAverageKg !== undefined && item.dailyAverageKg > 0 ? (
                         <span className="text-[9.5px] font-normal text-slate-400 dark:text-slate-500 font-sans mt-0.5">
-                          (rata-rata: {Number(item.dailyAverageKg).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg/hari)
+                          (rata-rata: {Number(item.dailyAverageKg).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg/hari)
                         </span>
                       ) : null}
                     </div>
@@ -851,8 +853,8 @@ export const WasteImpactSummaryTable: React.FC<WasteImpactSummaryTableProps> = (
                         )}
                         <span>
                           {deltaKg < 0
-                            ? `+${Math.abs(deltaKg).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`
-                            : `${deltaKg.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`}
+                            ? `+${Math.abs(deltaKg).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            : `${deltaKg.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                         </span>
                       </span>
                     )}
@@ -959,7 +961,7 @@ export const WasteImpactSummaryTable: React.FC<WasteImpactSummaryTableProps> = (
               {/* Total Baseline */}
               <td className="py-3.5 px-3 text-center border-r border-slate-200 dark:border-slate-700 font-mono tabular-nums">
                 <span className="font-black text-slate-900 dark:text-white">
-                  {aggregation.totalBaselineKg.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                  {aggregation.totalBaselineKg.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </td>
 
@@ -967,7 +969,7 @@ export const WasteImpactSummaryTable: React.FC<WasteImpactSummaryTableProps> = (
               <td className="py-3.5 px-3 text-center border-r border-slate-200 dark:border-slate-700 font-mono tabular-nums">
                 <div className="flex flex-col items-center justify-center">
                   <span className="font-black text-slate-900 dark:text-white">
-                    {aggregation.totalActualKg.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                    {aggregation.totalActualKg.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                   {aggregation.totalActualKg === 0 ? (
                     <span className="text-[9.5px] font-medium text-amber-600 dark:text-amber-400 font-sans mt-0.5">
@@ -975,7 +977,7 @@ export const WasteImpactSummaryTable: React.FC<WasteImpactSummaryTableProps> = (
                     </span>
                   ) : activePeriod === "MONTHLY" ? (
                     <span className="text-[9.5px] font-normal text-slate-500 dark:text-slate-400 font-sans mt-0.5">
-                      (rata-rata: {(aggregation.totalActualKg / STANDARD_CYCLE_DAYS).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg/hari)
+                      (rata-rata: {(aggregation.totalActualKg / STANDARD_CYCLE_DAYS).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg/hari)
                     </span>
                   ) : null}
                 </div>

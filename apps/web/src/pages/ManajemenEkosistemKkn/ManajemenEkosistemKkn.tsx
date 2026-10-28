@@ -309,7 +309,9 @@ export const ManajemenEkosistemKkn: React.FC = () => {
 
   // Auto reset RW when Kelurahan changes and current RW is invalid
   useEffect(() => {
-    if (filterRw !== "ALL" && !rwOptions.includes(filterRw)) {
+    if (filterKelurahan === "ALL") {
+      if (filterRw !== "ALL") setFilterRw("ALL");
+    } else if (filterRw !== "ALL" && !rwOptions.includes(filterRw)) {
       setFilterRw("ALL");
     }
   }, [filterKelurahan, rwOptions, filterRw]);
@@ -823,7 +825,10 @@ export const ManajemenEkosistemKkn: React.FC = () => {
                       <Filter size={16} className="text-slate-400 shrink-0" />
                       <select
                         value={filterKelurahan}
-                        onChange={(e) => setFilterKelurahan(e.target.value)}
+                        onChange={(e) => {
+                          setFilterKelurahan(e.target.value);
+                          setFilterRw("ALL");
+                        }}
                         aria-label="Filter Kelurahan"
                         className="px-3 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer w-full sm:w-auto"
                       >
@@ -840,15 +845,20 @@ export const ManajemenEkosistemKkn: React.FC = () => {
                       <select
                         value={filterRw}
                         onChange={(e) => setFilterRw(e.target.value)}
+                        disabled={filterKelurahan === "ALL"}
+                        title={filterKelurahan === "ALL" ? "Pilih kelurahan terlebih dahulu untuk memfilter RW" : "Filter RW"}
                         aria-label="Filter RW"
-                        className="px-3 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer w-full sm:w-auto"
+                        className="px-3 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800/60"
                       >
-                        <option value="ALL">Semua RW</option>
-                        {rwOptions.map((rwLabel) => (
-                          <option key={rwLabel} value={rwLabel}>
-                            {rwLabel}
-                          </option>
-                        ))}
+                        <option value="ALL">
+                          {filterKelurahan === "ALL" ? "Pilih Kelurahan Dahulu" : "Semua RW"}
+                        </option>
+                        {filterKelurahan !== "ALL" &&
+                          rwOptions.map((rwLabel) => (
+                            <option key={rwLabel} value={rwLabel}>
+                              {rwLabel}
+                            </option>
+                          ))}
                       </select>
                     </div>
                   </>

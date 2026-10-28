@@ -198,6 +198,8 @@ export class BinService {
         orderBy = { updatedAt: orderDir };
       } else if (filters.sortBy === "qrCode") {
         orderBy = { qrCode: orderDir };
+      } else if (filters.sortBy === "lastActivityAt" || filters.sortBy === "lastActivity") {
+        orderBy = { updatedAt: "desc" };
       }
       return binRepository.findAll(whereClause, orderBy);
     }
