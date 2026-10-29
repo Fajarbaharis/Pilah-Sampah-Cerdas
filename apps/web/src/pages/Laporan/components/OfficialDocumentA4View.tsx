@@ -73,16 +73,16 @@ export const OfficialDocumentA4View: React.FC<OfficialDocumentA4ViewProps> = ({
       <header className="avoid-break pb-2 mb-4 border-b-0">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 print:flex-row print:justify-between">
           {/* Logo UNIKOM di Kiri Sesuai Mandat Pengguna */}
-          <div className="w-16 sm:w-20 md:w-24 shrink-0 flex items-center justify-center">
+          <div className="w-16 sm:w-20 md:w-20 shrink-0 flex items-center justify-center pl-2">
             <img
               src="/image/mitra/unikom.png"
               alt="Logo Universitas Komputer Indonesia (UNIKOM)"
-              className="h-14 sm:h-16 md:h-20 w-auto object-contain"
+              className="h-14 sm:h-16 md:h-18 w-auto object-contain"
             />
           </div>
 
           {/* Teks Lembaga & Kedinasan Berpusat (Bebas LPPM Sesuai Mandat) */}
-          <div className="text-center flex-1 px-1 sm:px-2 space-y-0.5">
+          <div className="text-center flex-1 px-2 sm:px-3 space-y-0.5">
             <h3 className="text-[10pt] sm:text-[12pt] md:text-[13pt] print:text-[13pt] font-bold tracking-wide uppercase text-black leading-tight">
               UNIVERSITAS KOMPUTER INDONESIA (UNIKOM)
             </h3>
@@ -102,12 +102,15 @@ export const OfficialDocumentA4View: React.FC<OfficialDocumentA4ViewProps> = ({
             </p>
           </div>
 
-          {/* Logo Platform BERSEKA di Kanan Sesuai Mandat Pengguna */}
-          <div className="w-16 sm:w-20 md:w-24 shrink-0 flex items-center justify-center">
+          {/* Logo Platform BERSEKA di Kanan (Emblem Lambang Saja) */}
+          <div className="w-16 sm:w-20 md:w-20 shrink-0 flex items-center justify-center pr-2">
             <img
-              src="/logos/berseka/berseka-logo-full.png?v=20261022_v2"
+              src="/logos/berseka/logo-berseka-laporan.png?v=20261029"
               alt="Logo Resmi BERSEKA"
               className="h-12 sm:h-14 md:h-16 w-auto object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/logos/berseka/berseka-logo-bg-transparent.png";
+              }}
             />
           </div>
         </div>

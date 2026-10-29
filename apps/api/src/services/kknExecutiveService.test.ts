@@ -230,10 +230,10 @@ describe("kknExecutiveService - Status Pelaksanaan Proker (Business Logic Fix)",
     expect(pelaksanaan.sedangBerjalan.count).toBe(64);
     expect(pelaksanaan.belum.count).toBe(13); // Terkoreksi akurat jadi 13, bukan 47!
 
-    // Persentase dihitung terhadap total proker disetujui (104)
-    expect(pelaksanaan.selesai.percentage).toBe(Math.round((27 / 104) * 100));
-    expect(pelaksanaan.sedangBerjalan.percentage).toBe(Math.round((64 / 104) * 100));
-    expect(pelaksanaan.belum.percentage).toBe(Math.round((13 / 104) * 100));
+    // Persentase dihitung terhadap total proker disetujui (104) dengan 1 angka desimal
+    expect(pelaksanaan.selesai.percentage).toBe(Math.round((27 / 104) * 1000) / 10);
+    expect(pelaksanaan.sedangBerjalan.percentage).toBe(Math.round((64 / 104) * 1000) / 10);
+    expect(pelaksanaan.belum.percentage).toBe(Math.round((13 / 104) * 1000) / 10);
   });
 });
 

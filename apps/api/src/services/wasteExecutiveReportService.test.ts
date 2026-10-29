@@ -275,7 +275,7 @@ describe("wasteExecutiveReportService - Aggregation & Impact Analysis", () => {
     expect(buffer).toBeInstanceOf(Buffer);
 
     const wb = XLSX.read(buffer, { type: "buffer" });
-    expect(wb.SheetNames).toContain("Ringkasan Eksekutif");
+    expect(wb.SheetNames).toContain("Ringkasan & Neraca Sampah");
     expect(wb.SheetNames).toContain("Kinerja per Kelurahan");
     expect(wb.SheetNames).toContain("Database Fasilitas");
     expect(wb.SheetNames).toContain("Tren Berkala");

@@ -411,7 +411,7 @@ export async function exportExecutiveReportDocx(payload: DocxReportPayload): Pro
             spacing: { after: 120 },
             children: [
               new TextRun({
-                text: "Laporan ini menyajikan pemantauan strategis real-time pelaksanaan Kuliah Kerja Nyata (KKN) Tematik Terpadu serta integrasi pemantauan tata kelola sampah dan lingkungan hidup di wilayah Kecamatan Coblong (6 Kelurahan Binaan, 86 RW).",
+                text: "Laporan ini menyajikan pemantauan strategis real-time pelaksanaan Kuliah Kerja Nyata (KKN) Tematik Terpadu serta integrasi pemantauan tata kelola sampah dan lingkungan hidup di wilayah Kecamatan Coblong (6 Kelurahan Binaan, 74 RW).",
               }),
             ],
           }),

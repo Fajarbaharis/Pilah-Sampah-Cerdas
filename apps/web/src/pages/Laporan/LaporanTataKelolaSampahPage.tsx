@@ -1948,9 +1948,9 @@ export const LaporanTataKelolaSampahPage: React.FC = () => {
               >
                 {/* 1. KOP SURAT RESMI KEDINASAN */}
                 <div className="pb-3 border-b-2 border-black mb-3.5 overflow-visible">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 px-3">
                     {/* Logo UNIKOM Resmi Utuh */}
-                    <div className="w-20 shrink-0 flex items-center justify-center">
+                    <div className="w-16 shrink-0 flex items-center justify-center pl-1">
                       <img
                         src="/logos/unikom.png"
                         alt="Logo UNIKOM"
@@ -1962,7 +1962,7 @@ export const LaporanTataKelolaSampahPage: React.FC = () => {
                     </div>
 
                     {/* Teks Identitas Lembaga Resmi */}
-                    <div className="text-center flex-1 px-1 leading-tight text-black">
+                    <div className="text-center flex-1 px-2 leading-tight text-black">
                       <div className="text-xs font-bold tracking-wider uppercase text-black">
                         PEMERINTAH DAERAH KOTA BANDUNG &bull; DINAS LINGKUNGAN HIDUP
                       </div>
@@ -1979,14 +1979,14 @@ export const LaporanTataKelolaSampahPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Logo BERSEKA Resmi */}
-                    <div className="w-20 shrink-0 flex items-center justify-center">
+                    {/* Logo BERSEKA Resmi (Emblem Lambang Saja) */}
+                    <div className="w-16 shrink-0 flex items-center justify-center pr-1">
                       <img
-                        src="/logos/berseka/berseka-logo-full.png?v=20261022_v2"
+                        src="/logos/berseka/logo-berseka-laporan.png?v=20261029"
                         alt="Logo BERSEKA"
-                        className="h-12 w-auto max-w-[105px] object-contain block shrink-0"
+                        className="h-14 w-14 object-contain block shrink-0"
                         onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src = "/logos/berseka/berseka-logo-full.svg?v=20261022_v2";
+                          (e.currentTarget as HTMLImageElement).src = "/logos/berseka/berseka-logo-bg-transparent.png";
                         }}
                       />
                     </div>

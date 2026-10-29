@@ -1162,9 +1162,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
           icon: BarChart3,
           allowed: [
             "DEVELOPER",
-            "SUPER_USER",
-            "PIMPINAN",
-            "PEMIMPIN",
           ] as UserRole[],
           children: [
             {
@@ -1172,9 +1169,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
               label: "Kuliah Kerja Nyata",
               allowed: [
                 "DEVELOPER",
-                "SUPER_USER",
-                "PIMPINAN",
-                "PEMIMPIN",
               ] as UserRole[],
             },
             {
@@ -1182,9 +1176,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
               label: "Tata Kelola Sampah",
               allowed: [
                 "DEVELOPER",
-                "SUPER_USER",
-                "PIMPINAN",
-                "PEMIMPIN",
               ] as UserRole[],
             },
           ],

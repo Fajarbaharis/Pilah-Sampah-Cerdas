@@ -12,6 +12,7 @@ import * as XLSX from "xlsx";
 import { isTestKelompok, isTestStudent, isTestUser } from "../utils/filterTestingUtils.js";
 import { wasteExecutiveReportService } from "./wasteExecutiveReportService.js";
 import { gamificationService } from "./gamificationService.js";
+import { redisService } from "./redisService.js";
 
 export interface LaporanKknFilters {
   kelurahan?: string;
@@ -84,6 +85,15 @@ export const laporanKknService = {
    * 100% Agregasi Real-time dari Database PostgreSQL
    */
   async getLaporanSummary(filters: LaporanKknFilters = {}) {
+    const isTestEnv = process.env.NODE_ENV === "test";
+    const cacheKey = `laporan_kkn_summary:${JSON.stringify(filters)}`;
+    if (!isTestEnv) {
+      const cached = await redisService.getJson<any>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const rawKel = filters.kelurahan ? filters.kelurahan.replace(/^Kel\.\s*/i, "").trim() : "";
     const isFilteredKel = rawKel && rawKel !== "ALL" && rawKel !== "Semua Kelurahan" && rawKel !== "Semua Wilayah";
     const kelFilterNormalized = isFilteredKel ? rawKel : undefined;
@@ -189,6 +199,11 @@ export const laporanKknService = {
 
     // Saring kelompok dummy / testing
     rawKelompokList = rawKelompokList.filter((k) => !isTestKelompok(k));
+
+    // Simpan seluruh kelompok dalam cakupan wilayah (kelurahan) sebelum difilter oleh RW / kelompok spesifik.
+    // Hal ini krusial agar opsi filter dropdown di frontend tetap utuh dan pengguna dapat berpindah kelompok
+    // secara fleksibel tanpa harus reset ke "Semua Kelompok" terlebih dahulu.
+    const scopeKelompokList = [...rawKelompokList];
 
     // Filter RW di memori jika ada
     if (isFilteredRw) {
@@ -409,8 +424,9 @@ export const laporanKknService = {
     };
 
     // 2E. Opsi Filter RW & Kelompok Terverifikasi Aktif
+    // Menggunakan scopeKelompokList agar opsi tidak menyusut saat salah satu kelompok sedang aktif dipilih
     const rwOptionsSet = new Set<string>();
-    rawKelompokList.forEach((k) => {
+    scopeKelompokList.forEach((k) => {
       if (Array.isArray(k.cakupanRw)) {
         k.cakupanRw.forEach((rw) => {
           const num = parseInt(String(rw).replace(/\D/g, ""), 10);
@@ -428,8 +444,13 @@ export const laporanKknService = {
     const rwOptionsList = ["Semua RW", ...sortedRwOptions];
 
     const kelompokOptionsList = [
-      { value: "Semua Kelompok", label: "Semua Kelompok" },
-      ...rawKelompokList.map((k) => ({ value: k.name, label: k.name, kelurahan: k.kelurahan || "" })),
+      { value: "Semua Kelompok", label: "Semua Kelompok", kelurahan: "", cakupanRw: [] as string[] },
+      ...scopeKelompokList.map((k) => ({
+        value: k.name,
+        label: k.name,
+        kelurahan: k.kelurahan || "",
+        cakupanRw: Array.isArray(k.cakupanRw) ? (k.cakupanRw as string[]) : [],
+      })),
     ];
 
     const periodeOptions = [
@@ -808,16 +829,31 @@ export const laporanKknService = {
       volumeBulananM3: 0,
     };
 
+    let topMahasiswa: any[] = [];
+    let topDpl: any[] = [];
+
     try {
-      const wasteReport = await wasteExecutiveReportService.getWasteExecutiveReport({
-        wilayah: isFilteredKel ? rawKel : "ALL",
-        periode: filters.periode || "semua",
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        hari: filters.hari,
-        jamMulai: filters.jamMulai,
-        jamSelesai: filters.jamSelesai,
-      });
+      const [wasteReport, kknLb] = await Promise.all([
+        wasteExecutiveReportService
+          .getWasteExecutiveReport({
+            wilayah: isFilteredKel ? rawKel : "ALL",
+            periode: filters.periode || "semua",
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            hari: filters.hari,
+            jamMulai: filters.jamMulai,
+            jamSelesai: filters.jamSelesai,
+          })
+          .catch((err) => {
+            console.warn("[LaporanKknService] Gagal memuat ringkasan dampak sampah riil:", err);
+            return null;
+          }),
+        gamificationService.getLeaderboardKkn().catch((err) => {
+          console.warn("[LaporanKknService] Gagal memuat leaderboard KKN:", err);
+          return null;
+        }),
+      ]);
+
       if (wasteReport?.kpiSummary) {
         const d = wasteReport.kpiSummary.dampakDanReduksi;
         const totalKg = Number(d?.totalSampahTerpilahKg ?? 0);
@@ -839,15 +875,8 @@ export const laporanKknService = {
           volumeBulananM3: Number((totalKg / 250).toFixed(2)),
         };
       }
-    } catch (err) {
-      console.warn("[LaporanKknService] Gagal memuat ringkasan dampak sampah riil:", err);
-    }
 
-    // 9. Hitung 3 Mahasiswa Terbaik & 3 DPL Terbaik — Selaras 100% dengan Papan Peringkat KKN
-    let topMahasiswa: any[] = [];
-    let topDpl: any[] = [];
-    try {
-      const kknLb = await gamificationService.getLeaderboardKkn();
+      // 9. Hitung 3 Mahasiswa Terbaik & 3 DPL Terbaik — Selaras 100% dengan Papan Peringkat KKN
       if (kknLb?.students && Array.isArray(kknLb.students)) {
         topMahasiswa = kknLb.students.slice(0, 3).map((st: any, i: number) => {
           const matchedGroup = rawKelompokList.find(
@@ -886,7 +915,7 @@ export const laporanKknService = {
         });
       }
     } catch (err) {
-      console.warn("[LaporanKknService] Gagal memuat leaderboard kkn:", err);
+      console.warn("[LaporanKknService] Gagal memuat data eksternal (waste/leaderboard):", err);
     }
 
     if (topMahasiswa.length === 0) {
@@ -1034,7 +1063,7 @@ export const laporanKknService = {
     const tanggalCetakFormatted = `${now.getDate()} ${monthsIndo[now.getMonth()]} ${now.getFullYear()}`;
 
     // Rangkuman response lengkap (Bebas LPPM, Kop UNIKOM x BERSEKA, TTD Tengah Bawah)
-    return {
+    const resultData = {
       header: {
         nomorDokumen: `027/UNIKOM-BERSEKA/KKN-T/${now.getFullYear()}`,
         judulLaporan: "LAPORAN EKSEKUTIF PELAKSANAAN KULIAH KERJA NYATA (KKN) & TATA KELOLA LINGKUNGAN",
@@ -1113,6 +1142,11 @@ export const laporanKknService = {
         selectedPeriode: filters.periode || "2026-041027-Universitas Komputer Indonesia - 1",
       },
     };
+
+    if (!isTestEnv) {
+      await redisService.setJson(cacheKey, resultData, 300);
+    }
+    return resultData;
   },
 
   /**

@@ -22,6 +22,7 @@ class RedisService {
 
   // Fallback in-memory storage if Redis is offline
   private memoryQuota: Record<string, number> = {};
+  private memoryCache = new Map<string, { data: string; expiresAt: number }>();
 
   constructor() {
     this.initializeRedis();
@@ -164,6 +165,56 @@ class RedisService {
       }
     }
     delete this.memoryQuota[redisKey];
+  }
+
+  // Generic JSON Cache with TTL support and in-memory fallback
+  async getJson<T>(key: string): Promise<T | null> {
+    if (this.isConnected) {
+      try {
+        const raw = await this.client.get(key);
+        if (raw) return JSON.parse(raw) as T;
+      } catch (err) {
+        console.warn(`[RedisService] Error getting json for ${key}:`, err);
+      }
+    }
+    const item = this.memoryCache.get(key);
+    if (!item) return null;
+    if (Date.now() > item.expiresAt) {
+      this.memoryCache.delete(key);
+      return null;
+    }
+    try {
+      return JSON.parse(item.data) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  async setJson<T>(key: string, value: T, ttlSeconds: number = 300): Promise<void> {
+    const raw = JSON.stringify(value);
+    if (this.isConnected) {
+      try {
+        await this.client.set(key, raw, { EX: ttlSeconds });
+        return;
+      } catch (err) {
+        console.warn(`[RedisService] Error setting json for ${key}:`, err);
+      }
+    }
+    this.memoryCache.set(key, {
+      data: raw,
+      expiresAt: Date.now() + ttlSeconds * 1000,
+    });
+  }
+
+  async invalidateKey(key: string): Promise<void> {
+    if (this.isConnected) {
+      try {
+        await this.client.del(key);
+      } catch (err) {
+        console.warn(`[RedisService] Error deleting key ${key}:`, err);
+      }
+    }
+    this.memoryCache.delete(key);
   }
 }
 

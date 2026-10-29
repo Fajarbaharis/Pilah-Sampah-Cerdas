@@ -1151,7 +1151,8 @@ export async function calculateGroupPoints(
 export async function calculateDplPoints(
   dplUserId: string,
   kelompokId?: string,
-  groupPoints?: number
+  groupPoints?: number,
+  logbooksInput?: any[]
 ): Promise<{
   poinDpl: number;
   poinLogbookDpl: number;
@@ -1190,7 +1191,11 @@ export async function calculateDplPoints(
     }
 
     let logbooks: any[] = [];
-    if (typeof (prisma as any).logbookDpl?.findMany === "function") {
+    if (logbooksInput) {
+      logbooks = targetKelompokId
+        ? logbooksInput.filter((lb) => !lb.kelompokId || lb.kelompokId === targetKelompokId)
+        : logbooksInput;
+    } else if (typeof (prisma as any).logbookDpl?.findMany === "function") {
       logbooks = await prisma.logbookDpl.findMany({
         where: logbookWhere,
         select: {
