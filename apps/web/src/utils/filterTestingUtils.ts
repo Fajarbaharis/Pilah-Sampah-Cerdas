@@ -43,15 +43,15 @@ export function isCurrentUserDeveloper(): boolean {
 
 /**
  * Memeriksa status konfigurasi: Apakah grup Laporan ditampilkan di sidebar Pimpinan?
- * Default: true (Muncul). Jika dimatikan oleh DEVELOPER ("false"), grup Laporan tidak muncul di sidebar Pimpinan.
+ * Default: false (Di-hide). Hanya muncul jika diaktifkan secara eksplisit oleh DEVELOPER ("true").
  */
 export function shouldShowLaporanPimpinan(): boolean {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") return false;
   const val = localStorage.getItem(DEV_SHOW_LAPORAN_PIMPINAN_KEY);
-  if (val === "false") {
-    return false;
+  if (val === "true") {
+    return true;
   }
-  return true; // Default ON
+  return false; // Default OFF (Di-hide)
 }
 
 /**

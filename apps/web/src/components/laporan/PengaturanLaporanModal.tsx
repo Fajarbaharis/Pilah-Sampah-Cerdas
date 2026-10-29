@@ -378,7 +378,7 @@ export const PengaturanLaporanModal: React.FC<PengaturanLaporanModalProps> = ({
                   value={formData.wilayahCakupan}
                   onChange={(e) => setFormData({ ...formData, wilayahCakupan: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs"
-                  placeholder="Kecamatan Coblong, Kota Bandung (6 Kelurahan, 86 RW)"
+                  placeholder="Kecamatan Coblong, Kota Bandung (6 Kelurahan, 74 RW)"
                 />
               </div>
             </div>

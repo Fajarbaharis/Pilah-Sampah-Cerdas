@@ -10,8 +10,14 @@
 
 import { prisma } from "../lib/prisma.js";
 import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import {
+  renderReportHeader,
+  renderFormalTable,
+} from "../utils/excelReportHelper.js";
 import { classifyWaste, dashboardService } from "./dashboardService.js";
 import { complianceService } from "./complianceService.js";
+import { redisService } from "./redisService.js";
 
 export interface WasteExecutiveFilters {
   wilayah?: string;
@@ -135,6 +141,15 @@ export const wasteExecutiveReportService = {
    * 100% Real-Time Aggregation dari PostgreSQL
    */
   async getWasteExecutiveReport(filters: WasteExecutiveFilters = {}) {
+    const isTestEnv = process.env.NODE_ENV === "test";
+    const cacheKey = `waste_exec_report:${JSON.stringify(filters)}`;
+    if (!isTestEnv) {
+      const cached = await redisService.getJson<any>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const dateFilter = resolveDateFilter(filters.periode, filters.startDate, filters.endDate);
     const rawWilayah = (filters.wilayah || "").trim();
     const isCoblongWide =
@@ -636,25 +651,28 @@ export const wasteExecutiveReportService = {
       include: { pemilahanSampah: true, volumeSampah: true },
     });
 
-    // Rentang evaluasi komparatif tutupan buku bulanan (M-1: September 2026 sebagai SSOT tutupan buku bulanan)
-    const evalStartDate =
-      filters.periode === "bulanan" && filters.startDate
-        ? new Date(filters.startDate)
-        : new Date("2026-09-01T00:00:00.000Z");
-    const evalEndDate =
-      filters.periode === "bulanan" && filters.endDate
-        ? new Date(filters.endDate)
-        : new Date("2026-09-30T23:59:59.999Z");
+    // Rentang evaluasi komparatif audit kelurahan: selaras dengan dateFilter laporan (atau kumulatif all-time jika filter kosong)
+    const evalAutoWhere: any = {
+      warga: { isTestAccount: false, NOT: { name: { contains: "test", mode: "insensitive" } } },
+      NOT: [
+        { bin: { rw: { name: { contains: "99" } } } },
+        { warga: { rw: { name: { contains: "99" } } } },
+      ],
+    };
+    if (dateFilter) {
+      evalAutoWhere.createdAt = dateFilter;
+    }
+
+    const evalManualWhere: any = {
+      petugas: { isTestAccount: false, NOT: { name: { contains: "test", mode: "insensitive" } } },
+      rw: { name: { not: { contains: "99" } } },
+    };
+    if (dateFilter) {
+      evalManualWhere.createdAt = dateFilter;
+    }
 
     const evalAutoLogs = await prisma.setoranOtomatis.findMany({
-      where: {
-        createdAt: { gte: evalStartDate, lte: evalEndDate },
-        warga: { isTestAccount: false, NOT: { name: { contains: "test", mode: "insensitive" } } },
-        NOT: [
-          { bin: { rw: { name: { contains: "99" } } } },
-          { warga: { rw: { name: { contains: "99" } } } },
-        ],
-      },
+      where: evalAutoWhere,
       select: {
         wargaId: true,
         berat: true,
@@ -676,11 +694,7 @@ export const wasteExecutiveReportService = {
     });
 
     const evalManualLogs = await prisma.setoranManual.findMany({
-      where: {
-        createdAt: { gte: evalStartDate, lte: evalEndDate },
-        petugas: { isTestAccount: false, NOT: { name: { contains: "test", mode: "insensitive" } } },
-        rw: { name: { not: { contains: "99" } } },
-      },
+      where: evalManualWhere,
       select: {
         berat: true,
         kategori: true,
@@ -713,6 +727,23 @@ export const wasteExecutiveReportService = {
       const key = normalizeKelurahanName(kName);
       totalWargaByKel[key] = (totalWargaByKel[key] || 0) + (r._count?.users || 0);
     });
+
+    // Prefetch compliance metrics per kelurahan dari SSOT complianceService
+    const compMetricsPerKelurahan = await Promise.all(
+      ALL_KELURAHAN_COBLONG.map(async (namaKel) => {
+        try {
+          const metrics = await complianceService.getComplianceMetrics({
+            kelurahan: namaKel,
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+          });
+          return { namaKel, metrics };
+        } catch {
+          return { namaKel, metrics: null };
+        }
+      })
+    );
+    const compMap = new Map(compMetricsPerKelurahan.map((c) => [c.namaKel, c.metrics]));
 
     const kelurahanAuditList: KelurahanGovernanceAudit[] = ALL_KELURAHAN_COBLONG.map((namaKel) => {
       const normK = normalizeKelurahanName(namaKel);
@@ -836,11 +867,17 @@ export const wasteExecutiveReportService = {
       const partisipasiRate = totWarga > 0 ? Math.min(100, (wargaAktif / totWarga) * 100) : 0;
 
       // Standarisasi Skor Kepatuhan Komposit Resmi BERSEKA (Anti-Bias Kamera AI):
-      // 50% Partisipasi Warga Aktif + 50% Ketepatan Pemilahan Wadah
-      const kepatuhanAktual =
-        totWarga > 0
-          ? Number(((partisipasiRate * 0.5) + (akurasiWadah * 0.5)).toFixed(1))
-          : Number(akurasiWadah.toFixed(1));
+      // 50% Partisipasi Warga Aktif + 50% Ketepatan Pemilahan Wadah (Presisi 2 Desimal sesuai Dasbor & SSOT complianceService)
+      const compForKel = compMap.get(namaKel);
+      const kepatuhanAktual = compForKel
+        ? Number(compForKel.indeksKepatuhan.toFixed(2))
+        : (totWarga > 0
+            ? Number(((partisipasiRate * 0.5) + (akurasiWadah * 0.5)).toFixed(2))
+            : Number(akurasiWadah.toFixed(2)));
+
+      const partisipasiRateFinal = compForKel
+        ? Number(compForKel.partisipasiWarga.partisipasiPersen.toFixed(2))
+        : Number(partisipasiRate.toFixed(2));
 
       const penurunanKg =
         monthlyBaselineKg > 0 && monthlyAktualKg > 0
@@ -851,7 +888,7 @@ export const wasteExecutiveReportService = {
           ? Number((((monthlyBaselineKg - monthlyAktualKg) / monthlyBaselineKg) * 100).toFixed(1))
           : 0;
       const kepatuhanBaseline = Number(baselineRate.toFixed(1));
-      const perubahanKepatuhanPp = Number((kepatuhanAktual - kepatuhanBaseline).toFixed(1));
+      const perubahanKepatuhanPp = Number((kepatuhanAktual - kepatuhanBaseline).toFixed(2));
 
       return {
         kelurahan: namaKel,
@@ -874,7 +911,7 @@ export const wasteExecutiveReportService = {
         penurunanPersen: penurunanPersen ?? undefined,
         kepatuhanBaseline,
         kepatuhanAktual,
-        partisipasiWarga: Number(partisipasiRate.toFixed(1)),
+        partisipasiWarga: partisipasiRateFinal,
         perubahanKepatuhanPp: perubahanKepatuhanPp ?? undefined,
       };
     });
@@ -882,6 +919,8 @@ export const wasteExecutiveReportService = {
     // Rata-rata Kepatuhan Pemilahan Komposit SSOT (Menggunakan Skor Partisipasi dan Kepatuhan Warga dari complianceService)
     const compMetrics = await complianceService.getComplianceMetrics({
       kelurahan: filters.wilayah && filters.wilayah !== "ALL" ? filters.wilayah : undefined,
+      startDate: filters.startDate,
+      endDate: filters.endDate,
     });
     const sortingComplianceRate = Number(compMetrics.indeksKepatuhan.toFixed(2));
 
@@ -1005,7 +1044,7 @@ export const wasteExecutiveReportService = {
       });
     }
 
-    return {
+    const result = {
       metadata: {
         nomorDokumen: `BERSEKA/LAP-TKS/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/001`,
         judulLaporan: "Laporan Evaluasi dan Akuntabilitas Tata Kelola Sampah Berkelanjutan",
@@ -1124,79 +1163,142 @@ export const wasteExecutiveReportService = {
       },
       strategicInsights,
     };
+
+    if (!isTestEnv) {
+      await redisService.setJson(cacheKey, result, 300);
+    }
+    return result;
   },
 
   /**
    * Mengunduh Laporan Resmi dalam format Spreadsheet Excel (.xlsx) Multi-Sheet
+   * Standar Formal & Industri Menggunakan ExcelJS
    */
   async exportWasteExecutiveReport(filters: WasteExecutiveFilters = {}) {
     const data = await this.getWasteExecutiveReport(filters);
-    const wb = XLSX.utils.book_new();
 
-    // Sheet 1: Ringkasan Eksekutif & Neraca Sampah
-    const summaryRows = [
-      ["LAPORAN EVALUASI & AKUNTABILITAS TATA KELOLA SAMPAH BERKELANJUTAN"],
-      ["PEMERINTAH KOTA BANDUNG - KECAMATAN COBLONG - PLATFORM BERSEKA"],
-      [],
-      ["METADATA DOKUMEN"],
-      ["Nomor Dokumen", data.metadata.nomorDokumen],
-      ["Tanggal Terbit", new Date(data.metadata.tanggalTerbit).toLocaleString("id-ID")],
-      ["Cakupan Wilayah", data.metadata.wilayahCakupan],
-      ["Periode Evaluasi", data.metadata.periodeEvaluasi],
-      [],
-      ["NERACA SIRKULARITAS & DAMPAK REDUKSI KE TPA", "NILAI", "SATUAN"],
-      ["Total Sampah Terpilah", data.kpiSummary.dampakDanReduksi.totalSampahTerpilahKg, "kg"],
-      ["Total Sampah Terpilah (Ton)", data.kpiSummary.dampakDanReduksi.totalSampahTerpilahTon, "Ton"],
-      ["Estimasi Tonase Tereduksi dari TPA", data.kpiSummary.dampakDanReduksi.tonaseTereduksiDariTpaKg, "kg"],
-      ["Estimasi Tonase Tereduksi dari TPA (Ton)", data.kpiSummary.dampakDanReduksi.tonaseTereduksiDariTpaTon, "Ton"],
-      ["Residu Terangkut ke TPA", data.kpiSummary.dampakDanReduksi.residuKeTpaKg, "kg"],
-      ["Total Timbulan Sampah", data.kpiSummary.dampakDanReduksi.totalTimbulanSampahKg, "kg"],
-      ["Persentase Reduksi Sampah dari TPA", `${data.kpiSummary.dampakDanReduksi.rasioReduksiTpaPersen}%`, "Persen"],
-      ["Rata-Rata Kepatuhan Pemilahan Warga", `${data.kpiSummary.dampakDanReduksi.rataRataKepatuhanPersen}%`, "Persen"],
-      ["Estimasi Reduksi Emisi Gas Rumah Kaca", data.kpiSummary.dampakDanReduksi.reduksiEmisiCo2Kg, "kg CO2e"],
-      [],
-      ["VALORISASI PRODUK HILIRISASI & EKONOMI SIRKULAR", "NILAI", "SATUAN"],
-      ["Bahan Baku Organik Masuk Fasilitas", data.kpiSummary.operasional.materialOrganikMasukKg, "kg"],
-      ["Total Output Produk Organik Olahan", data.kpiSummary.operasional.outputProdukOrganikKg, "kg"],
-      ["Hasil Panen Kompos Organik", data.kpiSummary.operasional.outputKomposKg, "kg"],
-      ["Hasil Panen Biomassa Maggot BSF", data.kpiSummary.operasional.outputMaggotKg, "kg"],
-      ["Hasil Pupuk Organik Cair (POC)", data.kpiSummary.operasional.outputPocLiter, "Liter"],
-      ["Estimasi Nilai Ekonomi Anorganik", data.kpiSummary.operasional.nilaiEkonomiAnorganikRupiah || 0, "Rupiah"],
-      ["Estimasi Nilai Ekonomi Kompos", data.kpiSummary.operasional.nilaiEkonomiKomposRupiah || 0, "Rupiah"],
-      ["Estimasi Nilai Ekonomi Maggot", data.kpiSummary.operasional.nilaiEkonomiMaggotRupiah || 0, "Rupiah"],
-      ["Estimasi Nilai Ekonomi POC", data.kpiSummary.operasional.nilaiEkonomiPocRupiah || 0, "Rupiah"],
-      ["Total Valorisasi Ekonomi Sirkular", data.kpiSummary.operasional.totalNilaiEkonomiRupiah || 0, "Rupiah"],
-      [],
-      ["KOMPOSISI TIMBULAN SAMPAH", "BERAT (kg)", "PERSENTASE"],
-      ["Sampah Organik", data.kpiSummary.dampakDanReduksi.rasioPemilahan.organikKg, `${data.kpiSummary.dampakDanReduksi.rasioPemilahan.organikPersen}%`],
-      ["Sampah Anorganik", data.kpiSummary.dampakDanReduksi.rasioPemilahan.anorganikKg, `${data.kpiSummary.dampakDanReduksi.rasioPemilahan.anorganikPersen}%`],
-      ["Sampah Residu (ke TPA)", data.kpiSummary.dampakDanReduksi.rasioPemilahan.residuKg, `${data.kpiSummary.dampakDanReduksi.rasioPemilahan.residuPersen}%`],
-      [],
-      ["STATUS WADAH SAMPAH (BIN)", "JUMLAH UNIT"],
-      ["Total Wadah Sampah", data.kpiSummary.infrastruktur.wadahSampahTotal],
-      ["Wadah Sampah Aktif Terpasang", data.kpiSummary.infrastruktur.wadahSampahAktif],
-      ["Kondisi Normal (<70%)", data.kpiSummary.infrastruktur.wadahNormal],
-      ["Kondisi Waspada (70-90%)", data.kpiSummary.infrastruktur.wadahWaspada],
-      ["Kondisi Kritis (>90%)", data.kpiSummary.infrastruktur.wadahKritis],
+    const wb = new ExcelJS.Workbook();
+    wb.creator = "BERSEKA - Pemerintah Kota Bandung (Kecamatan Coblong)";
+    wb.lastModifiedBy = "BERSEKA System";
+    wb.created = new Date();
+    wb.modified = new Date();
+
+    const formattedExportTime = new Date().toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }) + `, ${new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB`;
+
+    const metadata: Array<{ label: string; value: string | number }> = [
+      { label: "Nomor Dokumen:", value: data.metadata.nomorDokumen },
+      { label: "Waktu Ekspor:", value: formattedExportTime },
+      { label: "Cakupan Wilayah:", value: data.metadata.wilayahCakupan },
+      { label: "Periode Evaluasi:", value: data.metadata.periodeEvaluasi },
     ];
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Ringkasan Eksekutif");
 
-    // Sheet 2: Audit Kinerja per Kelurahan
-    const kelurahanRows = [
-      [
-        "NO",
-        "KELURAHAN BINAAN",
-        "BASELINE KKN (B0) (kg/bulan)",
-        "REALISASI AKTUAL (B1) (kg/bulan)",
-        "PENURUNAN BEBAN (B0 - B1) (kg/bulan)",
-        "PENURUNAN (%)",
-        "BASELINE KEPATUHAN (%)",
-        "KEPATUHAN AKTUAL (%)",
-        "DEVIASI KEPATUHAN (Δ pp)",
-        "STATUS KINERJA",
+    // =========================================================================
+    // SHEET 1: RINGKASAN EKSEKUTIF & NERACA SAMPAH
+    // =========================================================================
+    const wsSummary = wb.addWorksheet("Ringkasan & Neraca Sampah", {
+      views: [{ showGridLines: true }],
+    });
+
+    renderReportHeader(
+      wsSummary,
+      "LAPORAN EVALUASI & AKUNTABILITAS TATA KELOLA SAMPAH BERKELANJUTAN",
+      "PEMERINTAH KOTA BANDUNG - KECAMATAN COBLONG - PLATFORM BERSEKA",
+      metadata,
+      "C"
+    );
+
+    // Tabel 1.1: Neraca Sirkularitas
+    renderFormalTable(wsSummary, {
+      sectionTitle: "1. NERACA SIRKULARITAS & DAMPAK REDUKSI KE TPA",
+      columns: [
+        { header: "INDIKATOR NERACA SAMPAH", key: "indikator", width: 36, isBold: true },
+        { header: "NILAI CAPAIAN", key: "nilai", width: 22, align: "center" },
+        { header: "SATUAN", key: "satuan", width: 16, align: "center" },
       ],
-      ...data.kelurahanAudit.map((k, idx) => {
+      data: [
+        { indikator: "Total Sampah Terpilah", nilai: Number(data.kpiSummary.dampakDanReduksi.totalSampahTerpilahKg || 0).toLocaleString("id-ID"), satuan: "kg" },
+        { indikator: "Total Sampah Terpilah (Tonase)", nilai: data.kpiSummary.dampakDanReduksi.totalSampahTerpilahTon, satuan: "Ton" },
+        { indikator: "Estimasi Tonase Tereduksi dari TPA", nilai: Number(data.kpiSummary.dampakDanReduksi.tonaseTereduksiDariTpaKg || 0).toLocaleString("id-ID"), satuan: "kg" },
+        { indikator: "Residu Terangkut ke TPA", nilai: Number(data.kpiSummary.dampakDanReduksi.residuKeTpaKg || 0).toLocaleString("id-ID"), satuan: "kg" },
+        { indikator: "Total Timbulan Sampah Terdata", nilai: Number(data.kpiSummary.dampakDanReduksi.totalTimbulanSampahKg || 0).toLocaleString("id-ID"), satuan: "kg" },
+        { indikator: "Persentase Reduksi Sampah ke TPA", nilai: `${data.kpiSummary.dampakDanReduksi.rasioReduksiTpaPersen}%`, satuan: "Persen" },
+        { indikator: "Rata-Rata Kepatuhan Pemilahan Warga", nilai: `${data.kpiSummary.dampakDanReduksi.rataRataKepatuhanPersen}%`, satuan: "Persen" },
+        { indikator: "Estimasi Reduksi Emisi Gas Rumah Kaca", nilai: Number(data.kpiSummary.dampakDanReduksi.reduksiEmisiCo2Kg || 0).toLocaleString("id-ID"), satuan: "kg CO2e" },
+      ],
+    });
+
+    // Tabel 1.2: Komposisi Timbulan Sampah
+    renderFormalTable(wsSummary, {
+      sectionTitle: "2. KOMPOSISI TIMBULAN SAMPAH KECAMATAN",
+      columns: [
+        { header: "KATEGORI SAMPAH", key: "kategori", width: 36, isBold: true },
+        { header: "BERAT TERPILAH (KG)", key: "berat", width: 22, align: "center", numFmt: "#,##0" },
+        { header: "PERSENTASE", key: "persen", width: 16, align: "center" },
+      ],
+      data: [
+        { kategori: "Sampah Organik", berat: data.kpiSummary.dampakDanReduksi.rasioPemilahan.organikKg, persen: `${data.kpiSummary.dampakDanReduksi.rasioPemilahan.organikPersen}%` },
+        { kategori: "Sampah Anorganik", berat: data.kpiSummary.dampakDanReduksi.rasioPemilahan.anorganikKg, persen: `${data.kpiSummary.dampakDanReduksi.rasioPemilahan.anorganikPersen}%` },
+        { kategori: "Sampah Residu (ke TPA)", berat: data.kpiSummary.dampakDanReduksi.rasioPemilahan.residuKg, persen: `${data.kpiSummary.dampakDanReduksi.rasioPemilahan.residuPersen}%` },
+      ],
+      totalRow: {
+        kategori: "TOTAL TIMBULAN SAMPAH",
+        berat: data.kpiSummary.dampakDanReduksi.totalTimbulanSampahKg,
+        persen: "100.0%",
+      },
+    });
+
+    // Tabel 1.3: Valorisasi Ekonomi Sirkular
+    renderFormalTable(wsSummary, {
+      sectionTitle: "3. VALORISASI PRODUK HILIRISASI & EKONOMI SIRKULAR",
+      columns: [
+        { header: "KOMODITAS / PRODUK SIRKULAR", key: "komoditas", width: 36, isBold: true },
+        { header: "VOLUME OUTPUT", key: "output", width: 22, align: "center" },
+        { header: "SATUAN", key: "satuan", width: 16, align: "center" },
+      ],
+      data: [
+        { komoditas: "Bahan Baku Organik Masuk Fasilitas", output: Number(data.kpiSummary.operasional.materialOrganikMasukKg || 0).toLocaleString("id-ID"), satuan: "kg" },
+        { komoditas: "Total Output Produk Organik Olahan", output: Number(data.kpiSummary.operasional.outputProdukOrganikKg || 0).toLocaleString("id-ID"), satuan: "kg" },
+        { komoditas: "Hasil Panen Kompos Organik", output: Number(data.kpiSummary.operasional.outputKomposKg || 0).toLocaleString("id-ID"), satuan: "kg" },
+        { komoditas: "Hasil Panen Biomassa Maggot BSF", output: Number(data.kpiSummary.operasional.outputMaggotKg || 0).toLocaleString("id-ID"), satuan: "kg" },
+        { komoditas: "Hasil Pupuk Organik Cair (POC)", output: Number(data.kpiSummary.operasional.outputPocLiter || 0).toLocaleString("id-ID"), satuan: "Liter" },
+        { komoditas: "Estimasi Total Nilai Ekonomi Sirkular", output: `Rp ${Number(data.kpiSummary.operasional.totalNilaiEkonomiRupiah || 0).toLocaleString("id-ID")}`, satuan: "Rupiah" },
+      ],
+    });
+
+    // =========================================================================
+    // SHEET 2: KINERJA PER KELURAHAN
+    // =========================================================================
+    const wsKelurahan = wb.addWorksheet("Kinerja per Kelurahan", {
+      views: [{ showGridLines: true }],
+    });
+
+    renderReportHeader(
+      wsKelurahan,
+      "AUDIT KINERJA TATA KELOLA SAMPAH PER KELURAHAN BINAAN",
+      "KECAMATAN COBLONG, KOTA BANDUNG",
+      metadata,
+      "I"
+    );
+
+    renderFormalTable(wsKelurahan, {
+      sectionTitle: "REKAPITULASI TONASE DAN KEPATUHAN 6 KELURAHAN",
+      columns: [
+        { header: "KELURAHAN BINAAN", key: "kelurahan", width: 24, isBold: true },
+        { header: "BASELINE B0 (KG)", key: "bKg", width: 18, align: "center", numFmt: "#,##0.00" },
+        { header: "AKTUAL B1 (KG)", key: "aKg", width: 18, align: "center", numFmt: "#,##0.00" },
+        { header: "PENURUNAN BEBAN (KG)", key: "dKg", width: 22, align: "center", numFmt: "#,##0.00" },
+        { header: "PENURUNAN (%)", key: "dPct", width: 16, align: "center" },
+        { header: "BASELINE KEPATUHAN", key: "bRate", width: 20, align: "center" },
+        { header: "KEPATUHAN AKTUAL", key: "aRate", width: 18, align: "center" },
+        { header: "DEVIASI KEPATUHAN", key: "dComp", width: 18, align: "center" },
+        { header: "STATUS KINERJA", key: "status", width: 18, align: "center" },
+      ],
+      data: data.kelurahanAudit.map((k) => {
         const bKg = Number((k.baselineKg || 0).toFixed(2));
         const aKg = Number((k.aktualKg || 0).toFixed(2));
         const dKg =
@@ -1218,54 +1320,93 @@ export const wasteExecutiveReportService = {
             ? k.perubahanKepatuhanPp
             : Number((aRate - bRate).toFixed(1));
 
-        return [
-          idx + 1,
-          k.kelurahan,
+        return {
+          kelurahan: (k.kelurahan || "").replace(/^Kelurahan\s+/i, ""),
           bKg,
           aKg,
           dKg,
           dPct,
-          `${bRate}%`,
-          `${aRate}%`,
-          `${dComp >= 0 ? "+" : ""}${dComp} pp`,
-          k.complianceLevel,
-        ];
+          bRate: `${bRate}%`,
+          aRate: `${aRate}%`,
+          dComp: `${dComp >= 0 ? "+" : ""}${dComp} pp`,
+          status: k.complianceLevel,
+        };
       }),
-    ];
-    const wsKelurahan = XLSX.utils.aoa_to_sheet(kelurahanRows);
-    XLSX.utils.book_append_sheet(wb, wsKelurahan, "Kinerja per Kelurahan");
+    });
 
-    // Sheet 3: Database Fasilitas Infrastruktur
-    const fasilitasRows = [
-      ["NAMA FASILITAS", "JENIS FASILITAS", "KELURAHAN", "RW", "PIC / PENANGGUNG JAWAB", "KONTAK", "KAPASITAS (kg/hari)", "LOG PRODUKSI"],
-      ...data.fasilitasDetail.map((f) => [
-        f.nama,
-        f.jenis,
-        f.kelurahan,
-        f.rw,
-        f.pic,
-        f.kontak,
-        f.kapasitasKg,
-        f.totalLogProduksi,
-      ]),
-    ];
-    const wsFasilitas = XLSX.utils.aoa_to_sheet(fasilitasRows);
-    XLSX.utils.book_append_sheet(wb, wsFasilitas, "Database Fasilitas");
+    // =========================================================================
+    // SHEET 3: DATABASE FASILITAS
+    // =========================================================================
+    const wsFasilitas = wb.addWorksheet("Database Fasilitas", {
+      views: [{ showGridLines: true }],
+    });
 
-    // Sheet 4: Tren Berkala Mingguan
-    const trenRows = [
-      ["PEKAN", "ORGANIK (kg)", "ANORGANIK (kg)", "RESIDU KE TPA (kg)", "KEPATUHAN PEMILAHAN (%)"],
-      ...data.trenBerkala.map((t) => [
-        t.pekan,
-        t.organikKg,
-        t.anorganikKg,
-        t.residuKg,
-        `${t.kepatuhanPercent}%`,
-      ]),
-    ];
-    const wsTren = XLSX.utils.aoa_to_sheet(trenRows);
-    XLSX.utils.book_append_sheet(wb, wsTren, "Tren Berkala");
+    renderReportHeader(
+      wsFasilitas,
+      "INVENTARISASI FASILITAS PENGOLAHAN SAMPAH KECAMATAN COBLONG",
+      "STATUS INFRASTRUKTUR DAN KAPASITAS PRODUKSI HARIAN",
+      metadata,
+      "H"
+    );
 
-    return XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    renderFormalTable(wsFasilitas, {
+      sectionTitle: "DAFTAR FASILITAS TERINTEGRASI PLATFORM BERSEKA",
+      columns: [
+        { header: "NAMA FASILITAS", key: "nama", width: 28, isBold: true },
+        { header: "JENIS FASILITAS", key: "jenis", width: 20, align: "center" },
+        { header: "KELURAHAN", key: "kelurahan", width: 20 },
+        { header: "RW", key: "rw", width: 14, align: "center" },
+        { header: "PIC / PENGELOLA", key: "pic", width: 24 },
+        { header: "KONTAK", key: "kontak", width: 18, align: "center" },
+        { header: "KAPASITAS (KG/HARI)", key: "kapasitasKg", width: 20, align: "center", numFmt: "#,##0" },
+        { header: "LOG PRODUKSI", key: "totalLogProduksi", width: 16, align: "center", numFmt: "#,##0" },
+      ],
+      data: data.fasilitasDetail.map((f) => ({
+        nama: f.nama,
+        jenis: f.jenis,
+        kelurahan: (f.kelurahan || "").replace(/^Kelurahan\s+/i, ""),
+        rw: f.rw,
+        pic: f.pic || "-",
+        kontak: f.kontak || "-",
+        kapasitasKg: f.kapasitasKg || 0,
+        totalLogProduksi: f.totalLogProduksi || 0,
+      })),
+    });
+
+    // =========================================================================
+    // SHEET 4: TREN BERKALA MINGGUAN
+    // =========================================================================
+    const wsTren = wb.addWorksheet("Tren Berkala", {
+      views: [{ showGridLines: true }],
+    });
+
+    renderReportHeader(
+      wsTren,
+      "TREN HISTORIS TIMBULAN DAN KEPATUHAN PEMILAHAN MINGGUAN",
+      "EVALUASI PEKANAN KECAMATAN COBLONG",
+      metadata,
+      "E"
+    );
+
+    renderFormalTable(wsTren, {
+      sectionTitle: "HISTORI TONASE SAMPAH DAN KEPATUHAN BERKALA",
+      columns: [
+        { header: "PEKAN EVALUASI", key: "pekan", width: 22, isBold: true },
+        { header: "ORGANIK (KG)", key: "organikKg", width: 18, align: "center", numFmt: "#,##0.0" },
+        { header: "ANORGANIK (KG)", key: "anorganikKg", width: 18, align: "center", numFmt: "#,##0.0" },
+        { header: "RESIDU KE TPA (KG)", key: "residuKg", width: 20, align: "center", numFmt: "#,##0.0" },
+        { header: "KEPATUHAN PEMILAHAN", key: "kepatuhan", width: 22, align: "center" },
+      ],
+      data: data.trenBerkala.map((t) => ({
+        pekan: t.pekan,
+        organikKg: t.organikKg,
+        anorganikKg: t.anorganikKg,
+        residuKg: t.residuKg,
+        kepatuhan: `${t.kepatuhanPercent}%`,
+      })),
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   },
 };

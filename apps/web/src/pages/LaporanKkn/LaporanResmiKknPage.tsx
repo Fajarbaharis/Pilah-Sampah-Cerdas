@@ -222,6 +222,7 @@ export interface LaporanSummaryResponse {
       value: string;
       label: string;
       kelurahan?: string;
+      cakupanRw?: string[];
     }>;
     selectedKelurahan: string;
     selectedRw: string;
@@ -313,9 +314,22 @@ export const LaporanResmiKknPage: React.FC = () => {
     }
   };
 
+  const isInitialMount = useRef(true);
+
+  // Single unified fetch effect: fetch immediately on mount, debounce on filter changes
   useEffect(() => {
-    fetchLaporanData();
-  }, [selectedPeriode, selectedKelurahan]);
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      fetchLaporanData();
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      fetchLaporanData();
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [selectedPeriode, selectedKelurahan, selectedRw, selectedKelompok]);
+
   // Auto-print ketika dibuka langsung dari tombol Unduh Laporan di Dashboard
   useEffect(() => {
     if (data && !loading && searchParams.get("action") === "print" && !hasAutoPrintedRef.current) {
@@ -327,14 +341,6 @@ export const LaporanResmiKknPage: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [data, loading, searchParams]);
-
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      fetchLaporanData();
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [selectedRw, selectedKelompok]);
 
   // Aksi Cetak PDF Resmi Langsung
   const handlePrint = () => {
@@ -508,7 +514,14 @@ export const LaporanResmiKknPage: React.FC = () => {
 
   // Opsi RW yang tersedia (dinamis berdasarkan kelurahan yang dipilih)
   const availableRwOptions = useMemo(() => {
-    if (!isKelurahanSelected || !data?.matriksKelompok) return ["Semua RW"];
+    if (!isKelurahanSelected) return ["Semua RW"];
+
+    // Prioritaskan daftar RW resmi dari filterOptions backend (tidak terpotong saat filter kelompok aktif)
+    if (data?.filterOptions?.rwOptions && data.filterOptions.rwOptions.length > 0) {
+      return data.filterOptions.rwOptions;
+    }
+
+    if (!data?.matriksKelompok) return ["Semua RW"];
 
     const rws = new Set<string>();
     data.matriksKelompok
@@ -531,10 +544,42 @@ export const LaporanResmiKknPage: React.FC = () => {
     });
 
     return ["Semua RW", ...sortedList];
-  }, [isKelurahanSelected, selectedKelurahan, data?.matriksKelompok]);
+  }, [isKelurahanSelected, selectedKelurahan, data?.filterOptions?.rwOptions, data?.matriksKelompok]);
 
   // Opsi Kelompok yang tersedia (dinamis berdasarkan kelurahan dan RW terpilih)
   const availableKelompokOptions = useMemo(() => {
+    // 1. Prioritaskan daftar kelompok dari backend filterOptions agar tetap lengkap saat salah satu kelompok sedang aktif dipilih
+    if (data?.filterOptions?.kelompokOptions && data.filterOptions.kelompokOptions.length > 0) {
+      let list = data.filterOptions.kelompokOptions.filter(
+        (k) => k.value !== "Semua Kelompok" && k.value !== "ALL"
+      );
+
+      // Jika kelurahan tertentu aktif, persempit ke kelurahan tersebut
+      if (isKelurahanSelected) {
+        list = list.filter((k) =>
+          (k.kelurahan || "").toLowerCase().includes(selectedKelurahan.toLowerCase())
+        );
+      }
+
+      // Jika RW tertentu aktif, persempit kelompok ke RW tersebut
+      if (selectedRw && selectedRw !== "Semua RW" && selectedRw.trim() !== "") {
+        const rwNum = parseInt(selectedRw.replace(/\D/g, ""), 10);
+        if (!isNaN(rwNum)) {
+          list = list.filter((k) => {
+            if (!Array.isArray(k.cakupanRw)) return false;
+            return k.cakupanRw.some((r: any) => parseInt(String(r).replace(/\D/g, ""), 10) === rwNum);
+          });
+        }
+      }
+
+      const sortedNames = list
+        .map((k) => k.value)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+      return ["Semua Kelompok", ...sortedNames];
+    }
+
+    // 2. Fallback: jika filterOptions belum tersedia, gunakan data.matriksKelompok
     if (!data?.matriksKelompok) return ["Semua Kelompok"];
 
     let list = data.matriksKelompok;
@@ -561,7 +606,13 @@ export const LaporanResmiKknPage: React.FC = () => {
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
     return ["Semua Kelompok", ...sortedGroupNames];
-  }, [isKelurahanSelected, selectedKelurahan, selectedRw, data?.matriksKelompok]);
+  }, [
+    data?.filterOptions?.kelompokOptions,
+    isKelurahanSelected,
+    selectedKelurahan,
+    selectedRw,
+    data?.matriksKelompok,
+  ]);
 
   // Reset selectedKelompok jika kelompok terpilih tidak ada dalam opsi kelurahan/RW baru
   useEffect(() => {
@@ -953,7 +1004,7 @@ export const LaporanResmiKknPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-[10.5px] text-slate-500 dark:text-slate-400 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <span className="font-semibold text-purple-600 dark:text-purple-400">{data.ringkasanEksekutif.totalKelompok} Posko Kelompok</span>
+                      <span className="font-semibold text-purple-600 dark:text-purple-400">{data.ringkasanEksekutif.totalKelompok} Kelompok</span>
                       <span>&bull;</span>
                       <span className="font-semibold text-indigo-600 dark:text-indigo-400">{data.ringkasanEksekutif.totalDpl} DPL Pengampu</span>
                     </div>
@@ -1196,7 +1247,7 @@ export const LaporanResmiKknPage: React.FC = () => {
                                 return (
                                   <div className="bg-slate-900 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-lg border border-slate-700 space-y-1">
                                     <div className="font-extrabold text-sm text-slate-100">{d.fullName}</div>
-                                    <div className="text-[11px] text-slate-400">{d.kelompok} Posko Kelompok Binaan</div>
+                                    <div className="text-[11px] text-slate-400">{d.kelompok} Kelompok Binaan</div>
                                     <div className="pt-1 border-t border-slate-800 space-y-0.5">
                                       <div className="flex justify-between gap-4">
                                         <span className="text-blue-400 font-semibold">Mahasiswa:</span>
@@ -1231,7 +1282,7 @@ export const LaporanResmiKknPage: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-[11px] text-slate-400 italic">
-                        {data.ringkasanEksekutif.totalKelompok} Posko Kelompok Tersebar
+                        {data.ringkasanEksekutif.totalKelompok} Kelompok Tersebar
                       </span>
                     </div>
                   </div>
@@ -1389,7 +1440,7 @@ export const LaporanResmiKknPage: React.FC = () => {
                   <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-amber-200/80 dark:border-amber-800/50 space-y-1">
                     <div className="font-bold text-purple-700 dark:text-purple-400">3. Logbook Pembimbingan</div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Tercatat {(data.ringkasanEksekutif.totalLogbookDpl ?? 0).toLocaleString("id-ID")} catatan bimbingan DPL aktif yang mengawal luaran mahasiswa di {data.ringkasanEksekutif.totalKelompok} posko binaan.
+                      Tercatat {(data.ringkasanEksekutif.totalLogbookDpl ?? 0).toLocaleString("id-ID")} catatan bimbingan DPL aktif yang mengawal luaran mahasiswa di {data.ringkasanEksekutif.totalKelompok} kelompok binaan.
                     </p>
                   </div>
 
@@ -1773,9 +1824,9 @@ export const LaporanResmiKknPage: React.FC = () => {
               >
                 {/* 1. KOP SURAT RESMI UNIKOM */}
                 <div className="pb-3 border-b-2 border-black mb-3.5 overflow-visible">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 px-3">
                     {/* Logo UNIKOM Resmi Utuh */}
-                    <div className="w-20 shrink-0 flex items-center justify-center">
+                    <div className="w-16 shrink-0 flex items-center justify-center pl-1">
                       <img
                         src="/logos/unikom.png"
                         alt="Logo UNIKOM"
@@ -1787,15 +1838,9 @@ export const LaporanResmiKknPage: React.FC = () => {
                     </div>
 
                     {/* Teks Identitas Lembaga Resmi UNIKOM */}
-                    <div className="text-center flex-1 px-1 leading-tight text-black">
-                      <div className="text-xs font-bold tracking-wider uppercase text-black">
-                        YAYASAN SAINS DAN TEKNOLOGI
-                      </div>
+                    <div className="text-center flex-1 px-2 leading-tight text-black">
                       <div className="text-lg font-black tracking-wide uppercase text-black mt-0.5">
                         UNIVERSITAS KOMPUTER INDONESIA (UNIKOM)
-                      </div>
-                      <div className="text-xs font-black tracking-tight uppercase text-black mt-0.5">
-                        LEMBAGA PENGABDIAN DAN PEMBERDAYAAN MASYARAKAT
                       </div>
                       <div className="text-[10.5px] text-black mt-1 leading-snug">
                         Jalan Dipati Ukur Nomor 112–116, Coblong, Kota Bandung 40132 &bull; Telepon: (022) 2504119
@@ -1804,14 +1849,14 @@ export const LaporanResmiKknPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Logo BERSEKA Resmi */}
-                    <div className="w-20 shrink-0 flex items-center justify-center">
+                    {/* Logo BERSEKA Resmi (Emblem Lambang Saja) */}
+                    <div className="w-16 shrink-0 flex items-center justify-center pr-1">
                       <img
-                        src="/logos/berseka/berseka-logo-full.png?v=20261022_v2"
+                        src="/logos/berseka/logo-berseka-laporan.png?v=20261029"
                         alt="Logo BERSEKA"
-                        className="h-12 w-auto max-w-[105px] object-contain block shrink-0"
+                        className="h-14 w-14 object-contain block shrink-0"
                         onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src = "/logos/berseka/berseka-logo-full.svg?v=20261022_v2";
+                          (e.currentTarget as HTMLImageElement).src = "/logos/berseka/berseka-logo-bg-transparent.png";
                         }}
                       />
                     </div>
@@ -1848,9 +1893,9 @@ export const LaporanResmiKknPage: React.FC = () => {
                 <div className="text-[11.5px] leading-relaxed text-justify mb-3.5 text-black">
                   <p>
                     {selectedKelurahan !== "Semua Kelurahan" && selectedKelurahan !== "ALL" ? (
-                      `Berdasarkan Surat Keputusan Rektor Universitas Komputer Indonesia Nomor ST/084/REKTOR-UNIKOM/VIII/2026, telah dilaksanakan kegiatan Kuliah Kerja Nyata (KKN) Tematik di wilayah Kelurahan ${selectedKelurahan}, Kecamatan Coblong. Sebanyak ${data.ringkasanEksekutif.totalMahasiswaAktif} mahasiswa sarjana dan ${data.ringkasanEksekutif.totalDpl} Dosen Pembimbing Lapangan (DPL) diterjunkan ke ${data.ringkasanEksekutif.totalKelompok} posko binaan dengan hasil rekapitulasi pelaksanaan sebagai berikut:`
+                      `Berdasarkan Surat Keputusan Rektor Universitas Komputer Indonesia Nomor ST/084/REKTOR-UNIKOM/VIII/2026, telah dilaksanakan kegiatan Kuliah Kerja Nyata (KKN) Tematik di wilayah Kelurahan ${selectedKelurahan}, Kecamatan Coblong. Sebanyak ${data.ringkasanEksekutif.totalMahasiswaAktif} mahasiswa sarjana dan ${data.ringkasanEksekutif.totalDpl} Dosen Pembimbing Lapangan (DPL) diterjunkan ke ${data.ringkasanEksekutif.totalKelompok} kelompok binaan dengan hasil rekapitulasi pelaksanaan sebagai berikut:`
                     ) : (
-                      `Berdasarkan Surat Keputusan Rektor Universitas Komputer Indonesia Nomor ST/084/REKTOR-UNIKOM/VIII/2026, telah dilaksanakan kegiatan Kuliah Kerja Nyata (KKN) Tematik di wilayah Kecamatan Coblong yang mencakup 6 kelurahan binaan dan ${data.ringkasanDampakSampah?.totalLokasiRw ?? 74} RW binaan aktif. Sebanyak ${data.ringkasanEksekutif.totalMahasiswaAktif} mahasiswa sarjana dan ${data.ringkasanEksekutif.totalDpl} Dosen Pembimbing Lapangan (DPL) diterjunkan ke ${data.ringkasanEksekutif.totalKelompok} posko binaan dengan hasil rekapitulasi pelaksanaan sebagai berikut:`
+                      `Berdasarkan Surat Keputusan Rektor Universitas Komputer Indonesia Nomor ST/084/REKTOR-UNIKOM/VIII/2026, telah dilaksanakan kegiatan Kuliah Kerja Nyata (KKN) Tematik di wilayah Kecamatan Coblong yang mencakup 6 kelurahan binaan dan ${data.ringkasanDampakSampah?.totalLokasiRw ?? 74} RW binaan aktif. Sebanyak ${data.ringkasanEksekutif.totalMahasiswaAktif} mahasiswa sarjana dan ${data.ringkasanEksekutif.totalDpl} Dosen Pembimbing Lapangan (DPL) diterjunkan ke ${data.ringkasanEksekutif.totalKelompok} kelompok binaan dengan hasil rekapitulasi pelaksanaan sebagai berikut:`
                     )}
                   </p>
                 </div>
@@ -1890,7 +1935,7 @@ export const LaporanResmiKknPage: React.FC = () => {
                           <tr key={k.kelurahan} className="hover:bg-slate-50/50">
                             <td className="py-1 px-1 border border-black text-center font-semibold">{idx + 1}</td>
                             <td className="py-1 px-2 border border-black font-bold text-black whitespace-nowrap">Kelurahan {k.kelurahan}</td>
-                            <td className="py-1 px-1.5 border border-black text-center whitespace-nowrap">{k.totalKelompok} Posko</td>
+                            <td className="py-1 px-1.5 border border-black text-center whitespace-nowrap">{k.totalKelompok} Kelompok</td>
                             <td className="py-1 px-1.5 border border-black text-center whitespace-nowrap">{k.totalMahasiswa} Orang</td>
                             <td className="py-1 px-1.5 border border-black text-center font-bold text-black whitespace-nowrap">{Number(avgPresence ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%</td>
                             <td className="py-1 px-1.5 border border-black text-center font-bold text-black whitespace-nowrap">{k.prokerSelesai} Tuntas</td>
@@ -1904,7 +1949,7 @@ export const LaporanResmiKknPage: React.FC = () => {
                             ? `Akumulasi Kelurahan ${selectedKelurahan}`
                             : "Akumulasi Kecamatan Coblong"}
                         </td>
-                        <td className="py-1.5 px-1.5 border border-black text-center whitespace-nowrap">{data.ringkasanEksekutif.totalKelompok} Posko</td>
+                        <td className="py-1.5 px-1.5 border border-black text-center whitespace-nowrap">{data.ringkasanEksekutif.totalKelompok} Kelompok</td>
                         <td className="py-1.5 px-1.5 border border-black text-center whitespace-nowrap">{data.ringkasanEksekutif.totalMahasiswaAktif} Mahasiswa</td>
                         <td className="py-1.5 px-1.5 border border-black text-center font-bold text-black whitespace-nowrap">{Number(data.ringkasanEksekutif.kepatuhanPresensiPercent ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%</td>
                         <td className="py-1.5 px-1.5 border border-black text-center font-bold text-black whitespace-nowrap">{data.ringkasanEksekutif.totalProkerSelesai} / {data.ringkasanEksekutif.totalProkerDisetujui}</td>

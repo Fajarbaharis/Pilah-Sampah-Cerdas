@@ -312,6 +312,7 @@ export const DashboardEksekutifKkn: React.FC = () => {
   const [data, setData] = useState<KknExecutiveData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   // Master Wilayah & RW List dari fetchMasterWilayah
@@ -988,15 +989,24 @@ export const DashboardEksekutifKkn: React.FC = () => {
     return filteredModalGroupStudents.slice(start, start + MODAL_STUDENTS_PER_PAGE);
   }, [filteredModalGroupStudents, groupStudentPage]);
 
+  const handleManualRefresh = async () => {
+    setManualRefreshing(true);
+    try {
+      await fetchData(true);
+    } finally {
+      setManualRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [selectedPeriode, selectedKelurahan, selectedRw, selectedKelompok]);
 
-  // Periodic auto-refresh every 60 seconds
+  // Periodic auto-refresh every 3 minutes (180 seconds)
   useEffect(() => {
     const timer = setInterval(() => {
       fetchData(true);
-    }, 60000);
+    }, 180000);
     return () => clearInterval(timer);
   }, [selectedPeriode, selectedKelurahan, selectedRw, selectedKelompok]);
 
@@ -1118,17 +1128,17 @@ export const DashboardEksekutifKkn: React.FC = () => {
           <div className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200/80 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 font-semibold shadow-2xs shrink-0">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
             <span>Terakhir diperbarui: {formattedLastUpdated}</span>
-            {refreshing && (
+            {manualRefreshing && (
               <RefreshCw size={12} className="animate-spin text-emerald-600 ml-1" />
             )}
           </div>
           <button
             type="button"
-            onClick={() => fetchData(false)}
-            disabled={refreshing}
+            onClick={handleManualRefresh}
+            disabled={manualRefreshing}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#009966] hover:bg-[#008855] active:scale-95 text-white font-extrabold text-xs rounded-full shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+            <RefreshCw size={14} className={manualRefreshing ? "animate-spin" : ""} />
             <span>Perbarui Data</span>
           </button>
           <UnduhLaporanButton

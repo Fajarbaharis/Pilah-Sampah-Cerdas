@@ -85,12 +85,19 @@ describe("sidebarAccess utility", () => {
     expect(canAccessSidebarRoute("/monitoring-kegiatan/presensi", pimpinan, mockCan)).toBe(true);
   });
 
-  it("allows DEVELOPER and SUPER_USER full access", () => {
+  it("allows DEVELOPER full access and restricts Laporan exclusively to DEVELOPER", () => {
     const dev = createMockUser("DEVELOPER");
+    const superUser = createMockUser("SUPER_USER");
     expect(canAccessSidebarRoute("/wilayah/rw", dev)).toBe(true);
     expect(canAccessSidebarRoute("/monitoring-pemilahan/rekapitulasi-setoran", dev)).toBe(true);
     expect(canAccessSidebarRoute("/peringkat", dev)).toBe(true);
     expect(canAccessSidebarRoute("/monitoring-pengelolaan/tempat-sampah", dev)).toBe(true);
+    expect(canAccessSidebarRoute("/laporan/kkn", dev)).toBe(true);
+    expect(canAccessSidebarRoute("/laporan/tata-kelola-sampah", dev)).toBe(true);
+
+    // Pastikan non-DEVELOPER (seperti SUPER_USER, ADMIN_DLH, dll.) tidak dapat mengakses rute Laporan di sidebar
+    expect(canAccessSidebarRoute("/laporan/kkn", superUser)).toBe(false);
+    expect(canAccessSidebarRoute("/laporan/tata-kelola-sampah", superUser)).toBe(false);
   });
 
   it("blocks DPL from accessing executive Laporan routes and Leaderboard", () => {

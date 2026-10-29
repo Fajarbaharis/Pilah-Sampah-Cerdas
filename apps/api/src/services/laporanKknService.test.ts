@@ -222,6 +222,72 @@ describe("laporanKknService - Laporan Resmi KKN Eksekutif", () => {
       expect(result.lembarPengesahan.pejabat[0].posisi).toBe("TENGAH");
       expect(result.lembarPengesahan.pejabat[0].jabatan).toContain("Ketua Tim Pelaksana");
     });
+
+    it("harus menjaga kelengkapan filterOptions.kelompokOptions dan rwOptions meskipun filter kelompok spesifik sedang aktif", async () => {
+      (prisma.kelompokKkn.findMany as any).mockResolvedValue([
+        {
+          id: "kel-1",
+          name: "Sadang Serang 1",
+          kelurahan: "Sadang Serang",
+          cakupanRw: ["01", "02"],
+          dpl: { id: "dpl-1", name: "DPL 1" },
+          poskoKkn: null,
+          students: [],
+          programKerja: [],
+          penilaianMahasiswa: [],
+          schedules: [],
+        },
+        {
+          id: "kel-2",
+          name: "Sadang Serang 5",
+          kelurahan: "Sadang Serang",
+          cakupanRw: ["05"],
+          dpl: { id: "dpl-2", name: "DPL 2" },
+          poskoKkn: null,
+          students: [],
+          programKerja: [],
+          penilaianMahasiswa: [],
+          schedules: [],
+        },
+        {
+          id: "kel-3",
+          name: "Sadang Serang 7",
+          kelurahan: "Sadang Serang",
+          cakupanRw: ["07"],
+          dpl: { id: "dpl-3", name: "DPL 3" },
+          poskoKkn: null,
+          students: [],
+          programKerja: [],
+          penilaianMahasiswa: [],
+          schedules: [],
+        },
+      ]);
+
+      (prisma.presensiMandiri.aggregate as any).mockResolvedValue({ _sum: { durasiMenit: 0 } });
+      (prisma.penilaianKknMahasiswa.findMany as any).mockResolvedValue([]);
+      (prisma.activityAttendance.findMany as any).mockResolvedValue([]);
+
+      const result = await laporanKknService.getLaporanSummary({
+        kelurahan: "Sadang Serang",
+        kelompok: "Sadang Serang 5",
+      });
+
+      // Data matriks kelompok hanya menampilkan kelompok yang dipilih (Sadang Serang 5)
+      expect(result.matriksKelompok.length).toBe(1);
+      expect(result.matriksKelompok[0].nama).toBe("Sadang Serang 5");
+
+      // Namun filterOptions.kelompokOptions HARUS tetap utuh (semua kelompok di Sadang Serang)
+      // agar pengguna dapat langsung beralih ke Sadang Serang 7 tanpa harus memilih "Semua Kelompok" terlebih dahulu
+      const optionValues = result.filterOptions.kelompokOptions?.map((o) => o.value);
+      expect(optionValues).toContain("Semua Kelompok");
+      expect(optionValues).toContain("Sadang Serang 1");
+      expect(optionValues).toContain("Sadang Serang 5");
+      expect(optionValues).toContain("Sadang Serang 7");
+      expect(result.filterOptions.kelompokOptions?.length).toBe(4);
+
+      // rwOptions juga harus tetap memuat seluruh RW yang ada di kelurahan tersebut
+      expect(result.filterOptions.rwOptions).toEqual(["Semua RW", "RW 01", "RW 02", "RW 05", "RW 07"]);
+    });
   });
 
   describe("exportLaporanCsv", () => {
