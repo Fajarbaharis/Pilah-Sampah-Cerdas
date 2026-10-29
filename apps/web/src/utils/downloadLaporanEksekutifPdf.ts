@@ -94,8 +94,14 @@ export interface LaporanEksekutifData {
   };
 }
 
-export const downloadLaporanEksekutifPdf = (customData?: Partial<LaporanEksekutifData>) => {
-  const printWindow = window.open("", "_blank");
+export const downloadLaporanEksekutifPdf = (
+  customData?: Partial<LaporanEksekutifData>,
+  existingWindow?: Window | null
+) => {
+  const printWindow =
+    existingWindow && !existingWindow.closed
+      ? existingWindow
+      : window.open("", "_blank");
   if (!printWindow) {
     showToast.error("Gagal membuka jendela dokumen. Mohon izinkan popup di browser Anda.");
     return;
@@ -115,7 +121,7 @@ export const downloadLaporanEksekutifPdf = (customData?: Partial<LaporanEksekuti
   // Data Baku Acuan Pimpinan KKN & Lingkungan (100% Sesuai Acuan Resmi)
   const d: LaporanEksekutifData = {
     periode: customData?.periode || "KKN 2026",
-    tanggalUpdate: customData?.tanggalUpdate || "23 September 2026, 16:55 WIB",
+    tanggalUpdate: customData?.tanggalUpdate || `${generatedDate}, ${generatedTime} WIB`,
     cakupanWilayah: customData?.cakupanWilayah || "Kecamatan Coblong (6 Kelurahan Binaan, 86 RW)",
     totalKelompok: customData?.totalKelompok ?? 32,
     totalMahasiswa: customData?.totalMahasiswa ?? 534,
