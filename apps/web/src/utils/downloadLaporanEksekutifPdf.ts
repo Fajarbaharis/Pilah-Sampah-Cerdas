@@ -335,6 +335,10 @@ export const downloadLaporanEksekutifPdf = (
             page-break-after: always;
             break-after: page;
           }
+          .page-break-before {
+            page-break-before: always;
+            break-before: page;
+          }
         }
 
         /* Container Dokumen */
@@ -772,12 +776,14 @@ export const downloadLaporanEksekutifPdf = (
           </div>
         </div>
 
-        <div class="sub-heading">B. Log Aktivitas &amp; Keaktifan DPL</div>
-        <ul style="margin: 2px 0 8px 16px; padding: 0; font-size: 8.6pt; line-height: 1.5;">
-          <li>Logbook Mahasiswa Terisi: <strong>${d.logAktivitas?.logbookMhs} log</strong></li>
-          <li>Logbook DPL Terisi: <strong>${d.logAktivitas?.logbookDpl} log</strong> (${d.logAktivitas?.dplAktif} dari ${d.logAktivitas?.totalDpl} DPL aktif mengisi logbook / <strong>${d.logAktivitas?.dplAktifPersen}% Keaktifan</strong>)</li>
-          <li>Total Kunjungan Lapangan DPL: <strong>${d.logAktivitas?.kunjunganLapangan} kali kunjungan</strong> (Total ${d.logAktivitas?.jamKunjungan} Jam)</li>
-        </ul>
+        <div class="page-break-before">
+          <div class="sub-heading">B. Log Aktivitas &amp; Keaktifan DPL</div>
+          <ul style="margin: 2px 0 8px 16px; padding: 0; font-size: 8.6pt; line-height: 1.5;">
+            <li>Logbook Mahasiswa Terisi: <strong>${d.logAktivitas?.logbookMhs} log</strong></li>
+            <li>Logbook DPL Terisi: <strong>${d.logAktivitas?.logbookDpl} log</strong> (${d.logAktivitas?.dplAktif} dari ${d.logAktivitas?.totalDpl} DPL aktif mengisi logbook / <strong>${d.logAktivitas?.dplAktifPersen}% Keaktifan</strong>)</li>
+            <li>Total Kunjungan Lapangan DPL: <strong>${d.logAktivitas?.kunjunganLapangan} kali kunjungan</strong> (Total ${d.logAktivitas?.jamKunjungan} Jam)</li>
+          </ul>
+        </div>
 
         <!-- 4. STATUS PROGRAM KERJA (PROKER) -->
         <div class="section-header">
@@ -886,8 +892,7 @@ export const downloadLaporanEksekutifPdf = (
           <li><strong>Peningkatan Kepatuhan Sampah:</strong> ${narasiKepatuhanSampah} dan mengoptimalkan ${d.peringatanDini?.dplKosong ?? 0} DPL yang logbook-nya masih kosong.</li>
         </ol>
 
-        <div class="doc-footer" style="display: flex; justify-content: space-between; align-items: center;">
-          <span>Sistem Informasi Terpadu BERSEKA &bull; Universitas Komputer Indonesia</span>
+        <div class="doc-footer" style="display: flex; justify-content: flex-end; align-items: center;">
           <span>Dicetak pada: ${generatedDate}, ${generatedTime} WIB</span>
         </div>
       </div>
