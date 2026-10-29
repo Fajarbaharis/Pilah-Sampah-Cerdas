@@ -120,6 +120,16 @@ export const surveyController = {
    * DELETE /api/v1/survey/:id
    * Hapus survei berdasarkan ID
    */
+  getKelompokList: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const data = await surveyService.getKelompokList();
+      res.json({ success: true, data });
+    } catch (error) {
+      console.error("getKelompokList error:", error);
+      res.status(500).json({ success: false, message: "Gagal mengambil daftar kelompok." });
+    }
+  },
+
   deleteSurvey: async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;

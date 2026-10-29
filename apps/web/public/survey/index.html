@@ -655,9 +655,24 @@ $("#tanggal").value = todayStr();
 $("#tanggal").max = todayStr();
 $("#tanggal").min = CONFIG.tahunMulai + "-01-01";
 $("#prodi").innerHTML = opt("", "Pilih program studi") + PRODI.map(p => opt(p)).join("");
-let kHtml = opt("", "Pilih kelompok");
-for (let i = 1; i <= CONFIG.jumlahKelompok; i++) kHtml += opt("Kelompok " + String(i).padStart(2, "0"));
-$("#kelompok").innerHTML = kHtml;
+// FIX(survey): Kelompok tidak lagi hardcoded — dikunci dari database setelah NIM diverifikasi
+let studentVerifiedKelompok = null; // set saat NIM terverifikasi
+let studentCakupanRw = null;        // set saat NIM terverifikasi (array string: ["1","2","7","8"])
+$("#kelompok").innerHTML = opt("", "Verifikasi NIM dulu");
+$("#kelompok").disabled = true;
+
+// Prefetch daftar kelompok dari DB (untuk referensi/fallback)
+(async () => {
+  try {
+    const res = await fetch("/api/v1/survey/kelompok-list");
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        window._kelompokList = json.data;
+      }
+    }
+  } catch (e) { /* offline mode */ }
+})();
 
 const kota = $("#kota"), kec = $("#kec"), kel = $("#kel"), rw = $("#rw");
 kota.innerHTML = opt("", "Pilih kabupaten/kota") + Object.keys(WILAYAH).map(k => opt(k)).join("");
@@ -676,7 +691,17 @@ function fillRw() {
   const d = WILAYAH[kota.value] && WILAYAH[kota.value][kec.value];
   const n = d && d[kel.value];
   let h = opt("", n ? "Pilih RW" : "Pilih kelurahan dulu");
-  if (n) for (let i = 1; i <= n; i++) h += opt("RW " + String(i).padStart(2, "0"));
+  if (n) {
+    for (let i = 1; i <= n; i++) {
+      // FIX(survey): Filter RW berdasarkan cakupanRw mahasiswa jika sudah terverifikasi
+      if (studentCakupanRw && studentCakupanRw.length > 0) {
+        const rwStr = String(i);
+        const rwPad = String(i).padStart(2, "0");
+        if (!studentCakupanRw.includes(rwStr) && !studentCakupanRw.includes(rwPad)) continue;
+      }
+      h += opt("RW " + String(i).padStart(2, "0"));
+    }
+  }
   rw.innerHTML = h; rw.disabled = !n;
 }
 kota.addEventListener("change", fillKec);
@@ -1200,16 +1225,37 @@ async function verifyNimDatabase(nimVal) {
           if (op.value.toLowerCase() === s.prodi.toLowerCase()) $("#prodi").value = op.value;
         });
       }
-      if (s.kelompok && !$("#kelompok").value) {
-        [...$("#kelompok").options].forEach(op => {
-          if (op.value.toLowerCase().includes(s.kelompok.toLowerCase())) $("#kelompok").value = op.value;
-        });
+      // FIX(survey): Kelompok dikunci dari DB — set read-only, value dari API
+      studentVerifiedKelompok = s.kelompok || null;
+      studentCakupanRw = (Array.isArray(s.cakupanRw) && s.cakupanRw.length > 0) ? s.cakupanRw : null;
+      const kelompokEl = $("#kelompok");
+      // Bersihkan opsi lama, isi 1 opsi dari DB, dan lock
+      kelompokEl.innerHTML = opt("", "Verifikasi NIM dulu");
+      if (s.kelompok) {
+        const kOpt = document.createElement("option");
+        kOpt.value = s.kelompok;
+        kOpt.textContent = s.kelompok;
+        kelompokEl.appendChild(kOpt);
+        kelompokEl.value = s.kelompok;
       }
-      if (s.kelurahan && !$("#kel").value) {
-        [...$("#kel").options].forEach(op => {
+      kelompokEl.disabled = true; // read-only — kelompok sudah dari DB
+      // Auto-select kota & kecamatan terlebih dahulu
+      if (s.kelurahan) {
+        const kotaEl = $("#kota"), kecEl = $("#kec"), kelEl = $("#kel");
+        // Kota Bandung sudah default, pastikan kecamatan Coblong diisi dulu
+        if (!kotaEl.value) {
+          const kotaOpt = [...kotaEl.options].find(o => o.value === "Kota Bandung");
+          if (kotaOpt) { kotaEl.value = "Kota Bandung"; if (typeof fillKec === 'function') fillKec(); }
+        }
+        if (!kecEl.value) {
+          const kecOpt = [...kecEl.options].find(o => o.value === "Coblong");
+          if (kecOpt) { kecEl.value = "Coblong"; if (typeof fillKel === 'function') fillKel(); }
+        }
+        // Sekarang set kelurahan
+        [...kelEl.options].forEach(op => {
           if (op.value.toLowerCase().includes(s.kelurahan.toLowerCase())) {
-            $("#kel").value = op.value;
-            fillRw();
+            kelEl.value = op.value;
+            fillRw(); // fillRw sudah filter by studentCakupanRw
           }
         });
       }
@@ -1235,6 +1281,11 @@ $("#nim").addEventListener("input", e => {
     verifyDebounce = setTimeout(() => verifyNimDatabase(val), 350);
   } else {
     const s = $("#nimVerifyStatus"); if (s) s.style.display = "none";
+    // FIX(survey): Reset state verifikasi saat NIM diubah
+    studentVerifiedKelompok = null;
+    studentCakupanRw = null;
+    const kelompokEl2 = $("#kelompok");
+    if (kelompokEl2) { kelompokEl2.innerHTML = opt("", "Verifikasi NIM dulu"); kelompokEl2.disabled = true; }
     const b = $("#nimBadge"); if (b) b.style.display = "none";
   }
 });
