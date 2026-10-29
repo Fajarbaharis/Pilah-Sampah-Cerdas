@@ -73,6 +73,7 @@ const DetailSurveiKkn = React.lazy(() => import("../pages/SuperUser/DetailSurvei
 const EditSurveiKkn = React.lazy(() => import("../pages/SuperUser/EditSurveiKkn"));
 const ResiduDashboard = React.lazy(() => import("../pages/ResiduDashboard/ResiduDashboard"));
 const DownloadPage = React.lazy(() => import("../pages/Download/DownloadPage"));
+const SurveyLandingPage = React.lazy(() => import("../pages/Survey/SurveyLandingPage"));
 const EvaluasiDampakKkn = React.lazy(() => import("../pages/EvaluasiDampak/EvaluasiDampakKkn"));
 const PemantauanDanRekapitulasi = React.lazy(() => import("../pages/PemantauanDanRekapitulasi/PemantauanDanRekapitulasi"));
 const ProgramKerjaKkn = React.lazy(() => import("../pages/ProgramKerjaKkn/ProgramKerjaKkn"));
@@ -299,6 +300,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/faq" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/survey" element={<SurveyLandingPage />} />
+      <Route path="/survei" element={<Navigate to="/survey" replace />} />
       <Route path="/download" element={<DownloadPage />} />
       <Route path="/register" element={<Register />} />
       <Route path="/register-mahasiswa" element={<MahasiswaRegistration />} />
