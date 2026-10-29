@@ -112,7 +112,6 @@ function buildStudentHtml(s) {
   <title>Sertifikat KKN Tematik - ${s.nama} (${s.nim})</title>
   <style>
     ${embeddedFontFacesCss}
-    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
 
     @page {
       size: A4 landscape;
@@ -157,7 +156,7 @@ function buildStudentHtml(s) {
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      padding: 38px 75px 28px 75px;
+      padding: 30px 65px 25px 65px;
       box-sizing: border-box;
     }
 
@@ -175,64 +174,40 @@ function buildStudentHtml(s) {
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-left: 60px;
-      margin-top: 5px;
+      width: 100%;
+      margin-top: 4px;
     }
 
     .univ-title {
       font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
-      font-size: 24pt;
+      font-size: 18pt;
       font-weight: 800;
       color: #0A2540;
       letter-spacing: 0.5px;
       margin: 0;
       line-height: 1.1;
-    }
-
-    .univ-tagline-container {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-top: 6px;
-      width: 100%;
-      justify-content: center;
-    }
-
-    .tagline-line {
-      height: 1px;
-      background-color: #C5A059;
-      flex: 1;
-      max-width: 90px;
-    }
-
-    .univ-tagline {
-      font-size: 8pt;
-      font-weight: 700;
-      color: #0A2540;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      margin: 0;
+      text-align: center;
     }
 
     .title-wrapper {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 20px;
+      gap: 16px;
       width: 100%;
-      margin-top: 18px;
+      margin-top: 10px;
     }
 
     .title-line {
       height: 1.5px;
       background-color: #C5A059;
-      width: 50px;
+      width: 55px;
       flex-shrink: 0;
     }
 
     .title-main {
       font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
-      font-size: 34pt;
+      font-size: 26pt;
       font-weight: 800;
       color: #0A2540;
       letter-spacing: 2.5px;
@@ -241,44 +216,44 @@ function buildStudentHtml(s) {
     }
 
     .title-sub1 {
-      font-size: 15.5pt;
+      font-size: 12pt;
       font-weight: 800;
       color: #005AA9;
-      letter-spacing: 1px;
-      margin-top: 6px;
+      letter-spacing: 0.8px;
+      margin-top: 5px;
       text-transform: uppercase;
     }
 
     .title-sub2 {
-      font-size: 13.5pt;
+      font-size: 10.5pt;
       font-weight: 800;
       color: #005AA9;
-      letter-spacing: 0.8px;
-      margin-top: 3px;
+      letter-spacing: 0.6px;
+      margin-top: 2px;
       text-transform: uppercase;
     }
 
     .cert-number {
-      font-size: 11pt;
+      font-size: 9.5pt;
       font-weight: 600;
       color: #0A2540;
-      margin-top: 6px;
+      margin-top: 4px;
     }
 
     .given-to {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 12.5pt;
+      font-size: 11pt;
       font-style: italic;
       color: #0A2540;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .recipient-name {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 28pt;
+      font-size: 22pt;
       font-weight: 900;
       color: #0A2540;
-      letter-spacing: 1.2px;
+      letter-spacing: 1px;
       margin-top: 0;
       text-transform: uppercase;
       text-align: center;
@@ -290,11 +265,11 @@ function buildStudentHtml(s) {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 12px;
+      gap: 10px;
       width: 100%;
-      max-width: 480px;
-      margin-top: 6px;
-      margin-bottom: 8px;
+      max-width: 420px;
+      margin-top: 5px;
+      margin-bottom: 6px;
     }
 
     .diamond-line {
@@ -305,80 +280,25 @@ function buildStudentHtml(s) {
 
     .diamond-shape {
       color: #C5A059;
-      font-size: 9pt;
+      font-size: 8pt;
       line-height: 1;
     }
 
     .bio-text {
-      font-size: 11pt;
+      font-size: 9.5pt;
       font-weight: 600;
       color: #0A2540;
-      margin-top: 2px;
-    }
-
-    .sks-pill {
-      margin-top: 7px;
-      border: 1.2px solid #C5A059;
-      border-radius: 9999px;
-      padding: 3px 22px;
-      background: #FFFFFF;
-      font-size: 11pt;
-      font-weight: 800;
-      color: #005AA9;
-      letter-spacing: 0.3px;
+      margin-top: 1.5px;
     }
 
     .narration {
-      font-size: 11pt;
-      line-height: 1.45;
+      font-size: 10pt;
+      line-height: 1.5;
       color: #0A2540;
       text-align: center;
       margin-top: 12px;
-      max-width: 760px;
-      font-weight: 500;
-    }
-
-    .hours-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 12px;
-      width: 100%;
       max-width: 660px;
-    }
-
-    .hours-col {
-      flex: 1;
-      text-align: center;
-      padding: 0 10px;
-    }
-
-    .hours-label {
-      font-size: 9.5pt;
-      color: #0A2540;
-      font-weight: 600;
-      margin-bottom: 2px;
-    }
-
-    .hours-val {
-      font-size: 15.5pt;
-      font-weight: 800;
-      color: #005AA9;
-    }
-
-    .hours-divider {
-      width: 1.5px;
-      height: 38px;
-      background-color: #C5A059;
-    }
-
-    .total-hours-label {
-      font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
-      font-size: 13pt;
-      font-weight: 800;
-      color: #0A2540;
-      letter-spacing: 2px;
-      margin-top: 8px;
+      font-weight: 500;
     }
 
     .page1-bottom {
@@ -387,16 +307,7 @@ function buildStudentHtml(s) {
       justify-content: flex-end;
       align-items: flex-end;
       flex-shrink: 0;
-      padding-right: 20px;
-    }
-
-    .footer-note {
-      font-size: 8.5pt;
-      color: #64748B;
-      font-style: italic;
-      text-align: center;
-      flex: 1;
-      margin-bottom: 5px;
+      padding-right: 25px;
     }
 
     .sig-block {
@@ -404,61 +315,62 @@ function buildStudentHtml(s) {
       flex-direction: column;
       align-items: center;
       text-align: center;
-      width: 290px;
+      width: 250px;
     }
 
     .sig-date {
-      font-size: 9.5pt;
+      font-size: 8.5pt;
       color: #0A2540;
       font-weight: 600;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
 
     .sig-role {
-      font-size: 9pt;
+      font-size: 8pt;
       font-weight: 700;
       color: #0A2540;
-      line-height: 1.25;
+      line-height: 1.2;
     }
 
     .sig-qr-box {
-      margin: 6px 0;
+      margin: 4px 0;
       border: 1px solid #CBD5E1;
       border-radius: 6px;
-      padding: 4px 8px;
+      padding: 3px 6px;
       background: #FFFFFF;
       display: flex;
       align-items: center;
-      gap: 8px;
-      width: 185px;
-      height: 52px;
+      gap: 6px;
+      width: 170px;
+      height: 44px;
     }
 
     .sig-qr-img {
-      width: 42px;
-      height: 42px;
+      width: 34px;
+      height: 34px;
       flex-shrink: 0;
     }
 
     .sig-qr-text {
       text-align: left;
-      font-size: 6.5pt;
+      font-size: 5.5pt;
       font-family: 'JetBrains Mono', monospace;
       color: #0A2540;
       line-height: 1.2;
     }
 
     .sig-name {
-      font-size: 9.5pt;
+      font-size: 8.5pt;
       font-weight: 800;
       color: #0A2540;
-      margin-top: 2px;
+      margin-top: 1px;
       white-space: nowrap;
     }
 
+    /* ── PAGE 2 STYLES ── */
     .page2-title {
       font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
-      font-size: 26pt;
+      font-size: 20pt;
       font-weight: 800;
       color: #0A2540;
       letter-spacing: 2px;
@@ -470,28 +382,28 @@ function buildStudentHtml(s) {
       display: flex;
       align-items: center;
       width: 100%;
-      max-width: 900px;
-      margin-top: 18px;
+      max-width: 820px;
+      margin-bottom: 14px;
     }
 
     .card-col {
       flex: 1;
       text-align: center;
-      padding: 0 10px;
+      padding: 0 8px;
     }
 
     .card-label {
-      font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
-      font-size: 10.5pt;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 9pt;
       color: #0A2540;
       font-weight: 700;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
       letter-spacing: 0.3px;
     }
 
     .card-val {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 11.5pt;
+      font-size: 10.5pt;
       font-weight: 800;
       color: #005AA9;
       white-space: nowrap;
@@ -501,15 +413,14 @@ function buildStudentHtml(s) {
 
     .card-divider {
       width: 1.5px;
-      height: 32px;
+      height: 28px;
       background-color: #C5A059;
       flex-shrink: 0;
     }
 
     .aspects-table {
       width: 100%;
-      max-width: 900px;
-      margin-top: 18px;
+      max-width: 820px;
       border-collapse: collapse;
       border: 1.5px solid #0D2C54;
       background: #FFFFFF;
@@ -518,7 +429,7 @@ function buildStudentHtml(s) {
     .aspects-table th {
       background-color: #0D2C54;
       color: #FFFFFF;
-      font-size: 11pt;
+      font-size: 9.5pt;
       font-weight: 700;
       padding: 8px 12px;
       border: 1px solid #0D2C54;
@@ -526,10 +437,10 @@ function buildStudentHtml(s) {
     }
 
     .aspects-table td {
-      padding: 7.5px 14px;
-      font-size: 10.5pt;
+      padding: 8px 14px;
+      font-size: 9pt;
       color: #0A2540;
-      border: 1px solid #94A3B8;
+      border: 1px solid #CBD5E1;
     }
 
     .aspects-table tr:nth-child(even) {
@@ -544,49 +455,61 @@ function buildStudentHtml(s) {
 
     .aspects-table td.col-aspect {
       font-weight: 600;
-      width: 67%;
+      width: 72%;
     }
 
     .aspects-table td.col-val {
       text-align: center;
       font-weight: 800;
-      width: 25%;
+      color: #005AA9;
+      width: 20%;
     }
 
-    .page2-bottom {
-      position: absolute;
-      bottom: 22px;
-      left: 75px;
-      right: 75px;
+    .hours-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 18px;
+      width: 100%;
+      max-width: 780px;
+      background: rgba(240, 247, 255, 0.7);
+      border: 1px solid #CBD5E1;
+      border-radius: 10px;
+      padding: 10px 18px;
+    }
+
+    .hours-col {
+      flex: 1;
       text-align: center;
+      padding: 0 10px;
     }
 
-    .page2-legal {
+    .hours-label {
       font-size: 8pt;
-      color: #64748B;
-      font-style: italic;
-      margin-bottom: 3px;
-    }
-
-    .page2-footer-id {
-      font-size: 7.5pt;
-      font-family: 'JetBrains Mono', monospace;
-      color: #475569;
+      color: #0A2540;
       font-weight: 600;
+      margin-bottom: 2px;
     }
 
-    .draft-ribbon {
-      display: inline-block;
-      margin-top: 4px;
-      margin-bottom: 2px;
-      background: #FEF3C7;
-      color: #92400E;
-      border: 1.5px solid #F59E0B;
-      border-radius: 9999px;
-      padding: 3px 14px;
-      font-size: 8.5pt;
+    .hours-val {
+      font-size: 13pt;
       font-weight: 800;
-      letter-spacing: 0.8px;
+      color: #005AA9;
+    }
+
+    .hours-divider {
+      width: 1.5px;
+      height: 30px;
+      background-color: #C5A059;
+    }
+
+    .total-hours-label {
+      font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+      font-size: 11pt;
+      font-weight: 800;
+      color: #0A2540;
+      letter-spacing: 2px;
+      margin-top: 14px;
     }
   </style>
 </head>
@@ -595,10 +518,8 @@ function buildStudentHtml(s) {
   <!-- ==================== HALAMAN 1 ==================== -->
   <div class="cert-sheet">
     <div class="cert-inner">
-      <div style="display: flex; flex-direction: column; align-items: center; width: 100%; flex-shrink: 0;">
-        <div class="header-block">
-          <h1 class="univ-title">UNIVERSITAS KOMPUTER INDONESIA</h1>
-        </div>
+      <div class="header-block">
+        <h1 class="univ-title">UNIVERSITAS KOMPUTER INDONESIA</h1>
 
         <div class="title-wrapper">
           <div class="title-line"></div>
@@ -629,118 +550,122 @@ function buildStudentHtml(s) {
 
       <div class="page1-bottom">
         <div class="sig-block">
-        <div class="sig-date">Bandung, ${tanggalTerbit}</div>
-        <div class="sig-role">Wakil Rektor I UNIKOM<br>Bidang Akademik dan Kemahasiswaan</div>
-        
-        <div class="sig-qr-box">
-          <div class="sig-qr-img">${qrSvg}</div>
-          <div class="sig-qr-text">
-            <strong style="color:#005AA9; display:block; font-size:7pt;">TANDA TANGAN ELEKTRONIK</strong>
-            <span>${s.idSertifikat.slice(0, 18)}</span><br>
-            <span style="color:#059669; font-weight:700;">VERIFIKASI SAH LPPM</span>
+          <div class="sig-date">Bandung, ${tanggalTerbit}</div>
+          <div class="sig-role">Wakil Rektor I UNIKOM<br>Bidang Akademik dan Kemahasiswaan</div>
+          
+          <div class="sig-qr-box">
+            <div class="sig-qr-img">${qrSvg}</div>
+            <div class="sig-qr-text">
+              <strong style="color:#005AA9; display:block; font-size:6pt;">TANDA TANGAN ELEKTRONIK</strong>
+              <span>${s.idSertifikat.slice(0, 18)}</span><br>
+              <span style="color:#059669; font-weight:700;">VERIFIKASI SAH LPPM</span>
             </div>
-        </div>
+          </div>
 
-        <div class="sig-name">Prof. Dr. Hj. Umi Narimawati, Dra., S.E., M.Si.</div>
+          <div class="sig-name">Prof. Dr. Hj. Umi Narimawati, Dra., S.E., M.Si.</div>
         </div>
       </div>
     </div>
   </div>
-
-  
 
   <!-- ==================== HALAMAN 2 ==================== -->
   <div class="cert-sheet">
     <div class="cert-inner">
       <div class="header-block">
         <h1 class="univ-title">UNIVERSITAS KOMPUTER INDONESIA</h1>
-        
+
+        <div class="title-wrapper">
+          <div class="title-line"></div>
+          <h2 class="page2-title">REKAP PENILAIAN PESERTA</h2>
+          <div class="title-line"></div>
+        </div>
+
+        <div class="title-sub1" style="font-size: 11pt;">KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026</div>
       </div>
 
-      <div class="title-wrapper">
-        <div class="title-line"></div>
-        <h2 class="page2-title">REKAP PENILAIAN PESERTA</h2>
-        <div class="title-line"></div>
+      <!-- CENTER PROPORTIONAL SECTION HALAMAN 2 -->
+      <div class="cert-center-body">
+        <div class="student-card-4col">
+          <div class="card-col">
+            <div class="card-label">NAMA:</div>
+            <div class="card-val">${formattedName}</div>
+          </div>
+          <div class="card-divider"></div>
+          <div class="card-col">
+            <div class="card-label">NIM:</div>
+            <div class="card-val">${s.nim}</div>
+          </div>
+          <div class="card-divider"></div>
+          <div class="card-col">
+            <div class="card-label">PROGRAM STUDI:</div>
+            <div class="card-val">${s.prodi.toUpperCase()}</div>
+          </div>
+          <div class="card-divider"></div>
+          <div class="card-col">
+            <div class="card-label">SKS DIAMBIL:</div>
+            <div class="card-val">${s.sks} SKS</div>
+          </div>
+        </div>
+
+        <table class="aspects-table">
+          <thead>
+            <tr>
+              <th class="col-no">No.</th>
+              <th class="col-aspect">Aspek</th>
+              <th class="col-val">Nilai</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-no">1</td>
+              <td class="col-aspect">Nilai personal</td>
+              <td class="col-val">${s.nilai.personal !== null && s.nilai.personal > 0 ? s.nilai.personal.toFixed(1) : '-'}</td>
+            </tr>
+            <tr>
+              <td class="col-no">2</td>
+              <td class="col-aspect">Program kerja kelompok</td>
+              <td class="col-val">${s.nilai.proker !== null && s.nilai.proker > 0 ? s.nilai.proker.toFixed(1) : '-'}</td>
+            </tr>
+            <tr>
+              <td class="col-no">3</td>
+              <td class="col-aspect">Laporan akhir</td>
+              <td class="col-val">${s.nilai.laporan !== null && s.nilai.laporan > 0 ? s.nilai.laporan.toFixed(1) : '-'}</td>
+            </tr>
+            <tr>
+              <td class="col-no">4</td>
+              <td class="col-aspect">Paper</td>
+              <td class="col-val">${s.nilai.paper !== null && s.nilai.paper > 0 ? s.nilai.paper.toFixed(1) : '-'}</td>
+            </tr>
+            <tr>
+              <td class="col-no">5</td>
+              <td class="col-aspect">Video</td>
+              <td class="col-val">${s.nilai.video !== null && s.nilai.video > 0 ? s.nilai.video.toFixed(1) : '-'}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="hours-container">
+          <div class="hours-col">
+            <div class="hours-label">Persiapan</div>
+            <div class="hours-val">100 jam</div>
+          </div>
+          <div class="hours-divider"></div>
+          <div class="hours-col">
+            <div class="hours-label">Pelaksanaan di lapangan</div>
+            <div class="hours-val">250 jam</div>
+          </div>
+          <div class="hours-divider"></div>
+          <div class="hours-col">
+            <div class="hours-label">Evaluasi dan pelaporan</div>
+            <div class="hours-val">100 jam</div>
+          </div>
+        </div>
+
+        <div class="total-hours-label">TOTAL 450 JAM</div>
       </div>
 
-      <div class="title-sub1" style="font-size: 13.5pt;">KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026</div>
-      <div class="student-card-4col">
-        <div class="card-col">
-          <div class="card-label">NAMA:</div>
-          <div class="card-val">${formattedName}</div>
-        </div>
-        <div class="card-divider"></div>
-        <div class="card-col">
-          <div class="card-label">NIM:</div>
-          <div class="card-val">${s.nim}</div>
-        </div>
-        <div class="card-divider"></div>
-        <div class="card-col">
-          <div class="card-label">PROGRAM STUDI:</div>
-          <div class="card-val">${s.prodi.toUpperCase()}</div>
-        </div>
-        <div class="card-divider"></div>
-        <div class="card-col">
-          <div class="card-label">SKS DIAMBIL:</div>
-          <div class="card-val">${s.sks} SKS</div>
-        </div>
-      </div>
-
-      <table class="aspects-table">
-        <thead>
-          <tr>
-            <th>No.</th>
-            <th>Aspek</th>
-            <th>Nilai</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="col-no">1</td>
-            <td class="col-aspect">Nilai personal</td>
-            <td class="col-val">${s.nilai.personal !== null && s.nilai.personal > 0 ? s.nilai.personal.toFixed(1) : '-'}</td>
-          </tr>
-          <tr>
-            <td class="col-no">2</td>
-            <td class="col-aspect">Program kerja kelompok</td>
-            <td class="col-val">${s.nilai.proker !== null && s.nilai.proker > 0 ? s.nilai.proker.toFixed(1) : '-'}</td>
-          </tr>
-          <tr>
-            <td class="col-no">3</td>
-            <td class="col-aspect">Laporan akhir</td>
-            <td class="col-val">${s.nilai.laporan !== null && s.nilai.laporan > 0 ? s.nilai.laporan.toFixed(1) : '-'}</td>
-          </tr>
-          <tr>
-            <td class="col-no">4</td>
-            <td class="col-aspect">Paper</td>
-            <td class="col-val">${s.nilai.paper !== null && s.nilai.paper > 0 ? s.nilai.paper.toFixed(1) : '-'}</td>
-          </tr>
-          <tr>
-            <td class="col-no">5</td>
-            <td class="col-aspect">Video</td>
-            <td class="col-val">${s.nilai.video !== null && s.nilai.video > 0 ? s.nilai.video.toFixed(1) : '-'}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="hours-container" style="margin-top: 15px; background: rgba(240, 247, 255, 0.7); border: 1px solid #CBD5E1; border-radius: 10px; padding: 10px 18px;">
-        <div class="hours-col">
-          <div class="hours-label">Persiapan</div>
-          <div class="hours-val">100 jam</div>
-        </div>
-        <div class="hours-divider"></div>
-        <div class="hours-col">
-          <div class="hours-label">Pelaksanaan di lapangan</div>
-          <div class="hours-val">250 jam</div>
-        </div>
-        <div class="hours-divider"></div>
-        <div class="hours-col">
-          <div class="hours-label">Evaluasi dan pelaporan</div>
-          <div class="hours-val">100 jam</div>
-        </div>
-      </div>
-
-      <div class="total-hours-label" style="margin-top: 8px;">TOTAL 450 JAM</div>
+      <!-- Bottom anchor to ensure vertical balance -->
+      <div style="height: 25px; width: 100%;"></div>
     </div>
   </div>
 
@@ -779,6 +704,14 @@ async function main() {
   if (args.includes('--all')) {
     targetStudents = allStudents;
     console.log(`Menyiapkan generate untuk SELURUH ${targetStudents.length} Mahasiswa...`);
+  } else if (args.includes('--existing')) {
+    const existingFiles = fs.readdirSync(publicCertsDir);
+    const existingNims = new Set(existingFiles.map(f => {
+      const m = f.match(/SERTIFIKAT_KKN_(\d+)_/);
+      return m ? m[1] : null;
+    }).filter(Boolean));
+    targetStudents = allStudents.filter(s => existingNims.has(s.nim));
+    console.log(`Menyiapkan generate ulang untuk ${targetStudents.length} Mahasiswa yang sudah ada berkas PDF-nya...`);
   } else if (args.includes('--kelompok')) {
     const idx = args.indexOf('--kelompok');
     const targetKelompok = args[idx + 1];

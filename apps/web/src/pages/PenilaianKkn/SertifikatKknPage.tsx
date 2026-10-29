@@ -273,23 +273,17 @@ export const SertifikatKknPage: React.FC = () => {
     }
 
     setIsDownloading(false);
-    toast("Membuka dialog Cetak / Simpan sebagai PDF vektor (Pilih 'Save as PDF' - Ukuran A4 Landscape)...", {
-      icon: "🖨️",
-      duration: 4000,
-    });
+    toast.dismiss();
     setTimeout(() => {
       window.print();
-    }, 300);
+    }, 100);
   };
 
   const handlePrintCertificate = () => {
-    toast("Membuka dialog Simpan PDF / Cetak. Pilih 'Save as PDF' dengan ukuran A4 Landscape untuk hasil vektor presisi.", {
-      icon: "🖨️",
-      duration: 3500,
-    });
+    toast.dismiss();
     setTimeout(() => {
       window.print();
-    }, 300);
+    }, 100);
   };
 
   const handleCopyId = () => {
@@ -496,7 +490,15 @@ export const SertifikatKknPage: React.FC = () => {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          .no-print {
+          .no-print,
+          div[data-toaster-container],
+          .toaster,
+          [role="status"],
+          [role="alert"],
+          [data-hot-toast],
+          .toaster-container,
+          [id^="toast-"],
+          div:has(> [role="status"]) {
             display: none !important;
           }
           .cert-export-wrapper {
@@ -523,29 +525,29 @@ export const SertifikatKknPage: React.FC = () => {
 
           /* Exact Canva Typography & Proportions in Print */
           .cert-univ-title {
-            font-size: 24pt !important;
+            font-size: 18pt !important;
             line-height: 1.1 !important;
           }
           .cert-univ-tagline {
-            font-size: 8pt !important;
-            letter-spacing: 3px !important;
+            font-size: 7.5pt !important;
+            letter-spacing: 2.5px !important;
           }
           .cert-title-main {
-            font-size: 34pt !important;
+            font-size: 26pt !important;
             line-height: 1 !important;
             letter-spacing: 2.5px !important;
           }
           .cert-title-sub1 {
-            font-size: 15.5pt !important;
-            margin-top: 6px !important;
+            font-size: 12pt !important;
+            margin-top: 5px !important;
           }
           .cert-title-sub2 {
-            font-size: 13.5pt !important;
-            margin-top: 3px !important;
+            font-size: 10.5pt !important;
+            margin-top: 2px !important;
           }
           .cert-number {
-            font-size: 11pt !important;
-            margin-top: 6px !important;
+            font-size: 9.5pt !important;
+            margin-top: 4px !important;
           }
           .cert-center-body {
             flex: 1 1 auto !important;
@@ -556,30 +558,30 @@ export const SertifikatKknPage: React.FC = () => {
             margin: auto 0 !important;
           }
           .cert-given-to {
-            font-size: 12.5pt !important;
+            font-size: 11pt !important;
             margin-top: 0 !important;
-            margin-bottom: 6px !important;
+            margin-bottom: 4px !important;
           }
           .cert-recipient-name {
-            font-size: 28pt !important;
-            letter-spacing: 1.2px !important;
+            font-size: 22pt !important;
+            letter-spacing: 1px !important;
             margin-top: 0 !important;
             line-height: 1.2 !important;
           }
           .cert-bio-text {
-            font-size: 11pt !important;
-            margin-top: 2px !important;
+            font-size: 9.5pt !important;
+            margin-top: 1.5px !important;
           }
           .cert-sks-pill {
-            font-size: 11pt !important;
-            margin-top: 7px !important;
-            padding: 3px 22px !important;
+            font-size: 9.5pt !important;
+            margin-top: 6px !important;
+            padding: 2.5px 18px !important;
           }
           .cert-narration {
-            font-size: 11.5pt !important;
-            line-height: 1.55 !important;
-            margin-top: 16px !important;
-            max-width: 720px !important;
+            font-size: 10pt !important;
+            line-height: 1.5 !important;
+            margin-top: 12px !important;
+            max-width: 660px !important;
           }
           .page1-bottom {
             width: 100% !important;
@@ -587,46 +589,47 @@ export const SertifikatKknPage: React.FC = () => {
             justify-content: flex-end !important;
             align-items: flex-end !important;
             flex-shrink: 0 !important;
+            padding-right: 20px !important;
           }
           .cert-hours-label {
-            font-size: 9.5pt !important;
+            font-size: 8pt !important;
           }
           .cert-hours-val {
-            font-size: 15.5pt !important;
+            font-size: 13pt !important;
           }
           .cert-total-hours {
-            font-size: 13pt !important;
+            font-size: 11pt !important;
             letter-spacing: 2px !important;
-            margin-top: 8px !important;
+            margin-top: 10px !important;
           }
           .cert-sig-date {
-            font-size: 9.5pt !important;
+            font-size: 8.5pt !important;
           }
           .cert-sig-role {
-            font-size: 9pt !important;
-            line-height: 1.25 !important;
+            font-size: 8pt !important;
+            line-height: 1.2 !important;
           }
           .cert-sig-name {
-            font-size: 9.5pt !important;
-            margin-top: 2px !important;
+            font-size: 8.5pt !important;
+            margin-top: 1px !important;
           }
           .cert-page2-title {
-            font-size: 26pt !important;
+            font-size: 20pt !important;
             letter-spacing: 2px !important;
           }
           .cert-card-label {
-            font-size: 10.5pt !important;
+            font-size: 9pt !important;
           }
           .cert-card-val {
-            font-size: 11.5pt !important;
+            font-size: 10.5pt !important;
           }
           .cert-table th {
-            font-size: 11pt !important;
-            padding: 8px 12px !important;
+            font-size: 9.5pt !important;
+            padding: 7px 12px !important;
           }
           .cert-table td {
-            font-size: 10.5pt !important;
-            padding: 7.5px 14px !important;
+            font-size: 9pt !important;
+            padding: 7px 14px !important;
           }
         }
       `}</style>
@@ -1096,75 +1099,78 @@ export const SertifikatKknPage: React.FC = () => {
           }}
         >
           {/* Inner Content Area */}
-          <div className="absolute inset-0 flex flex-col items-center px-8 md:px-16 pt-7 md:pt-10 pb-6 select-none box-border">
-            {/* Header UNIKOM */}
-            <div className="flex flex-col items-center ml-10 md:ml-16 mt-1">
-              <h1 className="cert-univ-title font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
-                UNIVERSITAS KOMPUTER INDONESIA
-              </h1>
-              
-            </div>
-
-            {/* Title REKAP PENILAIAN PESERTA - Safe Decorative Lines */}
-            <div className="flex items-center justify-center gap-3 md:gap-4 mt-3 md:mt-4 w-full">
-              <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
-              <h2 className="cert-page2-title font-cinzel text-xl md:text-[24pt] font-extrabold text-[#0A2540] tracking-[2px] m-0 leading-none">
-                REKAP PENILAIAN PESERTA
-              </h2>
-              <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
-            </div>
-
-            <div className="cert-title-sub1 text-[11px] md:text-[13pt] font-extrabold text-[#005AA9] tracking-wide mt-1 uppercase">
-              KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026
-            </div>
-
-            {/* ── 4-COLUMN STUDENT IDENTITY (100% CANVA EXACT & SEJAJAR) ── */}
-            <div className="flex items-center w-full max-w-[880px] mt-4 mb-2">
-              <div className="flex-1 text-center px-1 md:px-2">
-                <div className="cert-card-label font-sans text-[9.5px] md:text-[10pt] font-bold text-[#0A2540] mb-0.5">
-                  NAMA:
-                </div>
-                <div className="cert-card-val font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9] uppercase truncate">
-                  {formattedName}
-                </div>
-              </div>
-              
-              <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
-
-              <div className="flex-1 text-center px-1 md:px-2">
-                <div className="cert-card-label font-sans text-[9.5px] md:text-[10pt] font-bold text-[#0A2540] mb-0.5">
-                  NIM:
-                </div>
-                <div className="cert-card-val font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9]">
-                  {selectedStudent.nim}
-                </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-between px-8 md:px-16 pt-6 md:pt-8 pb-7 select-none box-border">
+            {/* Header UNIKOM & Title Block (Top) */}
+            <div className="flex flex-col items-center w-full shrink-0">
+              <div className="flex flex-col items-center ml-10 md:ml-16 mt-0.5 md:mt-1">
+                <h1 className="cert-univ-title font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
+                  UNIVERSITAS KOMPUTER INDONESIA
+                </h1>
               </div>
 
-              <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
-
-              <div className="flex-1 text-center px-1 md:px-2">
-                <div className="cert-card-label font-sans text-[9.5px] md:text-[10pt] font-bold text-[#0A2540] mb-0.5">
-                  PROGRAM STUDI:
-                </div>
-                <div className="cert-card-val font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9] uppercase truncate">
-                  {selectedStudent.prodi.toUpperCase()}
-                </div>
+              {/* Title REKAP PENILAIAN PESERTA - Safe Decorative Lines */}
+              <div className="flex items-center justify-center gap-3 md:gap-4 mt-2 md:mt-3 w-full">
+                <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
+                <h2 className="cert-page2-title font-cinzel text-xl md:text-[22pt] font-extrabold text-[#0A2540] tracking-[2px] m-0 leading-none">
+                  REKAP PENILAIAN PESERTA
+                </h2>
+                <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
               </div>
 
-              <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
-
-              <div className="flex-1 text-center px-1 md:px-2">
-                <div className="cert-card-label font-sans text-[9.5px] md:text-[10pt] font-bold text-[#0A2540] mb-0.5">
-                  SKS DIAMBIL:
-                </div>
-                <div className="cert-card-val font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9]">
-                  {selectedStudent.sks} SKS
-                </div>
+              <div className="cert-title-sub1 text-[11px] md:text-[12pt] font-extrabold text-[#005AA9] tracking-wide mt-1 uppercase">
+                KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026
               </div>
             </div>
 
-            {/* ── 5 ASPECTS TABLE (MATCHING WIDTH & BORDER 100%) ── */}
-            <table className="cert-table w-full max-w-[880px] mt-2 border-collapse border-[1.5px] border-[#0D2C54] bg-white shadow-2xs">
+            {/* ── CENTER PROPORTIONAL SECTION (SIMETRIS & ELEGAN DI TENGAH) ── */}
+            <div className="cert-center-body flex-1 flex flex-col items-center justify-center w-full my-auto py-2">
+              {/* ── 4-COLUMN STUDENT IDENTITY (100% CANVA EXACT & SEJAJAR) ── */}
+              <div className="flex items-center w-full max-w-[840px] mb-2.5">
+                <div className="flex-1 text-center px-1 md:px-2">
+                  <div className="cert-card-label font-sans text-[9px] md:text-[9.5pt] font-bold text-[#0A2540] mb-0.5">
+                    NAMA:
+                  </div>
+                  <div className="cert-card-val font-sans text-[10px] md:text-[11pt] font-extrabold text-[#005AA9] uppercase truncate">
+                    {formattedName}
+                  </div>
+                </div>
+                
+                <div className="w-[1.5px] h-6 md:h-[28px] bg-[#C5A059] shrink-0" />
+
+                <div className="flex-1 text-center px-1 md:px-2">
+                  <div className="cert-card-label font-sans text-[9px] md:text-[9.5pt] font-bold text-[#0A2540] mb-0.5">
+                    NIM:
+                  </div>
+                  <div className="cert-card-val font-sans text-[10px] md:text-[11pt] font-extrabold text-[#005AA9]">
+                    {selectedStudent.nim}
+                  </div>
+                </div>
+
+                <div className="w-[1.5px] h-6 md:h-[28px] bg-[#C5A059] shrink-0" />
+
+                <div className="flex-1 text-center px-1 md:px-2">
+                  <div className="cert-card-label font-sans text-[9px] md:text-[9.5pt] font-bold text-[#0A2540] mb-0.5">
+                    PROGRAM STUDI:
+                  </div>
+                  <div className="cert-card-val font-sans text-[10px] md:text-[11pt] font-extrabold text-[#005AA9] uppercase truncate">
+                    {selectedStudent.prodi.toUpperCase()}
+                  </div>
+                </div>
+
+                <div className="w-[1.5px] h-6 md:h-[28px] bg-[#C5A059] shrink-0" />
+
+                <div className="flex-1 text-center px-1 md:px-2">
+                  <div className="cert-card-label font-sans text-[9px] md:text-[9.5pt] font-bold text-[#0A2540] mb-0.5">
+                    SKS DIAMBIL:
+                  </div>
+                  <div className="cert-card-val font-sans text-[10px] md:text-[11pt] font-extrabold text-[#005AA9]">
+                    {selectedStudent.sks} SKS
+                  </div>
+                </div>
+              </div>
+
+              {/* ── 5 ASPECTS TABLE (MATCHING WIDTH & BORDER 100%) ── */}
+              <table className="cert-table w-full max-w-[840px] border-collapse border-[1.5px] border-[#0D2C54] bg-white shadow-2xs">
               <thead>
                 <tr className="bg-[#0D2C54] text-white">
                   <th className="py-1.5 md:py-2 px-3 border border-[#0D2C54] text-center text-[10px] md:text-[11pt] font-bold w-[10%]">
@@ -1266,12 +1272,16 @@ export const SertifikatKknPage: React.FC = () => {
             </div>
 
             {/* TOTAL 450 JAM */}
-            <div className="cert-total-hours font-cinzel text-xs md:text-[13pt] font-extrabold text-[#0A2540] tracking-[2px] mt-1.5 md:mt-2">
+            <div className="cert-total-hours font-cinzel text-xs md:text-[12pt] font-extrabold text-[#0A2540] tracking-[2px] mt-2 md:mt-2.5">
               TOTAL 450 JAM
             </div>
           </div>
+
+          {/* Bottom spacer for vertical balance */}
+          <div className="w-full shrink-0 h-4" />
         </div>
       </div>
+    </div>
 
       {/* ── MODAL EKSPOR FORMAT CANVA BULK CREATE DENGAN PILIHAN KELOMPOK ──── */}
       {showCanvaModal && (
