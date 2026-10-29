@@ -472,6 +472,17 @@ export const surveyService = {
   },
 
   /**
+   * Mengembalikan daftar semua KelompokKkn dari database.
+   * Digunakan form frontend sebagai referensi kelompok mahasiswa KKN.
+   */
+  getKelompokList: async () => {
+    return prisma.kelompokKkn.findMany({
+      select: { id: true, name: true, kelurahan: true, cakupanRw: true },
+      orderBy: { name: "asc" },
+    });
+  },
+
+  /**
    * Menghapus satu survei RW (opsional)
    */
   deleteSurvey: async (id: string) => {

@@ -42,6 +42,9 @@ jobs:
       - name: Type Check Backend API (apps/api)
         run: cd apps/api && npx tsc --noEmit
 
+      - name: Type Check Frontend Web (apps/web)
+        run: cd apps/web && npx tsc --noEmit
+
       - name: Validate & Build Web Dashboard (apps/web)
         run: npm run build:web
 
@@ -67,8 +70,10 @@ jobs:
           VPS_HOST: ${{ secrets.STAGING_VPS_HOST || secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.STAGING_VPS_USERNAME || secrets.VPS_USERNAME }}
           VPS_PASS: ${{ secrets.STAGING_VPS_PASSWORD || secrets.VPS_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          sshpass -p "$VPS_PASS" ssh -T -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o TCPKeepAlive=yes -o PreferredAuthentications=password -o PubkeyAuthentication=no "$VPS_USER@$VPS_HOST" "VPS_PASS='$VPS_PASS' bash -s" << 'EOF'
+          sshpass -p "$VPS_PASS" ssh -T -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o TCPKeepAlive=yes -o PreferredAuthentications=password -o PubkeyAuthentication=no "$VPS_USER@$VPS_HOST" "VPS_PASS='$VPS_PASS' GH_TOKEN='$GH_TOKEN' GH_REPO='$GH_REPO' bash -s" << 'EOF'
             set -e
             NODE_BIN_DIR=$(ls -d ~/.nvm/versions/node/v* 2>/dev/null | tail -n 1)/bin
             export PATH=$PATH:/usr/local/bin:/usr/bin:$NODE_BIN_DIR
@@ -99,7 +104,10 @@ jobs:
             git config extra.http.ipresolve 4 2>/dev/null || true
             FETCH_SUCCESS=false
             for i in 1 2 3; do
-              if git fetch --depth=1 origin staging; then
+              if [ -n "$GH_TOKEN" ] && git fetch --depth=1 "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" staging; then
+                FETCH_SUCCESS=true
+                break
+              elif git fetch --depth=1 origin staging; then
                 FETCH_SUCCESS=true
                 break
               fi
