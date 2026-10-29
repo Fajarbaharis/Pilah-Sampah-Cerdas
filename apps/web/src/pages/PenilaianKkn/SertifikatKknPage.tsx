@@ -480,13 +480,13 @@ export const SertifikatKknPage: React.FC = () => {
         }
 
         @page {
-          size: 297mm 210mm landscape;
+          size: A4 landscape;
           margin: 0;
         }
 
         @media print {
           @page {
-            size: 297mm 210mm landscape;
+            size: A4 landscape;
             margin: 0;
           }
           body, html {
@@ -1122,7 +1122,7 @@ export const SertifikatKknPage: React.FC = () => {
             <div className="flex items-center w-full max-w-[880px] mt-4 mb-2">
               <div className="flex-1 text-center px-1 md:px-2">
                 <div className="cert-card-label font-sans text-[9.5px] md:text-[10pt] font-bold text-[#0A2540] mb-0.5">
-                  Nama:
+                  NAMA:
                 </div>
                 <div className="cert-card-val font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9] uppercase truncate">
                   {formattedName}
@@ -1144,7 +1144,7 @@ export const SertifikatKknPage: React.FC = () => {
 
               <div className="flex-1 text-center px-1 md:px-2">
                 <div className="cert-card-label font-sans text-[9.5px] md:text-[10pt] font-bold text-[#0A2540] mb-0.5">
-                  Program Studi:
+                  PROGRAM STUDI:
                 </div>
                 <div className="cert-card-val font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9] uppercase truncate">
                   {selectedStudent.prodi.toUpperCase()}
@@ -1155,7 +1155,7 @@ export const SertifikatKknPage: React.FC = () => {
 
               <div className="flex-1 text-center px-1 md:px-2">
                 <div className="cert-card-label font-sans text-[9.5px] md:text-[10pt] font-bold text-[#0A2540] mb-0.5">
-                  SKS diambil:
+                  SKS DIAMBIL:
                 </div>
                 <div className="cert-card-val font-sans text-[10.5px] md:text-[12pt] font-extrabold text-[#005AA9]">
                   {selectedStudent.sks} SKS
