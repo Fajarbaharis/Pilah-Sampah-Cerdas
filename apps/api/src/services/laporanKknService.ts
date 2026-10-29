@@ -456,7 +456,7 @@ export const laporanKknService = {
     const periodeOptions = [
       {
         value: "2026-041027-Universitas Komputer Indonesia - 1",
-        label: "2026-041027-Universitas Komputer Indonesia - 1",
+        label: "Batch - 1, Periode Juli – Oktober 2026",
         tahun: "2026",
         kodePts: "041027",
         namaPts: "Universitas Komputer Indonesia",

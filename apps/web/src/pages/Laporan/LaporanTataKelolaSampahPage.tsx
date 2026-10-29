@@ -640,7 +640,7 @@ export const LaporanTataKelolaSampahPage: React.FC = () => {
                 className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#009966] cursor-pointer truncate"
               >
                 <option value="2026-041027-Universitas Komputer Indonesia - 1">
-                  2026-041027-Universitas Komputer Indonesia - 1
+                  Batch - 1, Periode Juli – Oktober 2026
                 </option>
                 <option value="ALL">Semua Batch / Periode</option>
               </select>
