@@ -999,7 +999,7 @@ export const SertifikatKknPage: React.FC = () => {
           <div className="absolute inset-0 flex flex-col items-center justify-between px-8 md:px-16 pt-7 md:pt-9 pb-6 select-none box-border">
             {/* Header UNIKOM & Title Block (Top) */}
             <div className="flex flex-col items-center w-full shrink-0">
-              <div className="flex flex-col items-center ml-10 md:ml-16 mt-0.5 md:mt-1">
+              <div className="flex flex-col items-center w-full mt-0.5 md:mt-1">
                 <h1 className="cert-univ-title font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
                   UNIVERSITAS KOMPUTER INDONESIA
                 </h1>
@@ -1102,7 +1102,7 @@ export const SertifikatKknPage: React.FC = () => {
           <div className="absolute inset-0 flex flex-col items-center justify-between px-8 md:px-16 pt-6 md:pt-8 pb-7 select-none box-border">
             {/* Header UNIKOM & Title Block (Top) */}
             <div className="flex flex-col items-center w-full shrink-0">
-              <div className="flex flex-col items-center ml-10 md:ml-16 mt-0.5 md:mt-1">
+              <div className="flex flex-col items-center w-full mt-0.5 md:mt-1">
                 <h1 className="cert-univ-title font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
                   UNIVERSITAS KOMPUTER INDONESIA
                 </h1>
