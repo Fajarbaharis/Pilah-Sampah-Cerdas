@@ -1291,7 +1291,7 @@ export const kknExecutiveService = {
         periodeOptions: [
           {
             value: "2026-041027-Universitas Komputer Indonesia - 1",
-            label: "2026-041027-Universitas Komputer Indonesia - 1",
+            label: "Batch - 1, Periode Juli – Oktober 2026",
             tahun: "2026",
             kodePts: "041027",
             namaPts: "Universitas Komputer Indonesia",
@@ -1346,9 +1346,16 @@ export const kknExecutiveService = {
       year: "numeric",
     }) + `, ${new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB`;
 
+    const periodeDisplay =
+      !filters.periode ||
+      filters.periode === "ALL" ||
+      filters.periode.includes("2026-041027")
+        ? "Batch - 1, Periode Juli – Oktober 2026"
+        : filters.periode;
+
     const metadata: Array<{ label: string; value: string | number }> = [
       { label: "Waktu Ekspor:", value: formattedExportTime },
-      { label: "Tahun / Periode:", value: filters.periode || "KKN Tematik 2026" },
+      { label: "Tahun / Periode:", value: periodeDisplay },
       { label: "Cakupan Kelurahan:", value: filters.kelurahan || "Semua Kelurahan (Coblong)" },
       { label: "Cakupan RW:", value: filters.rw || "Semua RW" },
       { label: "Kelompok Mahasiswa:", value: filters.kelompok || "Semua Kelompok" },

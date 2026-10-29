@@ -23,6 +23,42 @@ export interface ExecutiveReportFilters {
   timeFilter?: string;
 }
 
+/**
+ * Helper untuk menstandardisasi format teks periode laporan eksekutif
+ * Mengubah kode mentah database menjadi format formal kedinasan
+ */
+export const formatPeriodeLaporan = (periodeRaw?: string): string => {
+  if (
+    !periodeRaw ||
+    periodeRaw === "ALL" ||
+    periodeRaw === "semua" ||
+    periodeRaw === "Semua Batch / Periode" ||
+    periodeRaw === "Juli – Oktober 2026" ||
+    periodeRaw === "Juli - Oktober 2026"
+  ) {
+    return "Batch - 1, Periode Juli – Oktober 2026";
+  }
+
+  // Jika berupa ID teknis batch KKN dari database
+  if (
+    periodeRaw.includes("2026-041027") ||
+    periodeRaw.includes("Universitas Komputer Indonesia")
+  ) {
+    return "Batch - 1, Periode Juli – Oktober 2026";
+  }
+
+  // Jika teks belum mengandung kata Batch tapi berisi periode bulan
+  if (
+    periodeRaw.toLowerCase().includes("juli") &&
+    periodeRaw.toLowerCase().includes("oktober") &&
+    !periodeRaw.toLowerCase().includes("batch")
+  ) {
+    return "Batch - 1, Periode Juli – Oktober 2026";
+  }
+
+  return periodeRaw;
+};
+
 export async function fetchExecutiveReportData(
   filters?: ExecutiveReportFilters
 ): Promise<LaporanEksekutifData> {
@@ -404,7 +440,7 @@ export async function fetchExecutiveReportData(
   };
 
   return {
-    periode: filters?.periode && filters.periode !== "ALL" && filters.periode !== "semua" ? filters.periode : "Juli – Oktober 2026",
+    periode: formatPeriodeLaporan(filters?.periode),
     tanggalUpdate,
     cakupanWilayah,
     totalKelompok: Number(kkn?.summary?.totalKelompok?.count ?? 0),

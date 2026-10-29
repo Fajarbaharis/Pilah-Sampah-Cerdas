@@ -1108,13 +1108,13 @@ export const DashboardEksekutifKkn: React.FC = () => {
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
                 Kuliah Kerja Nyata
               </h1>
-              {/* Batch Identity Badge sesuai standar: Tahun-Kode PTS-Nama PTS - Batch */}
+              {/* Batch Identity Badge */}
               <div
-                className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 rounded-full text-xs font-mono font-bold tracking-tight shadow-2xs"
-                title="Format Identitas Program: [Tahun]-[Kode PTS]-[Nama PTS] - [Batch]"
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 rounded-full text-xs font-bold tracking-tight shadow-2xs"
+                title="Format Identitas Program: Batch - 1, Periode Juli – Oktober 2026"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span>2026-041027-Universitas Komputer Indonesia - 1</span>
+                <span>Batch - 1, Periode Juli – Oktober 2026</span>
               </div>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -1168,7 +1168,7 @@ export const DashboardEksekutifKkn: React.FC = () => {
             className="bg-transparent outline-none cursor-pointer pr-1 text-xs font-bold text-slate-700 dark:text-slate-200 w-full truncate"
           >
             <option value="2026-041027-Universitas Komputer Indonesia - 1">
-              2026-041027-Universitas Komputer Indonesia - 1
+              Batch - 1, Periode Juli – Oktober 2026
             </option>
             <option value="ALL">Semua Batch / Periode</option>
           </select>
