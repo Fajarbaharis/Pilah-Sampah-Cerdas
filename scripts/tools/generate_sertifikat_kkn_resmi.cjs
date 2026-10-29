@@ -42,6 +42,24 @@ if (!fs.existsSync(framePath)) {
 }
 const frameBase64 = fs.readFileSync(framePath).toString('base64');
 
+// 2.5 Load Base64 embedded fonts for offline, instant, identical PDF font rendering
+const fontsJsonPath = path.join(__dirname, 'certificate_fonts_base64.json');
+let embeddedFontFacesCss = '';
+if (fs.existsSync(fontsJsonPath)) {
+  const embeddedFonts = JSON.parse(fs.readFileSync(fontsJsonPath, 'utf8'));
+  for (const font of Object.values(embeddedFonts)) {
+    embeddedFontFacesCss += `
+@font-face {
+  font-family: '${font.family}';
+  font-style: ${font.style};
+  font-weight: ${font.weight};
+  font-display: swap;
+  src: url('data:font/woff2;base64,${font.base64}') format('woff2');
+}
+`;
+  }
+}
+
 // 3. QR Generator via ZXing
 function generateQrSvg(verifyUrl) {
   try {
@@ -93,10 +111,11 @@ function buildStudentHtml(s) {
   <meta charset="UTF-8">
   <title>Sertifikat KKN Tematik - ${s.nama} (${s.nim})</title>
   <style>
+    ${embeddedFontFacesCss}
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
 
     @page {
-      size: 297mm 210mm landscape;
+      size: A4 landscape;
       margin: 0;
     }
 
@@ -647,7 +666,7 @@ function buildStudentHtml(s) {
       <div class="title-sub1" style="font-size: 13.5pt;">KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026</div>
       <div class="student-card-4col">
         <div class="card-col">
-          <div class="card-label">Nama:</div>
+          <div class="card-label">NAMA:</div>
           <div class="card-val">${formattedName}</div>
         </div>
         <div class="card-divider"></div>
@@ -657,12 +676,12 @@ function buildStudentHtml(s) {
         </div>
         <div class="card-divider"></div>
         <div class="card-col">
-          <div class="card-label">Program Studi:</div>
+          <div class="card-label">PROGRAM STUDI:</div>
           <div class="card-val">${s.prodi.toUpperCase()}</div>
         </div>
         <div class="card-divider"></div>
         <div class="card-col">
-          <div class="card-label">SKS diambil:</div>
+          <div class="card-label">SKS DIAMBIL:</div>
           <div class="card-val">${s.sks} SKS</div>
         </div>
       </div>
@@ -737,7 +756,7 @@ function renderHtmlToPdf(htmlPath, pdfPath) {
     console.warn('⚠️ Microsoft Edge tidak ditemukan pada:', edgeExe);
     return false;
   }
-  const cmd = `"${edgeExe}" --headless --disable-gpu --no-pdf-header-footer --print-to-pdf="${pdfPath}" "${htmlPath}"`;
+  const cmd = `"${edgeExe}" --headless --disable-gpu --no-pdf-header-footer --run-all-compositor-stages-before-draw --virtual-time-budget=6000 --print-to-pdf="${pdfPath}" "${htmlPath}"`;
   try {
     execSync(cmd, { stdio: 'pipe' });
     return true;
