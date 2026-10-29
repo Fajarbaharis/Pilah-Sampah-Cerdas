@@ -376,6 +376,30 @@ Setiap pengembang maupun asisten AI wajib mematuhi 3 pilar perlindungan sistem b
 
 ---
 
+### L. 29 Oktober 2026 - Standardisasi Tombol Unduh Laporan Eksekutif PDF Langsung (Acuan Resmi 7 Bagian) Tanpa Dropdown
+- **Konteks & Hasil Review QC Staging (`https://staging.berseka.id/dasbor`)**:
+  - Pada tahap QC dasbor, pengguna menginstruksikan bahwa tombol "Unduh Laporan" pada dasbor tidak memerlukan opsi format lain (Naskah Dinas F4, Excel .xlsx, maupun Buka Lembar Dokumen).
+  - Laporan harus langsung dalam format PDF penuh sesuai acuan resmi pimpinan UNIKOM x BERSEKA (7 Bagian Utama: Demografi, Presensi, Proker, Peringatan Dini, Neraca Sampah, Rekomendasi Manajerial & Lembar Pengesahan).
+- **Implementasi Solusi Terpadu**:
+  1. `apps/web/src/components/dashboard/UnduhLaporanButton.tsx`:
+     - Menghilangkan struktur *split-button* dan menu *dropdown chevron*.
+     - Mentransformasi tombol menjadi aksi langsung 1-klik: "Unduh Laporan [PDF]" yang langsung mengeksekusi unduh dokumen PDF acuan resmi.
+     - Menyematkan perlindungan *popup blocker* browser dengan pembukaan jendela cetak secara sinkron sebelum proses kalkulasi data.
+     - Integrasi sinkronisasi data live terkini dari endpoint `/dashboard/kkn-executive` dan `/dashboard/waste-executive-report` dengan fallback aman ke standar acuan baku resmi pimpinan.
+     - Mendukung varian `rounded-xl` (tab Tata Kelola Sampah) dan `rounded-full` (tab KKN) yang selaras dengan design system Berseka.
+  2. `apps/web/src/utils/downloadLaporanEksekutifPdf.ts`:
+     - Menambahkan parameter `existingWindow` agar penulisan naskah dinas A4/F4 berjalan mulus pada jendela yang telah dibuka pengguna tanpa terblokir sistem keamanan browser.
+     - Memperbarui timestamp dinamis real-time saat pembuatan berkas.
+- **Validasi Mutu & Quality Gate**:
+  - `npm run build --prefix apps/web`: 0 error (Vite build sukses 100%).
+  - `npm run build --prefix apps/api`: 0 error (tsc 100% Pass).
+  - Vitest Test Suite DPL (30 tests): 100% Green (`dplApproval.test.ts`, `logbookVerifikasi.test.ts`, `penilaianKknRoleGuard.test.ts`).
+  - Skema Database Prisma (`schema.prisma`): 0 mutasi skema (Zero-Migration / Safe VPS).
+- **Alur Integrasi Git-Flow**:
+  - Dikerjakan pada branch `feat/unduh-laporan-pdf-acuan-resmi-direct` (bercabang dari `development`).
+
+---
+
 ## 5. Direktori & Arsip Dokumen
 
 Semua laporan audit berkala, investigasi teknis perorangan, dan dokumen historis telah dirapikan ke dalam folder:
