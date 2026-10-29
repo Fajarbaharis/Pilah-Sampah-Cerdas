@@ -4,9 +4,9 @@
  * Copyright (c) 2026 PT Makerindo. All rights reserved.
  * 
  * Reusable Component: UnduhLaporanButton
- * Tombol Unduh Laporan Eksekutif dengan Dukungan Utama Format PDF (Naskah Dinas Standar F4)
- * & Rekapitulasi Spreadsheet Excel (.xlsx) untuk Tab KKN dan Tata Kelola Sampah
- * Acuan: LAPORAN EKSEKUTIF PELAKSANAAN KULIAH KERJA NYATA (KKN) & TATA KELOLA LINGKUNGAN (7 Bagian Utama)
+ * Tombol Unduh Laporan Eksekutif Format PDF & Spreadsheet Excel (.xlsx)
+ * Menghasilkan Dokumen Naskah Dinas Sah KKN & Tata Kelola Lingkungan Berstandar Industri
+ * Sesuai Acuan Baku Pimpinan UNIKOM x BERSEKA.
  */
 
 import React, { useState, useRef, useEffect } from "react";

@@ -111,7 +111,10 @@ export const downloadLaporanEksekutifPdf = (
   customData?: Partial<LaporanEksekutifData>,
   existingWindow?: Window | null
 ) => {
-  const printWindow = (existingWindow && !existingWindow.closed) ? existingWindow : window.open("", "_blank");
+  const printWindow =
+    existingWindow && !existingWindow.closed
+      ? existingWindow
+      : window.open("", "_blank");
   if (!printWindow) {
     showToast.error("Gagal membuka jendela dokumen. Mohon izinkan popup di browser Anda.");
     return;
