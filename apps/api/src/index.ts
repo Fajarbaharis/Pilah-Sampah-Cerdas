@@ -60,6 +60,7 @@ import dplRouter from "./routes/dplRoutes.js";
 import mplRouter from "./routes/mplRoutes.js";
 import permissionRouter from "./routes/permissionRoutes.js";
 import surveiKknRouter from "./routes/surveiKknRoutes.js";
+import surveyRouter from "./routes/surveyRoutes.js";
 import evaluasiDampakRouter from "./routes/evaluasiDampakRoutes.js";
 import datasetKlasifikasiRouter from "./routes/datasetKlasifikasiRoutes.js";
 import panduanRouter from "./routes/panduanRoutes.js";
@@ -553,6 +554,14 @@ app.use("/downloads", (req, res, next) => {
   next();
 });
 
+
+// Statically serve /certificates folder (Pre-generated official PDFs) with multi-directory fallback
+app.use("/certificates", express.static(path.resolve(process.cwd(), "apps/web/public/certificates"), staticCacheOptions));
+app.use("/certificates", express.static(path.resolve(process.cwd(), "apps/web/dist/certificates"), staticCacheOptions));
+app.use("/certificates", express.static(path.resolve(process.cwd(), "../web/public/certificates"), staticCacheOptions));
+app.use("/certificates", express.static(path.resolve(__dirname, "../../web/public/certificates"), staticCacheOptions));
+app.use("/certificates", express.static(path.resolve(__dirname, "../../../apps/web/public/certificates"), staticCacheOptions));
+
 // Statically serve /image folder (public assets like QR templates) with multi-directory fallback
 app.use("/image", express.static(path.resolve(process.cwd(), "apps/web/public/image"), staticCacheOptions));
 app.use("/image", express.static(path.resolve(process.cwd(), "../web/public/image"), staticCacheOptions));
@@ -616,6 +625,7 @@ app.use("/api/v1/dpl", dplRouter);
 app.use("/api/v1/mpl", mplRouter);
 app.use("/api/v1/permissions", permissionRouter);
 app.use("/api/v1/survei-kkn", surveiKknRouter);
+app.use(["/api/v1/survey", "/api/v1/survey-kkn"], surveyRouter);
 app.use("/api/v1/evaluasi-dampak", evaluasiDampakRouter);
 app.use("/api/v1", datasetKlasifikasiRouter);
 app.use("/api/v1/panduan", panduanRouter);
