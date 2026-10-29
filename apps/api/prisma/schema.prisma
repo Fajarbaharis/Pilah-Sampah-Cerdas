@@ -428,6 +428,7 @@ model StudentKkn {
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   assignedRw        Rw?               @relation(fields: [assignedRwId], references: [id])
   programKerja      ProgramKerjaKkn[]
+  surveiRws         SurveiRw[]
 
   @@index([kelompokId])
   @@index([mplId])
@@ -1416,6 +1417,80 @@ model EndlineCatatanKesimpulan {
   kelurahan                   EndlineSurveiKelurahan @relation(fields: [kelurahanId], references: [kelurahanId], onDelete: Cascade)
 
   @@map("endline_catatan_kesimpulan")
+}
+
+// ─────────────────────────────────────────────
+// SURVEI KKN TINGKAT RW (Data Primer Enumerasi Lapangan Mahasiswa KKN)
+// ─────────────────────────────────────────────
+
+model SurveiRw {
+  id                   String      @id @default(uuid())
+  kodeSurvey           String      @unique @map("kode_survey") @db.VarChar(50)
+  tahap                String      @map("tahap") @db.VarChar(20)
+  tahun                String      @map("tahun") @db.VarChar(10)
+  tanggalSurvei        DateTime    @map("tanggal_survei") @db.Date
+
+  // Data Pelaku Survey (Mahasiswa KKN)
+  nim                  String      @map("nim") @db.VarChar(20)
+  namaSurveyor         String      @map("nama_surveyor") @db.VarChar(150)
+  prodi                String      @map("prodi") @db.VarChar(100)
+  kelompok             String      @map("kelompok") @db.VarChar(50)
+  noWa                 String      @map("no_wa") @db.VarChar(30)
+  studentId            String?     @map("id_student_kkn")
+
+  // Wilayah
+  kota                 String      @default("Kota Bandung") @map("kota") @db.VarChar(100)
+  kecamatan            String      @default("Coblong") @map("kecamatan") @db.VarChar(100)
+  kelurahan            String      @map("kelurahan") @db.VarChar(100)
+  rw                   String      @map("rw") @db.VarChar(20)
+  jumlahRt             Int         @map("jumlah_rt")
+  jumlahKk             Int         @map("jumlah_kk")
+
+  // Karakteristik Wilayah
+  karakter             Json?       @map("karakter")
+  karakterLain         String?     @map("karakter_lain")
+  jumlahKos            Int?        @map("jumlah_kos")
+  jumlahUmkm           Int?        @map("jumlah_umkm")
+
+  // Pemilahan Sampah
+  rumahPilah           Int         @map("rumah_pilah")
+  rumahTotal           Int         @map("rumah_total")
+  persenPilah          Decimal     @map("persen_pilah") @db.Decimal(5, 2)
+  tingkatPilah         String      @map("tingkat_pilah") @db.VarChar(50)
+
+  // Bank Sampah & Pengolahan
+  bankSampahAktif      Int         @default(0) @map("bank_sampah_aktif")
+  bankSampahTidakAktif Int         @default(0) @map("bank_sampah_tidak_aktif")
+  unitKomposter        Int         @default(0) @map("unit_komposter")
+  titikMaggot          Int         @default(0) @map("titik_maggot")
+  keteranganBankSampah String?     @map("keterangan_bank_sampah")
+  teknologi            Json?       @map("teknologi")
+  teknologiLain        String?     @map("teknologi_lain")
+
+  // Key Player
+  keyPlayer            Json?       @map("key_player")
+
+  // Volume Sampah (kg/hari)
+  volumeOrganik        Decimal     @map("volume_organik") @db.Decimal(10, 2)
+  volumeAnorganik      Decimal     @map("volume_anorganik") @db.Decimal(10, 2)
+  volumeResidu         Decimal     @map("volume_residu") @db.Decimal(10, 2)
+  volumeTotal          Decimal     @map("volume_total") @db.Decimal(10, 2)
+
+  // Catatan & Kesimpulan
+  prioritas            String      @map("prioritas")
+  risiko               String?     @map("risiko")
+  catatanValidasi      String?     @map("catatan_validasi")
+
+  status               String      @default("TERKIRIM") @map("status") @db.VarChar(50)
+  createdAt            DateTime    @default(now()) @map("dibuat_pada")
+  updatedAt            DateTime    @updatedAt @map("diperbarui_pada")
+
+  student              StudentKkn? @relation(fields: [studentId], references: [id])
+
+  @@index([kelurahan, rw])
+  @@index([tahap, tahun])
+  @@index([nim])
+  @@map("survei_rw")
 }
 
 /**
