@@ -547,19 +547,28 @@ export const SertifikatKknPage: React.FC = () => {
             font-size: 11pt !important;
             margin-top: 6px !important;
           }
+          .cert-center-body {
+            flex: 1 1 auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: auto 0 !important;
+          }
           .cert-given-to {
-            font-size: 11.5pt !important;
-            margin-top: 10px !important;
+            font-size: 12.5pt !important;
+            margin-top: 0 !important;
+            margin-bottom: 6px !important;
           }
           .cert-recipient-name {
-            font-size: 27pt !important;
-            letter-spacing: 1px !important;
-            margin-top: 4px !important;
+            font-size: 28pt !important;
+            letter-spacing: 1.2px !important;
+            margin-top: 0 !important;
             line-height: 1.2 !important;
           }
           .cert-bio-text {
             font-size: 11pt !important;
-            margin-top: 3px !important;
+            margin-top: 2px !important;
           }
           .cert-sks-pill {
             font-size: 11pt !important;
@@ -567,10 +576,17 @@ export const SertifikatKknPage: React.FC = () => {
             padding: 3px 22px !important;
           }
           .cert-narration {
-            font-size: 11pt !important;
-            line-height: 1.45 !important;
-            margin-top: 12px !important;
-            max-width: 760px !important;
+            font-size: 11.5pt !important;
+            line-height: 1.55 !important;
+            margin-top: 16px !important;
+            max-width: 720px !important;
+          }
+          .page1-bottom {
+            width: 100% !important;
+            display: flex !important;
+            justify-content: flex-end !important;
+            align-items: flex-end !important;
+            flex-shrink: 0 !important;
           }
           .cert-hours-label {
             font-size: 9.5pt !important;
@@ -977,65 +993,69 @@ export const SertifikatKknPage: React.FC = () => {
           }}
         >
           {/* Inner Content Area */}
-          <div className="absolute inset-0 flex flex-col items-center px-8 md:px-16 pt-7 md:pt-10 pb-6 select-none box-border">
-            {/* Header UNIKOM */}
-            <div className="flex flex-col items-center ml-10 md:ml-16 mt-1">
-              <h1 className="cert-univ-title font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
-                UNIVERSITAS KOMPUTER INDONESIA
-              </h1>
-              
+          <div className="absolute inset-0 flex flex-col items-center justify-between px-8 md:px-16 pt-7 md:pt-9 pb-6 select-none box-border">
+            {/* Header UNIKOM & Title Block (Top) */}
+            <div className="flex flex-col items-center w-full shrink-0">
+              <div className="flex flex-col items-center ml-10 md:ml-16 mt-0.5 md:mt-1">
+                <h1 className="cert-univ-title font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
+                  UNIVERSITAS KOMPUTER INDONESIA
+                </h1>
+              </div>
+
+              {/* Title SERTIFIKAT - Safe Decorative Lines Flanking (Anti-Bentrok Logo) */}
+              <div className="flex items-center justify-center gap-3 md:gap-4 mt-2.5 md:mt-3.5 w-full">
+                <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
+                <h2 className="cert-title-main font-cinzel text-2xl md:text-4xl font-extrabold text-[#0A2540] tracking-[3px] m-0 leading-none">
+                  SERTIFIKAT
+                </h2>
+                <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
+              </div>
+
+              <div className="cert-title-sub1 text-xs md:text-[15.5pt] font-extrabold text-[#005AA9] tracking-wide mt-1 md:mt-1.5 uppercase">
+                PESERTA KKN TEMATIK BATCH I
+              </div>
+              <div className="cert-title-sub2 text-[11px] md:text-[13.5pt] font-extrabold text-[#005AA9] tracking-wide mt-0.5 uppercase">
+                TAHUN AKADEMIK 2026/2027
+              </div>
+              <div className="cert-number text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-1">
+                {formattedNomor.startsWith("Nomor:") ? formattedNomor : `Nomor: ${formattedNomor}`}
+              </div>
             </div>
 
-            {/* Title SERTIFIKAT - Safe Decorative Lines Flanking (Anti-Bentrok Logo) */}
-            <div className="flex items-center justify-center gap-3 md:gap-4 mt-3 md:mt-4 w-full">
-              <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
-              <h2 className="cert-title-main font-cinzel text-2xl md:text-4xl font-extrabold text-[#0A2540] tracking-[3px] m-0 leading-none">
-                SERTIFIKAT
-              </h2>
-              <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
-            </div>
+            {/* ── CENTER PROPORTIONAL SECTION (SIMETRIS & ELEGAN DI TENGAH LAYAKNYA SERTIFIKAT PROFESIONAL) ── */}
+            <div className="cert-center-body flex-1 flex flex-col items-center justify-center w-full my-auto py-2">
+              <div className="cert-given-to font-playfair text-[10.5px] md:text-[12.5pt] italic text-[#0A2540] mb-1">
+                Diberikan kepada:
+              </div>
 
-            <div className="cert-title-sub1 text-xs md:text-[15.5pt] font-extrabold text-[#005AA9] tracking-wide mt-1.5 uppercase">
-              PESERTA KKN TEMATIK BATCH I
-            </div>
-            <div className="cert-title-sub2 text-[11px] md:text-[13.5pt] font-extrabold text-[#005AA9] tracking-wide mt-0.5 uppercase">
-              TAHUN AKADEMIK 2026/2027
-            </div>
-            <div className="cert-number text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-1">
-              {formattedNomor.startsWith("Nomor:") ? formattedNomor : `Nomor: ${formattedNomor}`}
-            </div>
+              {/* Recipient Name */}
+              <div className="cert-recipient-name font-playfair text-xl md:text-[28pt] font-black text-[#0A2540] tracking-wide uppercase text-center whitespace-nowrap leading-tight">
+                {formattedName}
+              </div>
 
-            <div className="cert-given-to font-playfair text-[10px] md:text-[11.5pt] italic text-[#0A2540] mt-2">
-              Diberikan kepada:
-            </div>
+              {/* Diamond Divider */}
+              <div className="flex items-center justify-center gap-3 w-full max-w-[420px] md:max-w-[480px] my-1.5 md:my-2">
+                <div className="h-[1px] bg-[#C5A059] flex-1" />
+                <span className="text-[#C5A059] text-[8pt] md:text-[10pt] leading-none">&#9670;</span>
+                <div className="h-[1px] bg-[#C5A059] flex-1" />
+              </div>
 
-            {/* Recipient Name */}
-            <div className="cert-recipient-name font-playfair text-xl md:text-[27pt] font-black text-[#0A2540] tracking-wide mt-1 uppercase text-center whitespace-nowrap">
-              {formattedName}
-            </div>
+              {/* NIM & Prodi */}
+              <div className="cert-bio-text text-[10px] md:text-[11pt] font-semibold text-[#0A2540]">
+                NIM: {selectedStudent.nim}
+              </div>
+              <div className="cert-bio-text text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-0.5">
+                Program Studi: {selectedStudent.prodi}
+              </div>
 
-            {/* Diamond Divider */}
-            <div className="flex items-center justify-center gap-3 w-full max-w-[420px] md:max-w-[480px] mt-1">
-              <div className="h-[1px] bg-[#C5A059] flex-1" />
-              <span className="text-[#C5A059] text-[8pt] md:text-[10pt] leading-none">&#9670;</span>
-              <div className="h-[1px] bg-[#C5A059] flex-1" />
-            </div>
-
-            {/* NIM & Prodi */}
-            <div className="cert-bio-text text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-1">
-              NIM: {selectedStudent.nim}
-            </div>
-            <div className="cert-bio-text text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-0.5">
-              Program Studi: {selectedStudent.prodi}
-            </div>
-
-            {/* Narration 450 Jam (Lapang & Elegan di Halaman 1) */}
-            <div className="cert-narration text-[10px] md:text-[11.5pt] text-[#0A2540] text-center max-w-[620px] md:max-w-[700px] leading-relaxed mt-5 md:mt-8 font-sans">
-              Telah mengikuti Kuliah Kerja Nyata (KKN) Tematik Batch I Universitas Komputer Indonesia pada periode Juli–Oktober 2026 dengan total beban kegiatan 450 jam.
+              {/* Narration 450 Jam */}
+              <div className="cert-narration text-[10px] md:text-[11.5pt] text-[#0A2540] text-center max-w-[620px] md:max-w-[700px] leading-relaxed mt-4 md:mt-5 font-sans">
+                Telah mengikuti Kuliah Kerja Nyata (KKN) Tematik Batch I Universitas Komputer Indonesia pada periode Juli–Oktober 2026 dengan total beban kegiatan 450 jam.
+              </div>
             </div>
 
             {/* Page 1 Bottom: Signature Block */}
-            <div className="absolute bottom-6 md:bottom-7 left-10 md:left-14 right-14 md:right-20 flex justify-end items-end">
+            <div className="page1-bottom w-full flex justify-end items-end shrink-0 pr-4 md:pr-8">
               <div className="flex flex-col items-center text-center w-64 md:w-80">
                 <div className="cert-sig-date text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540]">
                   Bandung, {tanggalTerbit}
