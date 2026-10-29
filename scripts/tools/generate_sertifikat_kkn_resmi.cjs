@@ -137,7 +137,19 @@ function buildStudentHtml(s) {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 38px 75px 25px 75px;
+      justify-content: space-between;
+      padding: 38px 75px 28px 75px;
+      box-sizing: border-box;
+    }
+
+    .cert-center-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      margin: auto 0;
     }
 
     .header-block {
@@ -235,22 +247,24 @@ function buildStudentHtml(s) {
     }
 
     .given-to {
-      font-size: 11.5pt;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 12.5pt;
       font-style: italic;
       color: #0A2540;
-      margin-top: 10px;
+      margin-bottom: 6px;
     }
 
     .recipient-name {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 27pt;
+      font-size: 28pt;
       font-weight: 900;
       color: #0A2540;
-      letter-spacing: 1px;
-      margin-top: 4px;
+      letter-spacing: 1.2px;
+      margin-top: 0;
       text-transform: uppercase;
       text-align: center;
       white-space: nowrap;
+      line-height: 1.2;
     }
 
     .diamond-divider {
@@ -260,7 +274,8 @@ function buildStudentHtml(s) {
       gap: 12px;
       width: 100%;
       max-width: 480px;
-      margin-top: 4px;
+      margin-top: 6px;
+      margin-bottom: 8px;
     }
 
     .diamond-line {
@@ -271,7 +286,7 @@ function buildStudentHtml(s) {
 
     .diamond-shape {
       color: #C5A059;
-      font-size: 8pt;
+      font-size: 9pt;
       line-height: 1;
     }
 
@@ -279,7 +294,7 @@ function buildStudentHtml(s) {
       font-size: 11pt;
       font-weight: 600;
       color: #0A2540;
-      margin-top: 3px;
+      margin-top: 2px;
     }
 
     .sks-pill {
@@ -348,13 +363,12 @@ function buildStudentHtml(s) {
     }
 
     .page1-bottom {
-      position: absolute;
-      bottom: 26px;
-      left: 75px;
-      right: 95px;
+      width: 100%;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: flex-end;
+      flex-shrink: 0;
+      padding-right: 20px;
     }
 
     .footer-note {
@@ -562,49 +576,40 @@ function buildStudentHtml(s) {
   <!-- ==================== HALAMAN 1 ==================== -->
   <div class="cert-sheet">
     <div class="cert-inner">
-      <div class="header-block">
-        <h1 class="univ-title">UNIVERSITAS KOMPUTER INDONESIA</h1>
-        
+      <div style="display: flex; flex-direction: column; align-items: center; width: 100%; flex-shrink: 0;">
+        <div class="header-block">
+          <h1 class="univ-title">UNIVERSITAS KOMPUTER INDONESIA</h1>
+        </div>
+
+        <div class="title-wrapper">
+          <div class="title-line"></div>
+          <h2 class="title-main">SERTIFIKAT</h2>
+          <div class="title-line"></div>
+        </div>
+
+        <div class="title-sub1">PESERTA KKN TEMATIK BATCH I</div>
+        <div class="title-sub2">TAHUN AKADEMIK 2026/2027</div>
+        <div class="cert-number">Nomor: ${nomorSert}</div>
       </div>
 
-      <div class="title-wrapper">
-        <div class="title-line"></div>
-        <h2 class="title-main">SERTIFIKAT</h2>
-        <div class="title-line"></div>
+      <!-- CENTER PROPORTIONAL SECTION -->
+      <div class="cert-center-body">
+        <div class="given-to">Diberikan kepada:</div>
+        <div class="recipient-name">${formattedName}</div>
+        <div class="diamond-divider">
+          <div class="diamond-line"></div>
+          <span class="diamond-shape">&#9670;</span>
+          <div class="diamond-line"></div>
+        </div>
+        <div class="bio-text">NIM: ${s.nim}</div>
+        <div class="bio-text">Program Studi: ${s.prodi}</div>
+        <div class="narration">
+          Telah mengikuti Kuliah Kerja Nyata (KKN) Tematik Batch I Universitas Komputer Indonesia pada periode Juli–Oktober 2026 dengan total beban kegiatan 450 jam.
+        </div>
       </div>
 
-      <div class="title-sub1">PESERTA KKN TEMATIK BATCH I</div>
-      <div class="title-sub2">TAHUN AKADEMIK 2026/2027</div>
-      <div class="cert-number">Nomor: ${nomorSert}</div>
-
-      <div class="given-to">Diberikan kepada:</div>
-
-      <div class="recipient-name">${formattedName}</div>
-
-      <div class="diamond-divider">
-        <div class="diamond-line"></div>
-        <span class="diamond-shape">&#9670;</span>
-        <div class="diamond-line"></div>
-      </div>
-
-      <div class="bio-text">NIM: ${s.nim}</div>
-      <div class="bio-text">Program Studi: ${s.prodi}</div>
-
-      
-
-      <div class="narration">
-        Telah mengikuti Kuliah Kerja Nyata (KKN) Tematik Batch I Universitas Komputer Indonesia pada periode Juli–Oktober 2026 dengan total beban kegiatan 450 jam.
-      </div>
-
-
-    </div>
-
-    <div class="page1-bottom">
-      <div style="width: 250px;"></div>
-
-      
-
-      <div class="sig-block">
+      <div class="page1-bottom">
+        <div class="sig-block">
         <div class="sig-date">Bandung, ${tanggalTerbit}</div>
         <div class="sig-role">Wakil Rektor I UNIKOM<br>Bidang Akademik dan Kemahasiswaan</div>
         
@@ -618,6 +623,7 @@ function buildStudentHtml(s) {
         </div>
 
         <div class="sig-name">Prof. Dr. Hj. Umi Narimawati, Dra., S.E., M.Si.</div>
+        </div>
       </div>
     </div>
   </div>
