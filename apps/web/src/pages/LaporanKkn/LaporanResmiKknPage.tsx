@@ -789,7 +789,7 @@ export const LaporanResmiKknPage: React.FC = () => {
                 ) : (
                   <>
                     <option value="2026-041027-Universitas Komputer Indonesia - 1">
-                      2026-041027-Universitas Komputer Indonesia - 1
+                      Batch - 1, Periode Juli – Oktober 2026
                     </option>
                     <option value="ALL">Semua Batch / Periode</option>
                   </>

@@ -11,6 +11,8 @@
 
 import showToast from "./showToast";
 
+import { formatPeriodeLaporan } from "./executiveReportDataFetcher";
+
 export interface LaporanEksekutifData {
   periode?: string;
   tanggalUpdate?: string;
@@ -133,7 +135,7 @@ export const downloadLaporanEksekutifPdf = (
 
   // Data Baku Acuan Pimpinan KKN & Lingkungan (100% Dinamis dari Parameter / Basis Data)
   const d: LaporanEksekutifData = {
-    periode: customData?.periode || "Juli – Oktober 2026",
+    periode: formatPeriodeLaporan(customData?.periode),
     tanggalUpdate:
       customData?.tanggalUpdate ||
       `${generatedDate}, ${generatedTime} WIB`,
@@ -893,7 +895,7 @@ export const downloadLaporanEksekutifPdf = (
         </ol>
 
         <div class="doc-footer" style="display: flex; justify-content: flex-end; align-items: center;">
-          <span>Dicetak pada: ${generatedDate}, ${generatedTime} WIB</span>
+          <span>Dicetak pada: ${generatedDate}</span>
         </div>
       </div>
     </body>

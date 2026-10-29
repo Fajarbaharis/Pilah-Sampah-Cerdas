@@ -14,7 +14,6 @@ import {
   FileText,
   ChevronDown,
   Printer,
-  Sparkles,
   Loader2,
   FileSpreadsheet,
 } from "lucide-react";
@@ -224,80 +223,56 @@ export const UnduhLaporanButton: React.FC<UnduhLaporanButtonProps> = ({
 
   const isBusy = isPreparing || isExportingXlsx;
   const roundedClasses = variant === "pill" ? "rounded-full" : "rounded-xl";
-  const leftRoundedClasses = variant === "pill" ? "rounded-l-full" : "rounded-l-xl";
-  const rightRoundedClasses = variant === "pill" ? "rounded-r-full" : "rounded-r-xl";
 
   const reportTitle =
     reportType === "kkn" ? "Kuliah Kerja Nyata (KKN)" : "Tata Kelola Sampah";
 
   return (
     <div ref={dropdownRef} className={`relative inline-flex items-center ${className}`}>
-      {/* Split Button Container */}
-      <div
-        className={`inline-flex items-center ${roundedClasses} border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xs hover:border-[#009966]/60 dark:hover:border-emerald-500/60 transition-all select-none`}
+      {/* Tombol Tunggal Pilihan Format Laporan (Klik di mana saja membuka dropdown) */}
+      <button
+        type="button"
+        onClick={() => !isBusy && setIsOpen(!isOpen)}
+        disabled={isBusy}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        title={`Pilih format laporan ${reportTitle} (PDF / Excel)`}
+        className={`inline-flex items-center gap-2 px-4 h-10 ${roundedClasses} border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:text-[#009966] dark:hover:text-emerald-400 hover:border-[#009966]/60 dark:hover:border-emerald-500/60 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-all select-none cursor-pointer disabled:opacity-60 disabled:cursor-wait`}
       >
-        {/* Tombol Utama: Unduh Laporan (Aksi Cepat 1-Klik) */}
-        <button
-          type="button"
-          onClick={handleDownloadPdf}
-          disabled={isBusy}
-          className={`inline-flex items-center gap-2 pl-3.5 pr-3 h-10 ${leftRoundedClasses} text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-[#009966] dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait`}
-          title={`Unduh Laporan Eksekutif ${reportTitle}`}
-        >
-          {isBusy ? (
-            <Loader2 size={15} className="text-[#009966] dark:text-emerald-400 animate-spin shrink-0" />
-          ) : (
-            <FileText size={15} className="text-[#009966] dark:text-emerald-400 shrink-0" />
-          )}
-          <span>
-            {isPreparing
-              ? "Menyiapkan..."
-              : isExportingXlsx
-              ? "Mengunduh Excel..."
-              : "Unduh Laporan"}
-          </span>
-        </button>
-
-        {/* Pemisah Vertikal Halus */}
-        <div className="w-[1px] h-5 bg-slate-200 dark:bg-slate-700 shrink-0" />
-
-        {/* Tombol Panah Dropdown (Pilihan Format Laporan) */}
-        <button
-          type="button"
-          onClick={() => !isBusy && setIsOpen(!isOpen)}
-          disabled={isBusy}
-          aria-expanded={isOpen}
-          aria-haspopup="true"
-          className={`px-2.5 h-10 ${rightRoundedClasses} text-slate-400 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-60`}
-          title="Pilihan format unduhan laporan (PDF & Spreadsheet Excel)"
-        >
-          <ChevronDown
-            size={14}
-            className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-          />
-        </button>
-      </div>
+        {isBusy ? (
+          <Loader2 size={15} className="text-[#009966] dark:text-emerald-400 animate-spin shrink-0" />
+        ) : (
+          <FileText size={15} className="text-[#009966] dark:text-emerald-400 shrink-0" />
+        )}
+        <span className="text-xs font-bold">
+          {isPreparing
+            ? "Menyiapkan..."
+            : isExportingXlsx
+            ? "Mengunduh Excel..."
+            : "Unduh Laporan"}
+        </span>
+        <ChevronDown
+          size={14}
+          className={`text-slate-400 dark:text-slate-400 transition-transform duration-200 shrink-0 ml-0.5 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
 
       {/* Menu Pilihan Dropdown Eksekutif */}
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-84 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
           {/* Header Menu */}
           <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black tracking-wider uppercase text-slate-400 dark:text-slate-500">
-                PILIHAN FORMAT LAPORAN
-              </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
-                <Sparkles size={10} />
-                <span>Eksekutif</span>
-              </span>
-            </div>
+            <span className="text-[10px] font-black tracking-wider uppercase text-slate-400 dark:text-slate-500">
+              PILIHAN FORMAT LAPORAN
+            </span>
             <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate mt-0.5">
               Laporan Eksekutif KKN &amp; Tata Kelola Lingkungan
             </p>
           </div>
 
-          {/* Opsi 1: Laporan Eksekutif Lengkap PDF (Acuan 7 Bab Resmi Pimpinan) */}
+          {/* Opsi 1: Laporan Eksekutif Lengkap PDF */}
           <button
             type="button"
             onClick={handleDownloadPdf}
@@ -308,14 +283,9 @@ export const UnduhLaporanButton: React.FC<UnduhLaporanButtonProps> = ({
               <Printer size={16} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-slate-900 dark:text-slate-100 group-hover:text-[#009966] dark:group-hover:text-emerald-400 transition-colors">
-                  Laporan Eksekutif (PDF)
-                </span>
-                <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
-                  Acuan Resmi
-                </span>
-              </div>
+              <span className="text-xs font-black text-slate-900 dark:text-slate-100 group-hover:text-[#009966] dark:group-hover:text-emerald-400 transition-colors">
+                Laporan Eksekutif (PDF)
+              </span>
               <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
                 Format naskah dinas cetak resmi standar pimpinan (7 Bagian Utama lengkap).
               </p>
@@ -333,14 +303,9 @@ export const UnduhLaporanButton: React.FC<UnduhLaporanButtonProps> = ({
               <FileSpreadsheet size={16} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  Rekapitulasi Data (XLSX)
-                </span>
-                <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300">
-                  Excel
-                </span>
-              </div>
+              <span className="text-xs font-black text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                Rekapitulasi Data (XLSX)
+              </span>
               <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
                 Format spreadsheet tabular (.xlsx) untuk pengolahan angka, statistik, dan arsip data.
               </p>
