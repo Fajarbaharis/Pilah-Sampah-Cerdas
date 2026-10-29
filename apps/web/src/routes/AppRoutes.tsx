@@ -298,6 +298,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/kalkulator" element={<LandingPage />} />
       <Route path="/faq" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/survey" element={<SurveyLandingPage />} />
       <Route path="/download" element={<DownloadPage />} />
       <Route path="/register" element={<Register />} />
       <Route path="/register-mahasiswa" element={<MahasiswaRegistration />} />
