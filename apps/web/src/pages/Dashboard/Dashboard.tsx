@@ -1895,6 +1895,7 @@ const Dashboard: React.FC = () => {
   const [selectedBinForDetail, setSelectedBinForDetail] = useState<any | null>(null);
   const [deleteBinConfirm, setDeleteBinConfirm] = useState<any | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
   const [lastUpdated] = useState<Date>(() => {
     try {
       return typeof __APP_LAST_COMMIT_DATE__ !== "undefined" && __APP_LAST_COMMIT_DATE__
@@ -2199,6 +2200,18 @@ const Dashboard: React.FC = () => {
     [effectiveWilayah]
   );
 
+  const handleManualRefresh = useCallback(async () => {
+    setManualRefreshing(true);
+    try {
+      await Promise.allSettled([
+        fetchStats(true),
+        fetchWasteComparisonData(wasteFilterState),
+      ]);
+    } finally {
+      setManualRefreshing(false);
+    }
+  }, [wasteFilterState, fetchWasteComparisonData]);
+
   useEffect(() => {
     fetchWasteComparisonData(wasteFilterState);
   }, [fetchWasteComparisonData, wasteFilterState]);
@@ -2226,7 +2239,8 @@ const Dashboard: React.FC = () => {
     }
 
     fetchStats(false);
-    const interval = setInterval(() => fetchStats(true), 30_000);
+    // Auto-refresh data latar belakang setiap 3 menit (180.000 ms)
+    const interval = setInterval(() => fetchStats(true), 180_000);
     return () => clearInterval(interval);
   }, [user, weeks, timeFilter, startDate, endDate, selectedWilayah, activeSubTab]);
 
@@ -2542,17 +2556,17 @@ const Dashboard: React.FC = () => {
             <div className="flex items-center gap-2 px-3.5 h-10 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 font-semibold shadow-2xs shrink-0">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
               <span>Terakhir diperbarui: {formattedLastUpdated}</span>
-              {refreshing && (
+              {manualRefreshing && (
                 <RefreshCw size={13} className="animate-spin text-emerald-600 ml-1" />
               )}
             </div>
             <button
               type="button"
-              onClick={() => fetchStats(false)}
-              disabled={refreshing || loading}
+              onClick={handleManualRefresh}
+              disabled={manualRefreshing || loading}
               className="inline-flex items-center justify-center gap-2 px-4 h-10 bg-[#009966] hover:bg-[#008055] active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50 select-none"
             >
-              <RefreshCw size={15} className={refreshing || loading ? "animate-spin" : ""} />
+              <RefreshCw size={15} className={manualRefreshing ? "animate-spin" : ""} />
               <span>Perbarui Data</span>
             </button>
             <UnduhLaporanButton

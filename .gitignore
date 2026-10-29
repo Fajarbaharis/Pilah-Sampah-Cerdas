@@ -112,9 +112,15 @@ linux/
 macos/
 windows/
 *.xlsx
+*.docx
+Logo_berseka_Laporan.png
+start_staging.sh
+scripts/tools/sync_db_*.cjs
+!scripts/tools/sync_db_from_vps.cjs
 .vscode/
 scripts/*.cjs
-!scripts/tools/*.cjs
+!scripts/tools/safety_guard.cjs
+!scripts/tools/sync_db_from_vps.cjs
 scripts/deep-search.js
 scripts/find-all-backups.js
 scripts/inspect-db.js

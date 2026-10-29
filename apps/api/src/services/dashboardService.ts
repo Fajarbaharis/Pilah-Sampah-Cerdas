@@ -565,6 +565,12 @@ export const dashboardService = {
     if (isFiltered && binMatch) {
       binsWhere.OR = [binMatch, ...(rtRwMatch ? [{ rw: rtRwMatch }] : [])];
     }
+    if (!includeTestAccounts) {
+      binsWhere.AND = [
+        ...(binsWhere.AND || []),
+        { rw: { name: { not: { contains: "99" } } } },
+      ];
+    }
     // Catatan: SENGAJA tidak memakai dateFilter di sini. Bin adalah inventaris
     // infrastruktur, bukan peristiwa. Memfilter bin.createdAt dengan periode
     // dashboard membuat "Tempat Sampah Aktif" hanya menghitung unit yang baru
@@ -602,6 +608,15 @@ export const dashboardService = {
           status: "ACTIVE_BOUND",
         },
       },
+      ...(!includeTestAccounts
+        ? {
+            NOT: [
+              { name: { contains: "99" } },
+              { name: { contains: "dummy" } },
+              { name: { contains: "test" } },
+            ],
+          }
+        : {}),
     };
     if (isFiltered && rwIds.length > 0) {
       rwActiveBinsWhere.id = { in: rwIds };

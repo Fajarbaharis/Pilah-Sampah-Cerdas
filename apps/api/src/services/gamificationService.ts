@@ -512,6 +512,19 @@ export const gamificationService = {
     // 100% Data Aktual: Filter kelompok testing/dummy
     const groups = groupsRaw.filter((g: any) => !isTestKelompok(g));
 
+    // Batch pre-fetch all programKerja for active groups to eliminate N+1 queries
+    const allGroupIds = groups.map((g: any) => g.id);
+    const allProkers = await prisma.programKerjaKkn.findMany({
+      where: { kelompokId: { in: allGroupIds } },
+    });
+    const prokersByGroupId = new Map<string, any[]>();
+    allProkers.forEach((p) => {
+      if (p.kelompokId) {
+        if (!prokersByGroupId.has(p.kelompokId)) prokersByGroupId.set(p.kelompokId, []);
+        prokersByGroupId.get(p.kelompokId)!.push(p);
+      }
+    });
+
     // Memoize group points calculation to prevent massive duplicate queries during DPL calculation
     const groupPointsMap = new Map<string, any>();
 
@@ -524,7 +537,11 @@ export const gamificationService = {
         batch.map(async (g: any) => {
           const realStudents = (g.students || []).filter((s: any) => !isTestStudent(s));
           const studentUserIds = realStudents.map((s: any) => s.userId).filter(Boolean);
-          const groupPointsData = await calculateGroupPoints(g.id, undefined, studentUserIds);
+          const groupPointsData = await calculateGroupPoints(
+            g.id,
+            prokersByGroupId.get(g.id) || [],
+            studentUserIds
+          );
           groupPointsMap.set(g.id, groupPointsData);
 
           const dplName = g.dpl?.name || g.dplNamaMentah || null;
@@ -584,6 +601,26 @@ export const gamificationService = {
     // 100% Data Aktual: Filter akun DPL testing/dummy
     const dplUsers = dplUsersRaw.filter((d: any) => !isTestUser(d));
 
+    // Batch pre-fetch all logbooks for active DPLs to eliminate N+1 queries
+    const allDplIds = dplUsers.map((d: any) => d.id);
+    const allLogbooks = await prisma.logbookDpl.findMany({
+      where: { dplId: { in: allDplIds } },
+      select: {
+        id: true,
+        dplId: true,
+        kelompokId: true,
+        kategori: true,
+        tempat: true,
+      },
+    });
+    const logbooksByDplId = new Map<string, any[]>();
+    allLogbooks.forEach((lb) => {
+      if (lb.dplId) {
+        if (!logbooksByDplId.has(lb.dplId)) logbooksByDplId.set(lb.dplId, []);
+        logbooksByDplId.get(lb.dplId)!.push(lb);
+      }
+    });
+
     const dplLeaderboard: any[] = [];
     for (let i = 0; i < dplUsers.length; i += BATCH_SIZE) {
       const batch = dplUsers.slice(i, i + BATCH_SIZE);
@@ -603,7 +640,11 @@ export const gamificationService = {
             let grpRes = groupPointsMap.get(kel.id);
             if (!grpRes) {
               const studentUserIds = realStudents.map((s: any) => s.userId).filter(Boolean);
-              grpRes = await calculateGroupPoints(kel.id, undefined, studentUserIds);
+              grpRes = await calculateGroupPoints(
+                kel.id,
+                prokersByGroupId.get(kel.id) || [],
+                studentUserIds
+              );
               groupPointsMap.set(kel.id, grpRes);
             }
             totalGroupPointsSum += grpRes.totalGroupPoints;
@@ -612,7 +653,8 @@ export const gamificationService = {
           const avgGroupPoints =
             cleanKelompokList.length > 0 ? totalGroupPointsSum / cleanKelompokList.length : 0;
 
-          const dplPointsData = await calculateDplPoints(d.id, undefined, avgGroupPoints);
+          const dplLogbooks = logbooksByDplId.get(d.id) || [];
+          const dplPointsData = await calculateDplPoints(d.id, undefined, avgGroupPoints, dplLogbooks);
 
           return {
             id: d.id,

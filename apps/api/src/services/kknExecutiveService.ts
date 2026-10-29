@@ -1,5 +1,10 @@
 import { prisma } from "../lib/prisma.js";
 import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import {
+  renderReportHeader,
+  renderFormalTable,
+} from "../utils/excelReportHelper.js";
 import { isTestKelompok, isTestStudent, isTestUser } from "../utils/filterTestingUtils.js";
 import { computeTimelineStatus, DEFAULT_TIMELINE_COBLONG } from "./timelineKknService.js";
 
@@ -429,6 +434,15 @@ export const kknExecutiveService = {
     };
 
     // 8. Sebaran Mahasiswa per Wilayah
+    const rwWilayahMap: Record<string, number> = {
+      Cipaganti: 7,
+      Dago: 13,
+      Lebakgede: 13,
+      "Lebak Siliwangi": 4,
+      "Sadang Serang": 21,
+      Sekeloa: 16,
+    };
+
     const mhsWilayahMap: Record<string, number> = {
       Cipaganti: 0,
       Dago: 0,
@@ -461,6 +475,7 @@ export const kknExecutiveService = {
     const sebaranMahasiswaPerWilayah = Object.entries(mhsWilayahMap).map(([kelurahan, count]) => ({
       kelurahan,
       count,
+      rwCount: rwWilayahMap[kelurahan] || 0,
     }));
 
     // 9. Sebaran DPL per Wilayah
@@ -556,13 +571,13 @@ export const kknExecutiveService = {
     });
 
     const totalProker = prokerList.length;
-    const pctUsulanDisetujui = totalProker > 0 ? Math.round((usulanDisetujui / totalProker) * 100) : 0;
-    const pctUsulanBelumDisetujui = totalProker > 0 ? Math.round((usulanBelumDisetujui / totalProker) * 100) : 0;
-    const pctUsulanDitolak = totalProker > 0 ? Math.round((usulanDitolak / totalProker) * 100) : 0;
+    const pctUsulanDisetujui = totalProker > 0 ? Math.round((usulanDisetujui / totalProker) * 1000) / 10 : 0;
+    const pctUsulanBelumDisetujui = totalProker > 0 ? Math.round((usulanBelumDisetujui / totalProker) * 1000) / 10 : 0;
+    const pctUsulanDitolak = totalProker > 0 ? Math.round((usulanDitolak / totalProker) * 1000) / 10 : 0;
 
-    const pctPelaksanaanBelum = totalProkerDisetujui > 0 ? Math.round((pelaksanaanBelum / totalProkerDisetujui) * 100) : 0;
-    const pctPelaksanaanSedangBerjalan = totalProkerDisetujui > 0 ? Math.round((pelaksanaanSedangBerjalan / totalProkerDisetujui) * 100) : 0;
-    const pctPelaksanaanSelesai = totalProkerDisetujui > 0 ? Math.round((pelaksanaanSelesai / totalProkerDisetujui) * 100) : 0;
+    const pctPelaksanaanBelum = totalProkerDisetujui > 0 ? Math.round((pelaksanaanBelum / totalProkerDisetujui) * 1000) / 10 : 0;
+    const pctPelaksanaanSedangBerjalan = totalProkerDisetujui > 0 ? Math.round((pelaksanaanSedangBerjalan / totalProkerDisetujui) * 1000) / 10 : 0;
+    const pctPelaksanaanSelesai = totalProkerDisetujui > 0 ? Math.round((pelaksanaanSelesai / totalProkerDisetujui) * 1000) / 10 : 0;
 
     const statusProker = {
       total: totalProker,
@@ -1313,90 +1328,295 @@ export const kknExecutiveService = {
 
   /**
    * Ekspor Laporan Lengkap Dashboard Eksekutif KKN ke Spreadsheet Excel
+   * Standar Formal & Industri Menggunakan ExcelJS
    */
   async exportExecutiveReport(filters: KknExecutiveFilters = {}) {
     const data = await this.getExecutiveDashboard(filters);
 
-    const wb = XLSX.utils.book_new();
+    const wb = new ExcelJS.Workbook();
+    wb.creator = "BERSEKA - Universitas Komputer Indonesia";
+    wb.lastModifiedBy = "BERSEKA System";
+    wb.created = new Date();
+    wb.modified = new Date();
 
-    // Sheet 1: Ringkasan Eksekutif
-    const summaryRows = [
-      ["LAPORAN EKSEKUTIF KKN PIMPINAN - BERSEKA"],
-      ["Waktu Ekspor", new Date().toLocaleString("id-ID")],
-      ["Filter Kelurahan", filters.kelurahan || "Semua Kelurahan"],
-      ["Filter RW", filters.rw || "Semua RW"],
-      ["Filter Kelompok", filters.kelompok || "Semua Kelompok"],
-      [],
-      ["METRIK UTAMA", "NILAI"],
-      ["Jumlah Wilayah", data.summary.totalWilayah.label],
-      ["Kelompok Mahasiswa", data.summary.totalKelompok.label],
-      ["Total Mahasiswa", data.summary.totalMahasiswa.label],
-      ["Total DPL", data.summary.totalDpl.label],
-      ["Rasio Kehadiran", `${data.summary.rasioKehadiran.percentage}% (${data.summary.rasioKehadiran.sublabel})`],
-      [],
-      ["STATUS PROGRAM KERJA", "JUMLAH", "PERSENTASE"],
-      ["Diusulkan", data.statusProker.diusulkan.count, `${data.statusProker.diusulkan.percentage}%`],
-      ["Disetujui", data.statusProker.disetujui.count, `${data.statusProker.disetujui.percentage}%`],
-      ["Sedang Dilaksanakan", data.statusProker.sedangDilaksanakan.count, `${data.statusProker.sedangDilaksanakan.percentage}%`],
-      ["Selesai Dilaksanakan", data.statusProker.selesai.count, `${data.statusProker.selesai.percentage}%`],
-      ["Total Program Kerja", data.statusProker.total, "100%"],
-      [],
-      ["PRESENSI MAHASISWA", "JUMLAH", "PERSENTASE"],
-      ...data.presensiMahasiswa.breakdown.map((b) => [b.label, b.count, `${b.percentage}%`]),
+    const formattedExportTime = new Date().toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }) + `, ${new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB`;
+
+    const metadata: Array<{ label: string; value: string | number }> = [
+      { label: "Waktu Ekspor:", value: formattedExportTime },
+      { label: "Tahun / Periode:", value: filters.periode || "KKN Tematik 2026" },
+      { label: "Cakupan Kelurahan:", value: filters.kelurahan || "Semua Kelurahan (Coblong)" },
+      { label: "Cakupan RW:", value: filters.rw || "Semua RW" },
+      { label: "Kelompok Mahasiswa:", value: filters.kelompok || "Semua Kelompok" },
     ];
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Ringkasan Eksekutif");
 
-    // Sheet 2: Sebaran Prodi
+    // =========================================================================
+    // SHEET 1: RINGKASAN EKSEKUTIF
+    // =========================================================================
+    const wsSummary = wb.addWorksheet("Ringkasan Eksekutif", {
+      views: [{ showGridLines: true }],
+    });
+
+    renderReportHeader(
+      wsSummary,
+      "LAPORAN EKSEKUTIF KKN & TATA KELOLA LINGKUNGAN PIMPINAN",
+      "UNIVERSITAS KOMPUTER INDONESIA (UNIKOM) & PLATFORM BERSEKA",
+      metadata,
+      "D"
+    );
+
+    // Tabel 1.1: Indikator Kinerja Utama
+    renderFormalTable(wsSummary, {
+      sectionTitle: "1. INDIKATOR UTAMA KKN",
+      columns: [
+        { header: "INDIKATOR KINERJA", key: "indikator", width: 28, isBold: true },
+        { header: "CAPAIAN / REALISASI", key: "capaian", width: 26, align: "center" },
+        { header: "KETERANGAN / STANDAR", key: "keterangan", width: 40, align: "left" },
+      ],
+      data: [
+        {
+          indikator: "Jumlah Wilayah Binaan",
+          capaian: data.summary.totalWilayah.label,
+          keterangan: "Seluruh kelurahan binaan di Kecamatan Coblong",
+        },
+        {
+          indikator: "Kelompok Mahasiswa",
+          capaian: data.summary.totalKelompok.label,
+          keterangan: "Tersebar aktif di 6 kelurahan binaan",
+        },
+        {
+          indikator: "Total Mahasiswa Aktif",
+          capaian: data.summary.totalMahasiswa.label,
+          keterangan: "Peserta terdaftar aktif KKN UNIKOM",
+        },
+        {
+          indikator: "Dosen Pembimbing Lapangan",
+          capaian: data.summary.totalDpl.label,
+          keterangan: "Rasio pendampingan 1 DPL : 1 Kelompok",
+        },
+        {
+          indikator: "Rasio Kehadiran Kumulatif",
+          capaian: `${data.summary.rasioKehadiran.percentage}%`,
+          keterangan: data.summary.rasioKehadiran.sublabel,
+        },
+      ],
+    });
+
+    // Tabel 1.2: Evaluasi Status Program Kerja
+    renderFormalTable(wsSummary, {
+      sectionTitle: "2. STATUS PROGRAM KERJA (PROKER)",
+      columns: [
+        { header: "STATUS PROGRAM KERJA", key: "status", width: 28, isBold: true },
+        { header: "JUMLAH PROKER", key: "jumlah", width: 20, align: "center", numFmt: "#,##0" },
+        { header: "PERSENTASE", key: "persen", width: 18, align: "center" },
+      ],
+      data: [
+        { status: "Diusulkan (Menunggu)", jumlah: data.statusProker.diusulkan.count, persen: `${data.statusProker.diusulkan.percentage}%` },
+        { status: "Disetujui", jumlah: data.statusProker.disetujui.count, persen: `${data.statusProker.disetujui.percentage}%` },
+        { status: "Sedang Dilaksanakan", jumlah: data.statusProker.sedangDilaksanakan.count, persen: `${data.statusProker.sedangDilaksanakan.percentage}%` },
+        { status: "Selesai Dilaksanakan", jumlah: data.statusProker.selesai.count, persen: `${data.statusProker.selesai.percentage}%` },
+      ],
+      totalRow: {
+        status: "TOTAL PROGRAM KERJA",
+        jumlah: data.statusProker.total,
+        persen: "100.0%",
+      },
+    });
+
+    // Tabel 1.3: Rekapitulasi Presensi Mahasiswa
+    const totalPresensiCount = data.presensiMahasiswa.breakdown.reduce((acc, curr) => acc + curr.count, 0) || data.summary.totalMahasiswa.count;
+    renderFormalTable(wsSummary, {
+      sectionTitle: "3. REKAPITULASI PRESENSI MAHASISWA",
+      columns: [
+        { header: "STATUS PRESENSI", key: "status", width: 28, isBold: true },
+        { header: "JUMLAH MAHASISWA", key: "jumlah", width: 20, align: "center", numFmt: "#,##0" },
+        { header: "PERSENTASE", key: "persen", width: 18, align: "center" },
+      ],
+      data: data.presensiMahasiswa.breakdown.map((b) => ({
+        status: b.label,
+        jumlah: b.count,
+        persen: `${b.percentage}%`,
+      })),
+      totalRow: {
+        status: "TOTAL PRESENSI MAHASISWA",
+        jumlah: totalPresensiCount,
+        persen: "100.0%",
+      },
+    });
+
+    // =========================================================================
+    // SHEET 2: SEBARAN PRODI
+    // =========================================================================
+    const wsProdi = wb.addWorksheet("Sebaran Prodi", {
+      views: [{ showGridLines: true }],
+    });
+
+    renderReportHeader(
+      wsProdi,
+      "DISTRIBUSI MAHASISWA KKN BERDASARKAN PROGRAM STUDI",
+      "UNIVERSITAS KOMPUTER INDONESIA (UNIKOM) - TAHUN 2026",
+      metadata,
+      "D"
+    );
+
     const prodiDataSource = (data as any).sebaranProdiFull && (data as any).sebaranProdiFull.length > 0
       ? (data as any).sebaranProdiFull
       : data.sebaranProdi;
-    const prodiRows = [
-      ["PROGRAM STUDI", "JUMLAH MAHASISWA"],
-      ...prodiDataSource.map((p: any) => [p.name, p.count]),
-    ];
-    const wsProdi = XLSX.utils.aoa_to_sheet(prodiRows);
-    XLSX.utils.book_append_sheet(wb, wsProdi, "Sebaran Prodi");
 
-    // Sheet 3: Sebaran Wilayah
-    const wilayahRows = [
-      ["KELURAHAN", "JUMLAH MAHASISWA", "JUMLAH DPL"],
-      ...data.sebaranMahasiswaPerWilayah.map((m) => {
-        const dpl = data.sebaranDplPerWilayah.find((d) => d.kelurahan === m.kelurahan);
-        return [m.kelurahan, m.count, dpl ? dpl.count : 0];
+    const totalMhsProdi = prodiDataSource.reduce((acc: number, curr: any) => acc + Number(curr.count || 0), 0);
+
+    renderFormalTable(wsProdi, {
+      sectionTitle: "DAFTAR PROGRAM STUDI PESERTA KKN",
+      columns: [
+        { header: "PROGRAM STUDI", key: "name", width: 38, isBold: true },
+        { header: "JUMLAH MAHASISWA", key: "count", width: 22, align: "center", numFmt: "#,##0" },
+        { header: "KONTRIBUSI", key: "persen", width: 18, align: "center" },
+      ],
+      data: prodiDataSource.map((p: any) => {
+        const count = Number(p.count || 0);
+        const pct = totalMhsProdi > 0 ? (count / totalMhsProdi) * 100 : 0;
+        return {
+          name: p.name,
+          count,
+          persen: `${pct.toFixed(1)}%`,
+        };
       }),
-    ];
-    const wsWilayah = XLSX.utils.aoa_to_sheet(wilayahRows);
-    XLSX.utils.book_append_sheet(wb, wsWilayah, "Sebaran Wilayah");
+      totalRow: {
+        name: "TOTAL SELURUH PROGRAM STUDI",
+        count: totalMhsProdi,
+        persen: "100.0%",
+      },
+    });
 
-    // Sheet 4: Perhatian Pimpinan
-    const alertRows = [
-      ["INDIKATOR PERHATIAN PIMPINAN", "STATUS / JUMLAH", "SATUAN", "KETERANGAN"],
-      ...data.perhatianPimpinan.map((a: any) => [a.title, a.count, a.unit || "Entitas", a.subtitle || ""]),
-    ];
-    const wsAlert = XLSX.utils.aoa_to_sheet(alertRows);
-    XLSX.utils.book_append_sheet(wb, wsAlert, "Perhatian Pimpinan");
+    // =========================================================================
+    // SHEET 3: SEBARAN WILAYAH
+    // =========================================================================
+    const wsWilayah = wb.addWorksheet("Sebaran Wilayah", {
+      views: [{ showGridLines: true }],
+    });
 
-    // Sheet 5: Rincian Mahasiswa Tanpa Keterangan Kritis
+    renderReportHeader(
+      wsWilayah,
+      "SEBARAN MAHASISWA DAN DPL PER KELURAHAN BINAAN",
+      "KECAMATAN COBLONG, KOTA BANDUNG - TAHUN 2026",
+      metadata,
+      "F"
+    );
+
+    const totalRwWilayah = data.sebaranMahasiswaPerWilayah.reduce((acc, curr: any) => acc + (curr.rwCount || 0), 0) || 74;
+    const totalMhsWilayah = data.sebaranMahasiswaPerWilayah.reduce((acc, curr) => acc + curr.count, 0);
+    const totalDplWilayah = data.sebaranDplPerWilayah.reduce((acc, curr) => acc + curr.count, 0);
+    const rasioMhsDplTotal = totalDplWilayah > 0 ? (totalMhsWilayah / totalDplWilayah).toFixed(1) : "0";
+
+    renderFormalTable(wsWilayah, {
+      sectionTitle: "DISTRIBUSI MAHASISWA, RW, DAN DPL DI 6 KELURAHAN",
+      columns: [
+        { header: "KELURAHAN", key: "kelurahan", width: 25, isBold: true },
+        { header: "JUMLAH RW", key: "rw", width: 16, align: "center", numFmt: "#,##0" },
+        { header: "JUMLAH MAHASISWA", key: "mhs", width: 22, align: "center", numFmt: "#,##0" },
+        { header: "JUMLAH DPL", key: "dpl", width: 16, align: "center", numFmt: "#,##0" },
+        { header: "RASIO MHS / DPL", key: "rasio", width: 18, align: "center" },
+      ],
+      data: data.sebaranMahasiswaPerWilayah.map((m: any) => {
+        const dplObj = data.sebaranDplPerWilayah.find((d) => d.kelurahan === m.kelurahan);
+        const dplCount = dplObj ? dplObj.count : 0;
+        const rasio = dplCount > 0 ? (m.count / dplCount).toFixed(1) : "-";
+        const cleanKel = (m.kelurahan || "").replace(/^Kelurahan\s+/i, "");
+        return {
+          kelurahan: cleanKel,
+          rw: m.rwCount || 0,
+          mhs: m.count,
+          dpl: dplCount,
+          rasio: `${rasio} : 1`,
+        };
+      }),
+      totalRow: {
+        kelurahan: "TOTAL KECAMATAN COBLONG",
+        rw: totalRwWilayah,
+        mhs: totalMhsWilayah,
+        dpl: totalDplWilayah,
+        rasio: `${rasioMhsDplTotal} : 1`,
+      },
+    });
+
+    // =========================================================================
+    // SHEET 4: PERHATIAN PIMPINAN
+    // =========================================================================
+    const wsAlert = wb.addWorksheet("Perhatian Pimpinan", {
+      views: [{ showGridLines: true }],
+    });
+
+    renderReportHeader(
+      wsAlert,
+      "MATRIKS MONITORING DAN PERINGATAN DINI PIMPINAN",
+      "SISTEM DETEKSI DINI & EVALUASI AKUNTABILITAS KKN",
+      metadata,
+      "E"
+    );
+
+    renderFormalTable(wsAlert, {
+      sectionTitle: "INDIKATOR KRITIS & REKOMENDASI MANAJERIAL",
+      columns: [
+        { header: "INDIKATOR PERHATIAN PIMPINAN", key: "title", width: 36, isBold: true },
+        { header: "STATUS / JUMLAH", key: "count", width: 18, align: "center", numFmt: "#,##0" },
+        { header: "SATUAN", key: "unit", width: 14, align: "center" },
+        { header: "KETERANGAN & REKOMENDASI TINDAK LANJUT", key: "subtitle", width: 48, align: "left" },
+      ],
+      data: data.perhatianPimpinan.map((a: any) => ({
+        title: a.title,
+        count: a.count,
+        unit: a.unit || "Entitas",
+        subtitle: a.subtitle || "-",
+      })),
+    });
+
+    // =========================================================================
+    // SHEET 5: MAHASISWA TANPA KETERANGAN KRITIS (JIKA ADA)
+    // =========================================================================
     if (data.criticalAlpaStudents && data.criticalAlpaStudents.length > 0) {
-      const criticalMhsRows = [
-        ["NIM", "NAMA MAHASISWA", "PROGRAM STUDI", "KELOMPOK", "KELURAHAN", "DPL PENGAMPU", "NO TELEPON", "JUMLAH TANPA KETERANGAN"],
-        ...data.criticalAlpaStudents.map((m: any) => [
-          m.nim,
-          m.name,
-          m.jurusan,
-          m.kelompokName,
-          m.kelurahan,
-          m.dplName,
-          m.phone || "-",
-          m.alpaCount,
-        ]),
-      ];
-      const wsCritical = XLSX.utils.aoa_to_sheet(criticalMhsRows);
-      XLSX.utils.book_append_sheet(wb, wsCritical, "Mahasiswa Tanpa Keterangan");
+      const wsCritical = wb.addWorksheet("Mahasiswa Tanpa Keterangan", {
+        views: [{ showGridLines: true }],
+      });
+
+      renderReportHeader(
+        wsCritical,
+        "DAFTAR MAHASISWA DENGAN PRESENSI KRITIS (ALPA >= 3 HARI)",
+        "ACUAN TINDAK LANJUT & PEMANGGILAN KHUSUS OLEH DPL PENGAMPU",
+        metadata,
+        "I"
+      );
+
+      renderFormalTable(wsCritical, {
+        sectionTitle: "RINCIAN IDENTITAS MAHASISWA PERLU TINDAK LANJUT",
+        columns: [
+          { header: "NIM", key: "nim", width: 16, align: "center" },
+          { header: "NAMA MAHASISWA", key: "name", width: 28, isBold: true },
+          { header: "PROGRAM STUDI", key: "jurusan", width: 26 },
+          { header: "KELOMPOK", key: "kelompokName", width: 18 },
+          { header: "KELURAHAN", key: "kelurahan", width: 18 },
+          { header: "DPL PENGAMPU", key: "dplName", width: 26 },
+          { header: "NO. WHATSAPP", key: "phone", width: 18, align: "center" },
+          { header: "TOTAL ALPA (HARI)", key: "alpaCount", width: 18, align: "center", numFmt: "#,##0" },
+        ],
+        data: data.criticalAlpaStudents.map((m: any) => ({
+          nim: m.nim,
+          name: m.name,
+          jurusan: m.jurusan,
+          kelompokName: m.kelompokName,
+          kelurahan: (m.kelurahan || "").replace(/^Kelurahan\s+/i, ""),
+          dplName: m.dplName,
+          phone: m.phone || "-",
+          alpaCount: m.alpaCount,
+        })),
+      });
     }
 
-    return XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    const buffer = await wb.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   },
 
   /**

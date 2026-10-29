@@ -33,13 +33,30 @@ export function canAccessSidebarRoute(
 
   const role = normalizeUserRole(user.peran || user.role);
 
-  // DEVELOPER dan SUPER_USER selalu memiliki akses penuh ke seluruh rute sidebar
-  if (role === "DEVELOPER" || role === "SUPER_USER") {
+  // DEVELOPER selalu memiliki akses penuh ke seluruh rute sidebar
+  if (role === "DEVELOPER") {
     return true;
   }
 
   // Bersihkan target URL dari query parameter dan hash untuk pencocokan path dasar
   const cleanPath = targetUrl.split("?")[0].split("#")[0].trim().toLowerCase();
+
+  // Rute Laporan: Eksklusif khusus untuk DEVELOPER (di-hide untuk seluruh peran lain termasuk SUPER_USER & PIMPINAN)
+  const isLaporanRoute =
+    cleanPath.startsWith("/laporan/") ||
+    cleanPath === "/laporan" ||
+    cleanPath === "/laporan/kkn" ||
+    cleanPath === "/laporan/tata-kelola-sampah" ||
+    cleanPath === "/laporan-pimpinan/kkn";
+
+  if (isLaporanRoute) {
+    return false;
+  }
+
+  // SUPER_USER memiliki akses administratif ke seluruh rute sidebar lainnya
+  if (role === "SUPER_USER") {
+    return true;
+  }
 
   // Helper can view resource
   const canView = (resource: string): boolean => {
@@ -252,25 +269,6 @@ export function canAccessSidebarRoute(
     cleanPath === "/iot"
   ) {
     return true;
-  }
-
-  // 7.1. Rute Laporan (Khusus PIMPINAN di-hide dari sidebar)
-  const isLaporanRoute =
-    cleanPath.startsWith("/laporan/") ||
-    cleanPath === "/laporan" ||
-    cleanPath === "/laporan/kkn" ||
-    cleanPath === "/laporan/tata-kelola-sampah" ||
-    cleanPath === "/laporan-pimpinan/kkn";
-
-  if (isLaporanRoute) {
-    if (role === "PIMPINAN") return false;
-    const allowedLaporan: UserRole[] = [
-      "ADMIN_DLH",
-      "CAMAT",
-      "LURAH",
-      "PANITIA_TASKFORCE",
-    ];
-    return allowedLaporan.includes(role);
   }
 
   // 8. Rute Pelaksanaan, Monitoring, Penilaian, Logbook, dan Hasil Survei (Terbuka untuk PIMPINAN)
