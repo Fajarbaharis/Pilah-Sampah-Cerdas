@@ -39,12 +39,12 @@ import {
   Filter,
   Users,
   ChevronDown,
-  Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../../store/useAuthStore";
 import studentsDataRaw from "../../data/students_certificates_data.json";
 import { sertifikatKknService, type StudentCertData } from "../../services/sertifikatKknService";
+import { dplService } from "../../services/dplService";
 import { PageHeader } from "../../components/common/PageHeader";
 
 export const SertifikatKknPage: React.FC = () => {
@@ -80,16 +80,64 @@ export const SertifikatKknPage: React.FC = () => {
   const fetchLiveData = async (force: boolean = false) => {
     if (force) setIsSyncing(true);
     try {
-      const liveList = await sertifikatKknService.getSertifikatList({ forceRefresh: force });
+      const [liveList, rekapRes] = await Promise.all([
+        sertifikatKknService.getSertifikatList({ forceRefresh: force }).catch((e) => {
+          console.warn("[SertifikatKknPage] getSertifikatList warning:", e);
+          return [] as StudentCertData[];
+        }),
+        dplService.getRekapNilaiAkhir().catch((e) => {
+          console.warn("[SertifikatKknPage] getRekapNilaiAkhir warning:", e);
+          return null;
+        }),
+      ]);
+
+      // Ambil nilai kehadiran dari rekapitulasi nilai akhir SSOT
+      const rekapMap = new Map<string, number>();
+      if (rekapRes && Array.isArray(rekapRes.students)) {
+        for (const st of rekapRes.students) {
+          const keh = typeof st.kehadiran === "number" ? st.kehadiran : (st.tingkatKehadiran ?? 0);
+          if (st.nim) rekapMap.set(String(st.nim).trim(), keh);
+        }
+      }
+
       if (liveList && liveList.length > 0) {
-        setStudentsData(liveList);
+        const enriched = liveList.map((s) => {
+          const rekapKeh = rekapMap.get(String(s.nim).trim());
+          const finalKeh = rekapKeh !== undefined ? rekapKeh : (s.nilai?.kehadiran ?? s.kehadiran ?? null);
+          return {
+            ...s,
+            kehadiran: finalKeh,
+            nilai: {
+              ...s.nilai,
+              kehadiran: finalKeh,
+            },
+          };
+        });
+
+        setStudentsData(enriched);
         setIsLiveDatabase(true);
         const now = new Date();
         const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
         setLastSyncTime(`Pukul ${timeStr} WIB`);
         if (force) {
-          toast.success(`Data live database berhasil diperbarui (${liveList.length} Mahasiswa)!`);
+          toast.success(`Data live database berhasil diperbarui (${enriched.length} Mahasiswa)!`);
         }
+      } else if (rekapMap.size > 0) {
+        // Fallback: perbarui data mahasiswa lokal dengan nilai kehadiran riil dari rekapitulasi nilai akhir
+        setStudentsData((prev) =>
+          prev.map((s) => {
+            const rekapKeh = rekapMap.get(String(s.nim).trim());
+            const finalKeh = rekapKeh !== undefined ? rekapKeh : (s.nilai?.kehadiran ?? s.kehadiran ?? null);
+            return {
+              ...s,
+              kehadiran: finalKeh,
+              nilai: {
+                ...s.nilai,
+                kehadiran: finalKeh,
+              },
+            };
+          })
+        );
       }
     } catch (err) {
       console.warn("[SertifikatKknPage] Fallback to bundled dataset:", err);
@@ -167,6 +215,8 @@ export const SertifikatKknPage: React.FC = () => {
         match.statusPenilaian !== selectedStudent.statusPenilaian ||
         match.sudahDinilai !== selectedStudent.sudahDinilai ||
         match.totalPoin !== selectedStudent.totalPoin ||
+        match.kehadiran !== selectedStudent.kehadiran ||
+        match.nilai?.kehadiran !== selectedStudent.nilai?.kehadiran ||
         match.nilai?.total !== selectedStudent.nilai?.total ||
         match.nilai?.proker !== selectedStudent.nilai?.proker ||
         match.nama !== selectedStudent.nama ||
@@ -313,6 +363,13 @@ export const SertifikatKknPage: React.FC = () => {
     ? selectedStudent.tanggalTerbit
     : "10 November 2026";
 
+  const selectedKehadiran =
+    typeof selectedStudent.nilai?.kehadiran === "number"
+      ? selectedStudent.nilai.kehadiran
+      : typeof selectedStudent.kehadiran === "number"
+        ? selectedStudent.kehadiran
+        : null;
+
   // =========================================================================
   // CANVA BULK CREATE MODAL STATE & LOGIC (WITH GROUP & STUDENT SELECTION)
   // =========================================================================
@@ -394,7 +451,7 @@ export const SertifikatKknPage: React.FC = () => {
       "Nomor_Sertifikat",
       "ID_Sertifikat",
       "Total_Jam_KKN",
-      "Poin_Berseka",
+      "Nilai_Kehadiran",
       "Nilai_Personal",
       "Nilai_Proker",
       "Nilai_Laporan",
@@ -420,6 +477,12 @@ export const SertifikatKknPage: React.FC = () => {
         : "10 November 2026";
       const totalNilai = s.nilai && s.nilai.total > 0 ? s.nilai.total.toFixed(2) : "-";
       const predikat = s.nilai?.predikat || "Belum Dinilai";
+      const studentKeh =
+        typeof s.nilai?.kehadiran === "number"
+          ? s.nilai.kehadiran
+          : typeof (s as any).kehadiran === "number"
+            ? (s as any).kehadiran
+            : null;
 
       return [
         escapeCsv(s.nim),
@@ -432,7 +495,7 @@ export const SertifikatKknPage: React.FC = () => {
         escapeCsv(nomor),
         escapeCsv(s.idSertifikat),
         escapeCsv("450 Jam"),
-        escapeCsv(`${(s.totalPoin ?? 0).toLocaleString("id-ID")} Poin`),
+        escapeCsv(studentKeh !== null && studentKeh > 0 ? studentKeh.toFixed(1) : "-"),
         escapeCsv(s.nilai?.personal !== null ? s.nilai.personal.toFixed(1) : "-"),
         escapeCsv(s.nilai?.proker !== null ? s.nilai.proker.toFixed(1) : "-"),
         escapeCsv(s.nilai?.laporan !== null ? s.nilai.laporan.toFixed(1) : "-"),
@@ -655,7 +718,7 @@ export const SertifikatKknPage: React.FC = () => {
           category="PENILAIAN KKN"
           scope="E-Sertifikat Kelulusan Resmi"
           title="E-Sertifikat KKN Tematik UNIKOM"
-          description="Format resmi 2 Halaman Canva: Sertifikat Kelulusan 450 Jam & Transkrip Rekapitulasi 5 Aspek Resmi"
+          description="Format resmi 2 Halaman Canva: Sertifikat Kelulusan 450 Jam & Transkrip Rekapitulasi Nilai Resmi"
           actions={
             <div className="flex flex-wrap items-center gap-2.5">
               {/* Sync Live Database Button */}
@@ -1186,7 +1249,7 @@ export const SertifikatKknPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* ── 5 ASPECTS TABLE (MATCHING WIDTH & BORDER 100%) ── */}
+              {/* ── 6 ASPECTS TABLE (MATCHING WIDTH & BORDER 100%) ── */}
               <table className="cert-table w-full max-w-[840px] border-collapse border-[1.5px] border-[#0D2C54] bg-white shadow-2xs">
               <thead>
                 <tr className="bg-[#0D2C54] text-white">
@@ -1207,6 +1270,19 @@ export const SertifikatKknPage: React.FC = () => {
                     1
                   </td>
                   <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                    Nilai kehadiran
+                  </td>
+                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
+                    {selectedKehadiran !== null && selectedKehadiran !== undefined && selectedKehadiran > 0
+                      ? selectedKehadiran.toFixed(1)
+                      : "-"}
+                  </td>
+                </tr>
+                <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
+                  <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
+                    2
+                  </td>
+                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
                     Nilai personal
                   </td>
                   <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
@@ -1215,9 +1291,9 @@ export const SertifikatKknPage: React.FC = () => {
                       : "-"}
                   </td>
                 </tr>
-                <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
+                <tr className="bg-white hover:bg-slate-50">
                   <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    2
+                    3
                   </td>
                   <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
                     Program kerja kelompok
@@ -1228,9 +1304,9 @@ export const SertifikatKknPage: React.FC = () => {
                       : "-"}
                   </td>
                 </tr>
-                <tr className="bg-white hover:bg-slate-50">
+                <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
                   <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    3
+                    4
                   </td>
                   <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
                     Laporan akhir
@@ -1241,9 +1317,9 @@ export const SertifikatKknPage: React.FC = () => {
                       : "-"}
                   </td>
                 </tr>
-                <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
+                <tr className="bg-white hover:bg-slate-50">
                   <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    4
+                    5
                   </td>
                   <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
                     Paper
@@ -1254,9 +1330,9 @@ export const SertifikatKknPage: React.FC = () => {
                       : "-"}
                   </td>
                 </tr>
-                <tr className="bg-white hover:bg-slate-50">
+                <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
                   <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    5
+                    6
                   </td>
                   <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
                     Video
@@ -1291,17 +1367,6 @@ export const SertifikatKknPage: React.FC = () => {
             {/* TOTAL 450 JAM */}
             <div className="cert-total-hours font-cinzel text-xs md:text-[12pt] font-extrabold text-[#0A2540] tracking-[2px] mt-2 md:mt-2.5">
               TOTAL 450 JAM
-            </div>
-
-            {/* ── AKUMULASI POIN BERSEKA MAHASISWA (DATA RIIL DATABASE) ── */}
-            <div className="cert-poin-berseka inline-flex items-center justify-center gap-1.5 md:gap-2 mt-1.5 md:mt-2 px-3 md:px-4 py-0.5 md:py-1 bg-emerald-50/90 border border-emerald-300/80 rounded-full shadow-2xs">
-              <Sparkles className="w-3 h-3 md:w-3.5 md:h-3.5 text-[#009966] shrink-0" />
-              <span className="font-sans text-[8.5px] md:text-[9.5pt] font-bold text-[#0A2540] tracking-wide">
-                POIN BERSEKA:
-              </span>
-              <span className="font-sans text-[9px] md:text-[10pt] font-extrabold text-[#009966]">
-                {(selectedStudent.totalPoin ?? 0).toLocaleString("id-ID")} POIN
-              </span>
             </div>
           </div>
 
@@ -1568,7 +1633,7 @@ export const SertifikatKknPage: React.FC = () => {
             {/* Modal Footer */}
             <div className="p-4 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
               <div className="text-xs text-slate-500">
-                Format: <strong className="text-slate-800 dark:text-slate-200 font-mono">18 Kolom Data Lengkap</strong> (Nama, NIM, Nilai 5 Aspek, SKS, No. Sertifikat)
+                Format: <strong className="text-slate-800 dark:text-slate-200 font-mono">18 Kolom Data Lengkap</strong> (Nama, NIM, Nilai Kehadiran & Aspek KKN, SKS, No. Sertifikat)
               </div>
               <div className="flex items-center gap-2">
                 <button

@@ -22,6 +22,7 @@
 
 import { prisma } from "../lib/prisma.js";
 import { calculateValidIndividualPointsForUsers } from "./pointService.js";
+import { dplService } from "./dplService.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -81,7 +82,9 @@ export interface StudentCertData {
   statusPenilaian: "SUDAH_DINILAI" | "BELUM_DINILAI";
   sudahDinilai: boolean;
   totalPoin: number;
+  kehadiran?: number | null;
   nilai: {
+    kehadiran?: number | null;
     personal: number | null;
     proker: number | null;
     laporan: number | null;
@@ -210,7 +213,26 @@ export const sertifikatKknService = {
       console.warn("[sertifikatKknService] Warning querying calculateValidIndividualPointsForUsers:", e);
     }
 
-    // 6. Mapping data live database ke format sertifikat TANPA NILAI FIKTIF
+    // 6. Ambil nilai kehadiran riil dari SSOT rekapitulasi nilai akhir
+    const attendanceMap = new Map<string, number>();
+    try {
+      const rekapRes = await dplService.getRekapNilaiAkhir(
+        userId || "",
+        filters?.kelompok,
+        userRole || "ADMIN_DLH"
+      );
+      if (rekapRes && Array.isArray(rekapRes.students)) {
+        for (const st of rekapRes.students) {
+          const keh = typeof st.kehadiran === "number" ? st.kehadiran : (st.tingkatKehadiran ?? 0);
+          if (st.nim) attendanceMap.set(String(st.nim).trim(), keh);
+          if (st.userId) attendanceMap.set(String(st.userId).trim(), keh);
+        }
+      }
+    } catch (e) {
+      console.warn("[sertifikatKknService] Warning querying rekapitulasi nilai akhir for attendance:", e);
+    }
+
+    // 7. Mapping data live database ke format sertifikat TANPA NILAI FIKTIF
     const results: StudentCertData[] = [];
     let counter = 1;
 
@@ -261,6 +283,9 @@ export const sertifikatKknService = {
         (s.isAssessed === true && Number(s.assessmentScore) > 0 && personalScore !== null && prokerScore !== null && laporanScore !== null && paperScore !== null && videoScore !== null)
       );
 
+      const rawKehadiran = attendanceMap.get(nim) ?? (s.userId ? attendanceMap.get(s.userId) : null) ?? null;
+      const kehadiranScore = rawKehadiran !== null ? Number(rawKehadiran.toFixed(1)) : null;
+
       let nilai: StudentCertData["nilai"];
       let statusPenilaian: "SUDAH_DINILAI" | "BELUM_DINILAI";
       let sudahDinilai: boolean;
@@ -272,6 +297,7 @@ export const sertifikatKknService = {
         sudahDinilai = true;
         const totalScore = Number(pDb?.nilaiAkhir || s.assessmentScore || 0);
         nilai = {
+          kehadiran: kehadiranScore,
           personal: personalScore !== null ? Number(personalScore.toFixed(1)) : null,
           proker: prokerScore !== null ? Number(prokerScore.toFixed(1)) : null,
           laporan: laporanScore !== null ? Number(laporanScore.toFixed(1)) : null,
@@ -287,6 +313,7 @@ export const sertifikatKknService = {
         statusPenilaian = "BELUM_DINILAI";
         sudahDinilai = false;
         nilai = {
+          kehadiran: kehadiranScore,
           personal: personalScore !== null ? Number(personalScore.toFixed(1)) : null,
           proker: prokerScore !== null ? Number(prokerScore.toFixed(1)) : null,
           laporan: laporanScore !== null ? Number(laporanScore.toFixed(1)) : null,
@@ -317,6 +344,7 @@ export const sertifikatKknService = {
         statusPenilaian,
         sudahDinilai,
         totalPoin,
+        kehadiran: kehadiranScore,
         nilai,
       });
     }
