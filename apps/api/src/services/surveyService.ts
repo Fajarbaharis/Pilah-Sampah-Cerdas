@@ -48,15 +48,24 @@ export interface SurveySubmitDto {
 }
 
 const KELURAHAN_ID_FALLBACK: Record<string, number> = {
-  dago: 1,
-  lebakgede: 2,
-  "lebak gede": 2,
+  sadangserang: 1,
+  "sadang serang": 1,
+  lebaksiliwangi: 2,
+  "lebak siliwangi": 2,
   sekeloa: 3,
-  lebaksiliwangi: 4,
-  "lebak siliwangi": 4,
-  sadangserang: 5,
-  "sadang serang": 5,
+  dago: 4,
+  lebakgede: 5,
+  "lebak gede": 5,
   cipaganti: 6,
+};
+
+const OFFICIAL_KELURAHAN_NAMES: Record<number, string> = {
+  1: "Sadang Serang",
+  2: "Lebak Siliwangi",
+  3: "Sekeloa",
+  4: "Dago",
+  5: "Lebak Gede",
+  6: "Cipaganti",
 };
 
 export const surveyService = {
@@ -117,6 +126,54 @@ export const surveyService = {
       const err = new Error("STUDENT_NOT_VERIFIED");
       (err as any).details = studentCheck.message;
       throw err;
+    }
+
+    // Validasi kesesuaian Kelurahan binaan kelompok
+    if (studentCheck.kelurahan && studentCheck.kelurahan.trim() !== "") {
+      const normalizeKel = (k: string) =>
+        (k || "").toLowerCase().replace(/^(kelurahan|desa)\s*/i, "").replace(/\s+/g, "").trim();
+      const normPayloadKel = normalizeKel(payload.kelurahan);
+      const normAssignedKel = normalizeKel(studentCheck.kelurahan);
+      if (
+        normPayloadKel !== normAssignedKel &&
+        !normPayloadKel.includes(normAssignedKel) &&
+        !normAssignedKel.includes(normPayloadKel)
+      ) {
+        const err = new Error("KELURAHAN_MISMATCH");
+        (err as any).details = `Kelurahan ${payload.kelurahan} tidak sesuai dengan wilayah penugasan kelompok Anda (${studentCheck.kelurahan}).`;
+        throw err;
+      }
+    }
+
+    // Validasi kesesuaian cakupan RW binaan kelompok
+    if (studentCheck.cakupanRw) {
+      let allowedRws: string[] = [];
+      if (Array.isArray(studentCheck.cakupanRw)) {
+        allowedRws = studentCheck.cakupanRw.map((r: any) => String(r).replace(/\D/g, "")).filter(Boolean);
+      } else if (typeof studentCheck.cakupanRw === "string") {
+        try {
+          const parsed = JSON.parse(studentCheck.cakupanRw);
+          if (Array.isArray(parsed)) {
+            allowedRws = parsed.map((r: any) => String(r).replace(/\D/g, "")).filter(Boolean);
+          }
+        } catch {
+          const match = studentCheck.cakupanRw.match(/\d+/g);
+          if (match) allowedRws = match;
+        }
+      }
+
+      if (allowedRws.length > 0) {
+        const payloadRwDigit = (payload.rw || "").replace(/\D/g, "");
+        const isMatch = allowedRws.some((r) => parseInt(r, 10) === parseInt(payloadRwDigit, 10));
+        if (!isMatch) {
+          const err = new Error("RW_MISMATCH");
+          const formattedAllowed = allowedRws
+            .map((r) => `RW ${String(parseInt(r, 10)).padStart(2, "0")}`)
+            .join(", ");
+          (err as any).details = `RW ${payload.rw} bukan bagian dari cakupan RW binaan kelompok Anda (${formattedAllowed}).`;
+          throw err;
+        }
+      }
     }
 
     const kodeSurvey = payload.id || `BRS-${Date.now().toString(36).toUpperCase()}`;
@@ -186,7 +243,7 @@ export const surveyService = {
         volumeAnorganik: new Prisma.Decimal(volAnorganik.toFixed(2)),
         volumeResidu: new Prisma.Decimal(volResidu.toFixed(2)),
         volumeTotal: new Prisma.Decimal(volTotal.toFixed(2)),
-        prioritas: payload.prioritas,
+        prioritas: payload.prioritas || "Optimalisasi pemilahan di sumber",
         risiko: payload.risiko || null,
         catatanValidasi: payload.catatan_validasi || null,
         status: "TERKIRIM",
@@ -271,12 +328,17 @@ export const surveyService = {
     // Cari ID Kelurahan
     const cleanKelName = namaKelurahan.trim().toLowerCase();
     const existingKel = await prisma.surveiKelurahan.findFirst({
-      where: { namaKelurahan: { contains: cleanKelName.replace(/\s+/g, ""), mode: "insensitive" } },
+      where: {
+        OR: [
+          { namaKelurahan: { equals: namaKelurahan.trim(), mode: "insensitive" } },
+          { namaKelurahan: { contains: cleanKelName, mode: "insensitive" } },
+        ],
+      },
       select: { kelurahanId: true, namaKelurahan: true },
     });
 
     const kelurahanId = existingKel?.kelurahanId ?? KELURAHAN_ID_FALLBACK[cleanKelName] ?? 1;
-    const finalKelName = existingKel?.namaKelurahan || namaKelurahan;
+    const finalKelName = existingKel?.namaKelurahan ?? OFFICIAL_KELURAHAN_NAMES[kelurahanId] ?? namaKelurahan;
 
     if (tahap === "Endline") {
       // Upsert Endline Kelurahan
@@ -385,20 +447,143 @@ export const surveyService = {
           },
         });
       }
+    } else if (tahap === "Baseline") {
+      // Upsert Baseline Kelurahan
+      await prisma.surveiKelurahan.upsert({
+        where: { kelurahanId },
+        create: {
+          kelurahanId,
+          namaKelurahan: finalKelName,
+          kecamatan: "Coblong",
+          tanggalSurvei: new Date(),
+          enumerator: `Mahasiswa KKN (${latestSurveys.length} RW)`,
+          catatanData: `Agregasi otomatis Baseline dari ${latestSurveys.length} RW via survey.berseka.id`,
+        },
+        update: {
+          namaKelurahan: finalKelName,
+          tanggalSurvei: new Date(),
+          enumerator: `Mahasiswa KKN (${latestSurveys.length} RW)`,
+          catatanData: `Agregasi otomatis Baseline dari ${latestSurveys.length} RW via survey.berseka.id`,
+        },
+      });
+
+      // Upsert Baseline Volume
+      await prisma.surveiVolumeSampah.upsert({
+        where: { kelurahanId },
+        create: {
+          kelurahanId,
+          organikKgPerHari: new Prisma.Decimal(sumOrganik.toFixed(2)),
+          anorganikKgPerHari: new Prisma.Decimal(sumAnorganik.toFixed(2)),
+          residuKgPerHari: new Prisma.Decimal(sumResidu.toFixed(2)),
+          totalVolumeKgPerHari: new Prisma.Decimal(sumTotalVolume.toFixed(2)),
+          catatan: `Total volume harian Baseline dihitung dari akumulasi ${latestSurveys.length} RW.`,
+        },
+        update: {
+          organikKgPerHari: new Prisma.Decimal(sumOrganik.toFixed(2)),
+          anorganikKgPerHari: new Prisma.Decimal(sumAnorganik.toFixed(2)),
+          residuKgPerHari: new Prisma.Decimal(sumResidu.toFixed(2)),
+          totalVolumeKgPerHari: new Prisma.Decimal(sumTotalVolume.toFixed(2)),
+          catatan: `Total volume harian Baseline dihitung dari akumulasi ${latestSurveys.length} RW.`,
+        },
+      });
+
+      // Upsert Baseline Pemilahan
+      await prisma.surveiPemilahanSampah.upsert({
+        where: { kelurahanId },
+        create: {
+          kelurahanId,
+          jumlahRumahMemilah: sumRumahPilah,
+          totalJumlahRumahDiRw: sumRumahTotal,
+          persentasePemilahan: new Prisma.Decimal(pctPilah.toFixed(4)),
+          tingkatPemilahan: tingkatPilah,
+          catatan: `Tingkat pemilahan rata-rata wilayah Baseline dari ${latestSurveys.length} RW.`,
+        },
+        update: {
+          jumlahRumahMemilah: sumRumahPilah,
+          totalJumlahRumahDiRw: sumRumahTotal,
+          persentasePemilahan: new Prisma.Decimal(pctPilah.toFixed(4)),
+          tingkatPemilahan: tingkatPilah,
+          catatan: `Tingkat pemilahan rata-rata wilayah Baseline dari ${latestSurveys.length} RW.`,
+        },
+      });
+
+      // Upsert Baseline Bank Sampah & Pengolahan
+      await prisma.surveiBankSampahPengolahan.upsert({
+        where: { kelurahanId },
+        create: {
+          kelurahanId,
+          bankSampahAktif: sumBsAktif,
+          bankSampahTidakAktif: sumBsNonaktif,
+          jumlahUnitKomposter: String(sumKomposter),
+          jumlahTitikMaggotBsf: String(sumMaggot),
+          bioporiLoseda: allTeknologi.has("Biopori/loseda"),
+          ecobrickKerajinanDaurUlang: allTeknologi.has("Ecobrick/kerajinan daur ulang"),
+          buruanSae: allTeknologi.has("Buruan Sae"),
+          pengepulMitraDaurUlang: allTeknologi.has("Pengepul/mitra daur ulang"),
+          digitalisasiData: allTeknologi.has("Digitalisasi data (WA/aplikasi)"),
+          aktivitasLainnyaKeterangan: `Fasilitas aktif terlaporkan di ${latestSurveys.length} RW`,
+        },
+        update: {
+          bankSampahAktif: sumBsAktif,
+          bankSampahTidakAktif: sumBsNonaktif,
+          jumlahUnitKomposter: String(sumKomposter),
+          jumlahTitikMaggotBsf: String(sumMaggot),
+          bioporiLoseda: allTeknologi.has("Biopori/loseda"),
+          ecobrickKerajinanDaurUlang: allTeknologi.has("Ecobrick/kerajinan daur ulang"),
+          buruanSae: allTeknologi.has("Buruan Sae"),
+          pengepulMitraDaurUlang: allTeknologi.has("Pengepul/mitra daur ulang"),
+          digitalisasiData: allTeknologi.has("Digitalisasi data (WA/aplikasi)"),
+          aktivitasLainnyaKeterangan: `Fasilitas aktif terlaporkan di ${latestSurveys.length} RW`,
+        },
+      });
+
+      // Update kesimpulan dari survei RW terbaru jika ada
+      const samplePrioritas = latestSurveys[0]?.prioritas;
+      const sampleRisiko = latestSurveys[0]?.risiko;
+      if (samplePrioritas || sampleRisiko) {
+        await prisma.surveiCatatanKesimpulan.upsert({
+          where: { kelurahanId },
+          create: {
+            kelurahanId,
+            prioritasIntervensi: samplePrioritas || "Optimalisasi pemilahan di sumber",
+            catatanTambahanRisikoSosial: sampleRisiko || null,
+          },
+          update: {
+            prioritasIntervensi: samplePrioritas || undefined,
+            catatanTambahanRisikoSosial: sampleRisiko || undefined,
+          },
+        });
+      }
     }
   },
 
   /**
    * Mengambil seluruh data survei RW beserta agregasi rekap per kelurahan
    */
-  getSurveyData: async (search?: string) => {
+  getSurveyData: async (search?: string, tahap?: string, kelurahan?: string) => {
     const where: Prisma.SurveiRwWhereInput = {};
-    if (search) {
-      where.OR = [
-        { namaSurveyor: { contains: search, mode: "insensitive" } },
-        { nim: { contains: search, mode: "insensitive" } },
-        { kelurahan: { contains: search, mode: "insensitive" } },
-        { rw: { contains: search, mode: "insensitive" } },
+
+    if (tahap && tahap.toUpperCase() !== "SEMUA") {
+      where.tahap = { equals: tahap, mode: "insensitive" };
+    }
+
+    if (kelurahan && kelurahan.toUpperCase() !== "SEMUA") {
+      where.kelurahan = { equals: kelurahan, mode: "insensitive" };
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim();
+      where.AND = [
+        {
+          OR: [
+            { namaSurveyor: { contains: q, mode: "insensitive" } },
+            { nim: { contains: q, mode: "insensitive" } },
+            { kelurahan: { contains: q, mode: "insensitive" } },
+            { rw: { contains: q, mode: "insensitive" } },
+            { kelompok: { contains: q, mode: "insensitive" } },
+            { kodeSurvey: { contains: q, mode: "insensitive" } },
+          ],
+        },
       ];
     }
 
@@ -483,12 +668,55 @@ export const surveyService = {
   },
 
   /**
+   * Cek apakah RW pada kelurahan, tahap, dan tahun tertentu sudah pernah disurvei
+   */
+  checkRwSurvey: async (kelurahan: string, rw: string, tahap: string, tahun: string) => {
+    if (!kelurahan || !rw) {
+      return { exists: false, survey: null };
+    }
+
+    const existing = await prisma.surveiRw.findFirst({
+      where: {
+        kelurahan: { equals: kelurahan.trim(), mode: "insensitive" },
+        rw: { equals: rw.trim(), mode: "insensitive" },
+        tahap: { equals: tahap.trim(), mode: "insensitive" },
+        tahun: { equals: tahun.trim(), mode: "insensitive" },
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        kodeSurvey: true,
+        namaSurveyor: true,
+        nim: true,
+        kelompok: true,
+        kelurahan: true,
+        rw: true,
+        tahap: true,
+        tahun: true,
+        createdAt: true,
+      },
+    });
+
+    if (!existing) {
+      return { exists: false, survey: null };
+    }
+
+    return {
+      exists: true,
+      survey: existing,
+    };
+  },
+
+  /**
    * Menghapus satu survei RW (opsional)
    */
-  deleteSurvey: async (id: string) => {
+  deleteSurvey: async (id: string, nim?: string) => {
     const existing = await prisma.surveiRw.findUnique({ where: { id } });
     if (!existing) {
       throw new Error("NOT_FOUND");
+    }
+    if (nim && existing.nim && existing.nim.trim() !== nim.trim()) {
+      throw new Error("FORBIDDEN");
     }
     const deleted = await prisma.surveiRw.delete({ where: { id } });
     // Re-aggregate

@@ -103,8 +103,49 @@ export const evaluasiDampakService = {
       prisma.endlineSurveiKelurahan.count({ where: whereClause }),
     ]);
 
+    // Enrich dengan metrik RW & RT real-time dari survei_rw
+    const enrichedData = await Promise.all(
+      data.map(async (item) => {
+        try {
+          const rwSurveys = await prisma.surveiRw.findMany({
+            where: {
+              kelurahan: { equals: item.namaKelurahan, mode: "insensitive" },
+              tahap: "Endline",
+            },
+            select: { rw: true, jumlahRt: true, createdAt: true },
+            orderBy: { createdAt: "desc" },
+          });
+
+          const uniqueRw = new Map<string, number>();
+          rwSurveys.forEach((s) => {
+            if (!uniqueRw.has(s.rw)) {
+              uniqueRw.set(s.rw, s.jumlahRt || 0);
+            }
+          });
+
+          const jumlahRw = uniqueRw.size;
+          let jumlahRt = 0;
+          uniqueRw.forEach((rtCount) => {
+            jumlahRt += rtCount;
+          });
+
+          return {
+            ...item,
+            jumlahRw,
+            jumlahRt,
+          };
+        } catch {
+          return {
+            ...item,
+            jumlahRw: 0,
+            jumlahRt: 0,
+          };
+        }
+      })
+    );
+
     return {
-      data,
+      data: enrichedData,
       meta: {
         total,
         page,
@@ -316,8 +357,39 @@ export const evaluasiDampakService = {
  * SUPER_USER, PANITIA_TASKFORCE, PEMIMPIN bisa melihat semua.
  */
 async function buildKelurahanScope(userId: string, userRole: string) {
-  if (["SUPER_USER", "PANITIA_TASKFORCE", "PEMIMPIN"].includes(userRole)) {
-    return {}; // Semua kelurahan
+  if (
+    [
+      "SUPER_USER",
+      "DEVELOPER",
+      "PANITIA_TASKFORCE",
+      "PEMIMPIN",
+      "PIMPINAN",
+      "ADMIN_DLH",
+      "CAMAT",
+    ].includes(userRole)
+  ) {
+    return {}; // Semua kelurahan di wilayah Coblong
+  }
+
+  // LURAH: scope ke kelurahan tempatnya bertugas jika ada
+  if (userRole === "LURAH") {
+    const lurah = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        rw: {
+          select: {
+            kelurahan: { select: { name: true } },
+          },
+        },
+      },
+    });
+    const kelName = lurah?.rw?.kelurahan?.name;
+    if (kelName) {
+      return {
+        namaKelurahan: { equals: kelName, mode: "insensitive" as const },
+      };
+    }
+    return {};
   }
 
   // DPL: scope ke kelurahan dari kelompok dampingan

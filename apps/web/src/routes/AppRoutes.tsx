@@ -1566,7 +1566,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/superUser/data-survei-kkn"
           element={
-            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DEVELOPER"]}>
+            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PEMIMPIN", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DPL", "DEVELOPER"]}>
               <DataSurveiKkn type="BASELINE" />
             </ProtectedRoute>
           }
@@ -1574,7 +1574,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/survei/baseline"
           element={
-            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DEVELOPER"]}>
+            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PEMIMPIN", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DPL", "DEVELOPER"]}>
               <DataSurveiKkn type="BASELINE" />
             </ProtectedRoute>
           }
@@ -1582,7 +1582,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/hasil-survei/baseline"
           element={
-            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DEVELOPER"]}>
+            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PEMIMPIN", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DPL", "DEVELOPER"]}>
               <DataSurveiKkn type="BASELINE" />
             </ProtectedRoute>
           }
@@ -1590,7 +1590,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/survei/endline"
           element={
-            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DEVELOPER"]}>
+            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PEMIMPIN", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DPL", "DEVELOPER"]}>
               <DataSurveiKkn type="ENDLINE" />
             </ProtectedRoute>
           }
@@ -1598,7 +1598,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/hasil-survei/endline"
           element={
-            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DEVELOPER"]}>
+            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PEMIMPIN", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DPL", "DEVELOPER"]}>
               <DataSurveiKkn type="ENDLINE" />
             </ProtectedRoute>
           }
@@ -1647,7 +1647,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/superUser/data-survei-kkn/:id"
           element={
-            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DEVELOPER"]}>
+            <ProtectedRoute allowedRoles={["SUPER_USER", "PANITIA_TASKFORCE", "PEMIMPIN", "PIMPINAN", "ADMIN_DLH", "CAMAT", "LURAH", "DPL", "DEVELOPER"]}>
               <DetailSurveiKkn />
             </ProtectedRoute>
           }

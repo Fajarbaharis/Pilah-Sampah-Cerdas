@@ -87,6 +87,16 @@ export const surveyController = {
         return;
       }
 
+      if (error.message === "KELURAHAN_MISMATCH" || error.message === "RW_MISMATCH") {
+        res.status(400).json({
+          success: false,
+          message:
+            error.details || "Wilayah survei tidak sesuai dengan wilayah penugasan kelompok Anda.",
+          code: error.message,
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         message: error.message || "Terjadi kesalahan saat memproses data survei.",
@@ -101,7 +111,9 @@ export const surveyController = {
   getSurveyData: async (req: Request, res: Response): Promise<void> => {
     try {
       const search = (req.query.search as string) || "";
-      const data = await surveyService.getSurveyData(search);
+      const tahap = (req.query.tahap as string) || "";
+      const kelurahan = (req.query.kelurahan as string) || "";
+      const data = await surveyService.getSurveyData(search, tahap, kelurahan);
 
       res.status(200).json({
         success: true,
@@ -133,7 +145,8 @@ export const surveyController = {
   deleteSurvey: async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      await surveyService.deleteSurvey(id);
+      const nim = (req.query.nim as string) || undefined;
+      await surveyService.deleteSurvey(id, nim);
 
       res.status(200).json({
         success: true,
@@ -141,9 +154,51 @@ export const surveyController = {
       });
     } catch (error: any) {
       console.error("Error deleteSurvey:", error);
+      const statusCode =
+        error.message === "FORBIDDEN" ? 403 : error.message === "NOT_FOUND" ? 404 : 500;
+      const message =
+        error.message === "FORBIDDEN"
+          ? "Anda hanya berhak menghapus data survei milik Anda sendiri (NIM tidak cocok)."
+          : error.message === "NOT_FOUND"
+          ? "Data survei tidak ditemukan."
+          : error.message || "Gagal menghapus data survei.";
+
+      res.status(statusCode).json({
+        success: false,
+        message,
+      });
+    }
+  },
+
+  /**
+   * GET /api/v1/survey/check-rw
+   * Pengecekan real-time apakah RW sudah pernah disurvei
+   */
+  checkRw: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const kelurahan = (req.query.kelurahan as string) || "";
+      const rw = (req.query.rw as string) || "";
+      const tahap = (req.query.tahap as string) || "Endline";
+      const tahun = (req.query.tahun as string) || "2026";
+
+      if (!kelurahan || !rw) {
+        res.status(400).json({
+          success: false,
+          message: "Parameter kelurahan dan rw wajib disertakan.",
+        });
+        return;
+      }
+
+      const result = await surveyService.checkRwSurvey(kelurahan, rw, tahap, tahun);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      console.error("Error checkRw:", error);
       res.status(500).json({
         success: false,
-        message: error.message || "Gagal menghapus data survei.",
+        message: "Gagal memeriksa status RW.",
       });
     }
   },

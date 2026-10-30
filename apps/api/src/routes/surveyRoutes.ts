@@ -11,6 +11,7 @@ const router = Router();
 // Public routes untuk enumerator lapangan (mahasiswa KKN dengan validasi NIM)
 router.get("/verify-student", surveyController.verifyStudent);
 router.get("/kelompok-list", surveyController.getKelompokList); // daftar kelompok KKN dari DB
+router.get("/check-rw", surveyController.checkRw); // Cek status survei RW real-time
 router.post("/submit", surveyController.submitSurvey);
 router.get("/data", surveyController.getSurveyData);
 router.delete("/:id", surveyController.deleteSurvey);
