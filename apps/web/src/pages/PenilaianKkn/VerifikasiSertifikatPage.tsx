@@ -9,6 +9,7 @@
 
 import React, { useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useAuthStore } from "../../store/useAuthStore";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -72,6 +73,9 @@ const dplData = dplDataRaw as DplCertData[];
 
 export const VerifikasiSertifikatPage: React.FC = () => {
   const { idSertifikat } = useParams<{ idSertifikat: string }>();
+  const { user } = useAuthStore();
+  const userRole = String(user?.peran || (user as any)?.role || "").toUpperCase();
+  const canAccessAdminSertifikat = userRole === "DEVELOPER" || userRole === "SUPER_USER";
 
   // Find student by idSertifikat or NIM
   const student = useMemo(() => {
@@ -122,11 +126,11 @@ export const VerifikasiSertifikatPage: React.FC = () => {
             </div>
           </div>
           <Link
-            to={dpl ? "/e-sertifikat/dpl" : "/e-sertifikat/mahasiswa"}
+            to={canAccessAdminSertifikat ? (dpl ? "/e-sertifikat/dpl" : "/e-sertifikat/mahasiswa") : "/"}
             className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-all"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Kembali
+            {canAccessAdminSertifikat ? "Kembali" : "Beranda"}
           </Link>
         </div>
 
@@ -217,13 +221,15 @@ export const VerifikasiSertifikatPage: React.FC = () => {
                 </p>
                 <span className="text-[11px] text-slate-400">Wakil Rektor I Bidang Akademik dan Kemahasiswaan UNIKOM</span>
               </div>
-              <Link
-                to={'/e-sertifikat/mahasiswa?nim=' + student.nim}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all"
-              >
-                <Award className="w-4 h-4" />
-                Buka E-Sertifikat
-              </Link>
+              {canAccessAdminSertifikat && (
+                <Link
+                  to={'/e-sertifikat/mahasiswa?nim=' + student.nim}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all"
+                >
+                  <Award className="w-4 h-4" />
+                  Buka E-Sertifikat
+                </Link>
+              )}
             </div>
           </div>
         ) : dpl ? (
@@ -281,13 +287,15 @@ export const VerifikasiSertifikatPage: React.FC = () => {
                 </p>
                 <span className="text-[11px] text-slate-400">Rektor Universitas Komputer Indonesia</span>
               </div>
-              <Link
-                to={'/e-sertifikat/dpl?nip=' + dpl.nip}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all"
-              >
-                <Award className="w-4 h-4" />
-                Buka Piagam DPL
-              </Link>
+              {canAccessAdminSertifikat && (
+                <Link
+                  to={'/e-sertifikat/dpl?nip=' + dpl.nip}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all"
+                >
+                  <Award className="w-4 h-4" />
+                  Buka Piagam DPL
+                </Link>
+              )}
             </div>
           </div>
         ) : (
@@ -301,18 +309,29 @@ export const VerifikasiSertifikatPage: React.FC = () => {
               ID Sertifikat atau Nomor Identitas <code className="bg-slate-900 px-2 py-0.5 rounded text-amber-300 font-mono">{idSertifikat}</code> tidak terdaftar di basis data resmi KKN Tematik UNIKOM.
             </p>
             <div className="flex items-center justify-center gap-3 pt-2">
-              <Link
-                to="/e-sertifikat/mahasiswa"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
-              >
-                Sertifikat Mahasiswa
-              </Link>
-              <Link
-                to="/e-sertifikat/dpl"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold"
-              >
-                Sertifikat DPL
-              </Link>
+              {canAccessAdminSertifikat ? (
+                <>
+                  <Link
+                    to="/e-sertifikat/mahasiswa"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+                  >
+                    Sertifikat Mahasiswa
+                  </Link>
+                  <Link
+                    to="/e-sertifikat/dpl"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold"
+                  >
+                    Sertifikat DPL
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold"
+                >
+                  Kembali ke Beranda
+                </Link>
+              )}
             </div>
           </div>
         )}

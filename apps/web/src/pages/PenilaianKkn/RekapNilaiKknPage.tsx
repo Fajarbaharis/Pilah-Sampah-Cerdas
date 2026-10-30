@@ -50,6 +50,7 @@ export const RekapNilaiKknPage: React.FC = () => {
   const isStaging = isStagingEnv();
   const { user } = useAuthStore();
   const userRole = String(user?.peran || (user as any)?.role || "").toUpperCase();
+  const canAccessSertifikat = userRole === "DEVELOPER" || userRole === "SUPER_USER";
   const isPimpinan = ["PEMIMPIN", "PIMPINAN", "CAMAT", "LURAH", "KEPALA_DESA", "REKTOR"].includes(
     userRole
   );
@@ -520,12 +521,12 @@ export const RekapNilaiKknPage: React.FC = () => {
               </button>
             )}
 
-            {/* Tombol Akses E-Sertifikat KKN (Khusus QC Staging) */}
-            {isStaging && (
+            {/* Tombol Akses E-Sertifikat KKN (Khusus Admin Teknis DEVELOPER & SUPER_USER) */}
+            {isStaging && canAccessSertifikat && (
               <Link
                 to="/sertifikat-kkn"
                 className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition shadow-2xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700/60 cursor-pointer"
-                title="Buka Generator & Verifikasi E-Sertifikat KKN (Staging QC)"
+                title="Buka Generator & Verifikasi E-Sertifikat KKN (Khusus Admin Teknis)"
               >
                 <Award size={14} />
                 <span>E-Sertifikat</span>
@@ -694,7 +695,7 @@ export const RekapNilaiKknPage: React.FC = () => {
 
                   {/* Status */}
                   <th className="py-3 px-4 w-36 font-bold border-r border-slate-200 dark:border-slate-800">Status</th>
-                  {isStaging && (
+                  {isStaging && canAccessSertifikat && (
                     <th className="py-3 px-3 w-28 font-bold text-center">E-Sertifikat</th>
                   )}
                 </tr>
@@ -816,8 +817,8 @@ export const RekapNilaiKknPage: React.FC = () => {
                         )}
                       </td>
 
-                      {/* E-Sertifikat (Khusus QC Staging) */}
-                      {isStaging && (
+                      {/* E-Sertifikat (Khusus Admin Teknis DEVELOPER & SUPER_USER) */}
+                      {isStaging && canAccessSertifikat && (
                         <td className="py-3 px-3 text-center">
                           <Link
                             to={`/sertifikat-kkn?nim=${st.nim}`}
