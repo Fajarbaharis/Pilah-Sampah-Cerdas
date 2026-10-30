@@ -67,6 +67,7 @@ export interface KomparasiData {
   kelurahanId: number;
   namaKelurahan: string;
   kecamatan: string | null;
+  hasBaseline?: boolean;
   hasEndline: boolean;
   pemilahan: { baseline: number | null; endline: number | null; delta: number | null };
   volumeSampah: { baseline: number | null; endline: number | null; delta: number | null };

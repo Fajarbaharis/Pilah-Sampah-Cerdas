@@ -27,6 +27,7 @@ import { evaluasiDampakApiService } from "../../services/evaluasiDampakService";
 import type { BaselineData, EndlineData, KomparasiData } from "../../services/evaluasiDampakService";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from "recharts";
 import EditSurveiModal from "../SuperUser/EditSurveiModal";
+import { normalizePercentage, formatPercentString } from "../../utils/surveyNormalizer";
 
 type TabType = "BASELINE" | "ENDLINE" | "KOMPARASI";
 
@@ -160,7 +161,7 @@ export const EvaluasiDampakKkn: React.FC = () => {
         item.enumerator || "-",
         item.pemilahanSampah?.jumlahRumahMemilah ?? 0,
         item.pemilahanSampah?.totalJumlahRumahDiRw ?? 0,
-        item.pemilahanSampah?.persentasePemilahan ?? 0,
+        normalizePercentage(item.pemilahanSampah?.persentasePemilahan),
         item.volumeSampah?.organikKgPerHari ?? 0,
         item.volumeSampah?.anorganikKgPerHari ?? 0,
         item.volumeSampah?.residuKgPerHari ?? 0,
@@ -176,19 +177,25 @@ export const EvaluasiDampakKkn: React.FC = () => {
         "Delta Pemilahan (%)",
         "Baseline Berat (kg/hari)",
         "Endline Berat (kg/hari)",
-        "Reduksi Residu (kg/hari)",
+        "Delta Volume (kg/hari)",
         "Status Dampak",
       ];
       rows = filtered.map((item, idx) => [
         idx + 1,
         item.namaKelurahan || "-",
-        item.baseline?.persentasePemilahan ?? 0,
-        item.endline?.persentasePemilahan ?? 0,
-        item.delta?.persentasePemilahan ?? 0,
-        item.baseline?.totalVolumeKgPerHari ?? 0,
-        item.endline?.totalVolumeKgPerHari ?? 0,
-        item.delta?.residuKgPerHari ?? 0,
-        item.statusEvaluasi || "TERVERIFIKASI",
+        item.pemilahan?.baseline !== null && item.pemilahan?.baseline !== undefined
+          ? `${item.pemilahan.baseline}%`
+          : "-",
+        item.pemilahan?.endline !== null && item.pemilahan?.endline !== undefined
+          ? `${item.pemilahan.endline}%`
+          : "-",
+        item.pemilahan?.delta !== null && item.pemilahan?.delta !== undefined
+          ? `${item.pemilahan.delta > 0 ? "+" : ""}${item.pemilahan.delta}%`
+          : "-",
+        item.volumeSampah?.baseline ?? 0,
+        item.volumeSampah?.endline ?? 0,
+        item.volumeSampah?.delta ?? 0,
+        (item as any).statusCapaian || "PROSES_EVALUASI",
       ]);
     }
 
@@ -349,9 +356,7 @@ export const EvaluasiDampakKkn: React.FC = () => {
                       <span className="block text-[10px] text-slate-400">Oleh: {item.enumerator || "-"}</span>
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                      {item.pemilahanSampah?.persentasePemilahan !== null && item.pemilahanSampah?.persentasePemilahan !== undefined
-                        ? `${(item.pemilahanSampah.persentasePemilahan * 100).toFixed(2)}%` 
-                        : "-"}
+                      {formatPercentString(item.pemilahanSampah?.persentasePemilahan)}
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
                       {item.volumeSampah?.totalVolumeKgPerHari ? `${Number(item.volumeSampah.totalVolumeKgPerHari).toFixed(2)} kg` : "-"}
@@ -459,7 +464,7 @@ export const EvaluasiDampakKkn: React.FC = () => {
                     <div className="flex items-baseline gap-2">
                       <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100">
                         {avgDeltaPemilahan > 0 ? "+" : ""}
-                        {(avgDeltaPemilahan * 100).toFixed(2)}%
+                        {avgDeltaPemilahan.toFixed(1)}%
                       </h3>
                       <span
                         className={`text-xs font-bold flex items-center gap-0.5 ${
@@ -552,9 +557,9 @@ export const EvaluasiDampakKkn: React.FC = () => {
                   <BarChart data={filteredKomparasi.filter(k => k.hasEndline)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis dataKey="namaKelurahan" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(val) => `${val * 100}%`} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(val) => `${Number(val).toFixed(0)}%`} domain={[0, 100]} />
                     <RechartsTooltip 
-                      formatter={(val: any) => [`${(Number(val) * 100).toFixed(2)}%`, '']}
+                      formatter={(val: any) => [`${Number(val).toFixed(1)}%`, '']}
                       cursor={{fill: '#f1f5f9'}} 
                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontWeight: 600 }}
                     />
@@ -615,19 +620,44 @@ export const EvaluasiDampakKkn: React.FC = () => {
                           Kel. {item.namaKelurahan}
                         </td>
                         <td className="px-4 py-3">
-                          {item.hasEndline ? (
-                             <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md text-[10px] font-bold">Lengkap</span>
+                          {item.hasEndline && item.hasBaseline !== false ? (
+                            <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md text-[10px] font-bold">
+                              Lengkap
+                            </span>
+                          ) : item.hasEndline && item.hasBaseline === false ? (
+                            <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-md text-[10px] font-bold">
+                              Hanya Endline
+                            </span>
                           ) : (
-                             <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-1 rounded-md text-[10px] font-bold">Menunggu Endline</span>
+                            <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-1 rounded-md text-[10px] font-bold">
+                              Menunggu Endline
+                            </span>
                           )}
                         </td>
                         <td className="px-4 py-3 font-semibold">
                           {item.pemilahan.delta !== null ? (
-                            <span className={item.pemilahan.delta > 0 ? "text-emerald-600 flex items-center gap-1" : item.pemilahan.delta < 0 ? "text-rose-600 flex items-center gap-1" : "text-slate-500 flex items-center gap-1"}>
-                               {item.pemilahan.delta > 0 ? <TrendingUp size={14}/> : item.pemilahan.delta < 0 ? <TrendingDown size={14}/> : <Minus size={14}/>}
-                               {item.pemilahan.delta > 0 ? '+' : ''}{(item.pemilahan.delta * 100).toFixed(2)}%
+                            <span
+                              className={
+                                item.pemilahan.delta > 0
+                                  ? "text-emerald-600 flex items-center gap-1"
+                                  : item.pemilahan.delta < 0
+                                  ? "text-rose-600 flex items-center gap-1"
+                                  : "text-slate-500 flex items-center gap-1"
+                              }
+                            >
+                              {item.pemilahan.delta > 0 ? (
+                                <TrendingUp size={14} />
+                              ) : item.pemilahan.delta < 0 ? (
+                                <TrendingDown size={14} />
+                              ) : (
+                                <Minus size={14} />
+                              )}
+                              {item.pemilahan.delta > 0 ? "+" : ""}
+                              {item.pemilahan.delta.toFixed(1)}%
                             </span>
-                          ) : "-"}
+                          ) : (
+                            "-"
+                          )}
                         </td>
                         <td className="px-4 py-3 font-semibold">
                           {item.volumeSampah.delta !== null ? (

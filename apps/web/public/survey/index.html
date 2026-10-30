@@ -1770,20 +1770,14 @@ function serialize() {
 }
 function restore(o) {
   if (!o) return;
-  ["kota", "kecamatan", "kelurahan", "rw"].forEach((n, i) => {
-    const el = [kota, kec, kel, rw][i];
-    if (o[n] !== undefined && [...el.options].some(op => op.value === o[n])) { el.value = o[n]; [fillKec, fillKel, fillRw, () => {}][i](); }
-  });
-  $$("#f input, #f select, #f textarea").forEach(el => {
-    if (!el.name || ["kota", "kecamatan", "kelurahan", "rw", "tingkat_pilah"].includes(el.name)) return;
-    const v = o[el.name];
-    if (el.type === "checkbox") el.checked = Array.isArray(v) && v.includes(el.value);
-    else if (el.type === "radio") el.checked = v === el.value;
-    else if (v !== undefined) el.value = v;
-  });
-  $$("input[data-other]").forEach(cb => cb._sync());
-  syncTanggalDisplay();
-  syncRumahTotalFromKk();
+
+  // Restore hidden inputs wilayah resmi
+  if (o.kota && kota) kota.value = o.kota;
+  if (o.kecamatan && kec) kec.value = o.kecamatan;
+  if (o.kelurahan && kel) {
+    kel.value = o.kelurahan;
+    updateWilayahDisplay(o.kelurahan, o.kelompok);
+  }
 
   // Restore status verifikasi surveyor jika ada NIM dan nama tersimpan
   if (o.nim && o.nim.length === 8) {
@@ -1795,12 +1789,30 @@ function restore(o) {
         prodi: o.prodi,
         kelompok: o.kelompok,
         kelurahan: o.kelurahan,
+        cakupanRw: Array.isArray(o.cakupanRw) ? o.cakupanRw : (CURRENT_STUDENT && CURRENT_STUDENT.cakupanRw ? CURRENT_STUDENT.cakupanRw : []),
         wa: o.wa,
       });
     } else {
       verifyNimDatabase(o.nim);
     }
   }
+
+  // Restore RW jika elemen dropdown rw memiliki opsi yang cocok
+  if (o.rw && rw && rw.options && [...rw.options].some(op => op.value === o.rw)) {
+    rw.value = o.rw;
+    checkRwStatus();
+  }
+
+  $$("#f input, #f select, #f textarea").forEach(el => {
+    if (!el.name || ["kota", "kecamatan", "kelurahan", "rw", "tingkat_pilah"].includes(el.name)) return;
+    const v = o[el.name];
+    if (el.type === "checkbox") el.checked = Array.isArray(v) && v.includes(el.value);
+    else if (el.type === "radio") el.checked = v === el.value;
+    else if (v !== undefined) el.value = v;
+  });
+  $$("input[data-other]").forEach(cb => cb._sync());
+  syncTanggalDisplay();
+  syncRumahTotalFromKk();
 }
 let saveT;
 function saveDraft() {
@@ -1912,9 +1924,20 @@ function resetForm(keepSurveyor) {
   $$(".field.err, .other-box.err").forEach(f => f.classList.remove("err"));
   $("#tahun").value = yDefault; $("#tanggal").value = todayStr();
   syncTanggalDisplay();
-  fillKec();
   if (keep) {
-    restore({ tahun: keep.tahun, tanggal: keep.tanggal, tahap: keep.tahap, nama: keep.nama, nim: keep.nim, prodi: keep.prodi, kelompok: keep.kelompok, wa: keep.wa, kota: keep.kota, kecamatan: keep.kecamatan, kelurahan: keep.kelurahan });
+    restore({
+      tahun: keep.tahun,
+      tanggal: keep.tanggal,
+      tahap: keep.tahap,
+      nama: keep.nama,
+      nim: keep.nim,
+      prodi: keep.prodi,
+      kelompok: keep.kelompok,
+      wa: keep.wa,
+      kota: keep.kota || "Kota Bandung",
+      kecamatan: keep.kecamatan || "Coblong",
+      kelurahan: keep.kelurahan || (CURRENT_STUDENT ? CURRENT_STUDENT.kelurahan : "")
+    });
   } else {
     clearSurveyorIdentity();
   }

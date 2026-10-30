@@ -5,6 +5,16 @@ import { prisma } from "../lib/prisma.js";
  * Mengelola data Baseline (dari SurveiKelurahan), Endline (EndlineSurveiKelurahan),
  * dan kalkulasi Komparasi Dampak.
  */
+function normalizePercentage(val: any): number | null {
+  if (val === null || val === undefined || val === "") return null;
+  const num = Number(val);
+  if (isNaN(num)) return null;
+  if (num > 0 && num <= 1.0) {
+    return Number((num * 100).toFixed(2));
+  }
+  return Number(num.toFixed(2));
+}
+
 export const evaluasiDampakService = {
   /**
    * Mengambil data baseline (SurveiKelurahan) beserta relasi child.
@@ -64,6 +74,19 @@ export const evaluasiDampakService = {
     });
 
     return updated;
+  },
+
+  getEndlineById: async (kelurahanId: number) => {
+    return prisma.endlineSurveiKelurahan.findUnique({
+      where: { kelurahanId },
+      include: {
+        pemilahanSampah: true,
+        volumeSampah: true,
+        bankSampahPengolahan: true,
+        catatanKesimpulan: true,
+        validasiDpl: { select: { id: true, name: true } },
+      },
+    });
   },
 
   /**
@@ -224,8 +247,14 @@ export const evaluasiDampakService = {
       }),
     ]);
 
-    // Merge baseline dan endline per kelurahanId
+    // Merge baseline dan endline per kelurahanId (Full Outer Map)
+    const baselineMap = new Map(baselineData.map((b) => [b.kelurahanId, b]));
     const endlineMap = new Map(endlineData.map((e) => [e.kelurahanId, e]));
+
+    // Himpun seluruh kelurahanId yang ada di Baseline maupun Endline
+    const allKelurahanIds = Array.from(
+      new Set([...baselineMap.keys(), ...endlineMap.keys()])
+    ).sort((a, b) => a - b);
 
     // Helper untuk menghitung jumlah kegiatan pemanfaatan sampah aktif
     const countKegiatan = (bs: any) => {
@@ -252,24 +281,25 @@ export const evaluasiDampakService = {
       return count;
     };
 
-    const komparasi = baselineData.map((baseline) => {
-      const endline: any = endlineMap.get(baseline.kelurahanId) || null;
+    const komparasi = allKelurahanIds.map((kelurahanId) => {
+      const baseline: any = baselineMap.get(kelurahanId) || null;
+      const endline: any = endlineMap.get(kelurahanId) || null;
 
-      const baselinePemilahan = baseline.pemilahanSampah?.persentasePemilahan
-        ? Number(baseline.pemilahanSampah.persentasePemilahan)
-        : null;
-      const endlinePemilahan = endline?.pemilahanSampah?.persentasePemilahan
-        ? Number(endline.pemilahanSampah.persentasePemilahan)
-        : null;
+      const namaKelurahan =
+        baseline?.namaKelurahan || endline?.namaKelurahan || `Kelurahan ${kelurahanId}`;
+      const kecamatan = baseline?.kecamatan || endline?.kecamatan || "Coblong";
 
-      const baselineVolume = baseline.volumeSampah?.totalVolumeKgPerHari
+      const baselinePemilahan = normalizePercentage(baseline?.pemilahanSampah?.persentasePemilahan);
+      const endlinePemilahan = normalizePercentage(endline?.pemilahanSampah?.persentasePemilahan);
+
+      const baselineVolume = baseline?.volumeSampah?.totalVolumeKgPerHari
         ? Number(baseline.volumeSampah.totalVolumeKgPerHari)
         : null;
       const endlineVolume = endline?.volumeSampah?.totalVolumeKgPerHari
         ? Number(endline.volumeSampah.totalVolumeKgPerHari)
         : null;
 
-      const baselineKegiatan = countKegiatan(baseline.bankSampahPengolahan);
+      const baselineKegiatan = countKegiatan(baseline?.bankSampahPengolahan);
       const endlineKegiatan = endline ? countKegiatan(endline.bankSampahPengolahan) : null;
 
       // Target standar DLH/KKN: Pemilahan minimal 50% atau kenaikan +20% dari baseline
@@ -296,18 +326,19 @@ export const evaluasiDampakService = {
 
       const evaluasiText =
         endline?.catatanKesimpulan?.prioritasIntervensi ||
-        baseline.catatanKesimpulan?.prioritasIntervensi ||
+        baseline?.catatanKesimpulan?.prioritasIntervensi ||
         "Evaluasi efektivitas intervensi pemilahan sampah organik dan anorganik di wilayah kelurahan.";
 
       const rekomendasiText =
         endline?.catatanKesimpulan?.catatanTambahanRisikoSosial ||
-        baseline.catatanKesimpulan?.catatanTambahanRisikoSosial ||
+        baseline?.catatanKesimpulan?.catatanTambahanRisikoSosial ||
         "Rekomendasi penguatan bank sampah unit dan konsistensi edukasi pemilahan level RT/RW.";
 
       return {
-        kelurahanId: baseline.kelurahanId,
-        namaKelurahan: baseline.namaKelurahan,
-        kecamatan: baseline.kecamatan,
+        kelurahanId,
+        namaKelurahan,
+        kecamatan,
+        hasBaseline: baseline !== null,
         hasEndline: endline !== null,
         evaluasi: evaluasiText,
         rekomendasi: rekomendasiText,

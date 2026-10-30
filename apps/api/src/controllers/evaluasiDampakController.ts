@@ -57,6 +57,46 @@ export const evaluasiDampakController = {
   },
 
   /**
+   * GET /evaluasi-dampak/endline/:kelurahanId
+   * Mengambil detail survei endline berdasarkan ID kelurahan.
+   */
+  getEndlineById: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const kelurahanId = parseInt(req.params.kelurahanId, 10);
+      if (isNaN(kelurahanId)) {
+        res.status(400).json({
+          success: false,
+          error: "BAD_REQUEST",
+          message: "ID Kelurahan tidak valid",
+        });
+        return;
+      }
+
+      const data = await evaluasiDampakService.getEndlineById(kelurahanId);
+      if (!data) {
+        res.status(404).json({
+          success: false,
+          error: "NOT_FOUND",
+          message: "Data survei endline kelurahan tidak ditemukan",
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error: any) {
+      console.error("[evaluasiDampakController.getEndlineById] error:", error);
+      res.status(500).json({
+        success: false,
+        error: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
+    }
+  },
+
+  /**
    * GET /evaluasi-dampak/endline
    * Mengambil data endline (EndlineSurveiKelurahan) — scope ke DPL atau semua.
    */

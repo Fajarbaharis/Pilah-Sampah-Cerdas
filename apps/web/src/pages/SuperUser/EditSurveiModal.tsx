@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import showToast from "../../utils/showToast";
+import { normalizePercentage } from "../../utils/surveyNormalizer";
 
 interface EditSurveiModalProps {
   kelurahanId: number | null;
@@ -147,7 +148,7 @@ export const EditSurveiModal: React.FC<EditSurveiModalProps> = ({
           totalJumlahRumahDiRw: ps.totalJumlahRumahDiRw ?? "",
           persentasePemilahan:
             ps.persentasePemilahan !== null && ps.persentasePemilahan !== undefined
-              ? (Number(ps.persentasePemilahan) * 100).toFixed(2)
+              ? normalizePercentage(ps.persentasePemilahan).toFixed(2)
               : "",
           tingkatPemilahan: ps.tingkatPemilahan || "",
           catatan: ps.catatan || "",

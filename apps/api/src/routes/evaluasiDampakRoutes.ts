@@ -107,6 +107,22 @@ router.get(
   evaluasiDampakController.getEndlineData
 );
 
+router.get(
+  "/endline/:kelurahanId",
+  roleMiddleware([
+    "SUPER_USER",
+    "DEVELOPER",
+    "PANITIA_TASKFORCE",
+    "PEMIMPIN",
+    "PIMPINAN",
+    "ADMIN_DLH",
+    "CAMAT",
+    "LURAH",
+    "DPL",
+  ]),
+  evaluasiDampakController.getEndlineById
+);
+
 /**
  * @swagger
  * /api/v1/evaluasi-dampak/endline/{kelurahanId}/validate:

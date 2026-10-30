@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   Phone,
   BarChart3,
+  Percent,
+  Scale,
 } from "lucide-react";
 import api from "../../services/api";
 import showToast from "../../utils/showToast";
@@ -22,6 +24,11 @@ import EditSurveiModal from "./EditSurveiModal";
 import DetailSurveiRwModal from "./DetailSurveiRwModal";
 import { Pagination } from "../../components/common/Pagination";
 import { EmptyTableState } from "../../components/common/EmptyTableState";
+import {
+  normalizePercentage,
+  formatPercentString,
+  determineProvenance,
+} from "../../utils/surveyNormalizer";
 
 interface DataSurveiKknProps {
   type?: "BASELINE" | "ENDLINE";
@@ -210,6 +217,26 @@ export default function DataSurveiKkn({ type: propType }: DataSurveiKknProps) {
   const paginatedRwSurveys = rwSurveys.slice(rwStartIndex, rwStartIndex + rwLimit);
   const rwTotalPages = Math.ceil(rwSurveys.length / rwLimit) || 1;
 
+  // KPI Metrics Calculation
+  const totalKelurahanCount = meta?.total || surveys.length;
+  const totalRwSurveyCount = rwSurveys.length;
+
+  const surveysWithPilah = surveys.filter(
+    (s) => s.pemilahanSampah?.persentasePemilahan !== null && s.pemilahanSampah?.persentasePemilahan !== undefined
+  );
+  const avgPilah =
+    surveysWithPilah.length > 0
+      ? surveysWithPilah.reduce(
+          (acc, s) => acc + normalizePercentage(s.pemilahanSampah.persentasePemilahan),
+          0
+        ) / surveysWithPilah.length
+      : 0;
+
+  const totalVolumeHarian = surveys.reduce(
+    (acc, s) => acc + (Number(s.volumeSampah?.totalVolumeKgPerHari) || 0),
+    0
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950/50 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
@@ -248,6 +275,62 @@ export default function DataSurveiKkn({ type: propType }: DataSurveiKknProps) {
               <span>Input Survei Baru</span>
               <ExternalLink size={14} className="opacity-70" />
             </button>
+          </div>
+        </div>
+
+        {/* KPI Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Building2 size={22} />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Cakupan Kelurahan</div>
+              <div className="text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                {totalKelurahanCount} <span className="text-xs font-semibold text-slate-400">Wilayah</span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">Kecamatan Coblong</div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Layers size={22} />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Isian RW Lapangan</div>
+              <div className="text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                {totalRwSurveyCount} <span className="text-xs font-semibold text-slate-400">RW Terdata</span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">Data Mikro Lapangan KKN</div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Percent size={22} />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Rata-rata Pemilahan</div>
+              <div className="text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                {avgPilah.toFixed(1)}%
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">Tingkat Pemilahan Rata-rata</div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+              <Scale size={22} />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Akumulasi Sampah</div>
+              <div className="text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                {totalVolumeHarian > 0 ? totalVolumeHarian.toLocaleString("id-ID", { maximumFractionDigits: 1 }) : "—"}{" "}
+                <span className="text-xs font-semibold text-slate-400">{totalVolumeHarian > 0 ? "kg/hari" : ""}</span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">Volume Total Terlaporkan</div>
+            </div>
           </div>
         </div>
 
@@ -324,13 +407,13 @@ export default function DataSurveiKkn({ type: propType }: DataSurveiKknProps) {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800">
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">No</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Kelurahan</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Kecamatan</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Tanggal Survei</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Enumerator</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Jml RW/RT</th>
-                      <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Aksi</th>
+                      <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">No</th>
+                      <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Kelurahan & Status Data</th>
+                      <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Pemilahan</th>
+                      <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Volume Sampah</th>
+                      <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Cakupan RW/RT</th>
+                      <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Waktu Survei</th>
+                      <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -350,69 +433,102 @@ export default function DataSurveiKkn({ type: propType }: DataSurveiKknProps) {
                         onResetSearch={() => setSearchQuery("")}
                       />
                     ) : (
-                      surveys.map((survey, index) => (
-                        <tr
-                          key={survey.kelurahanId}
-                          className="hover:bg-slate-50/50 dark:bg-slate-800/50 dark:hover:bg-slate-800/50 transition-colors group"
-                        >
-                          <td className="px-6 py-4 text-sm font-medium text-slate-500">
-                            {(currentPage - 1) * limit + index + 1}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="font-extrabold text-slate-800 dark:text-slate-100 text-[15px]">
-                              {survey.namaKelurahan}
-                            </span>
-                            {survey._count?.keyPlayers > 0 && (
-                              <div className="mt-1">
-                                <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
-                                  {survey._count.keyPlayers} Aktor Tersimpan
+                      surveys.map((survey, index) => {
+                        const prov = determineProvenance(survey.catatanData || survey.catatan, survey.jumlahRw);
+                        const pctPilah = normalizePercentage(survey.pemilahanSampah?.persentasePemilahan);
+                        const volTotal = Number(survey.volumeSampah?.totalVolumeKgPerHari) || 0;
+
+                        return (
+                          <tr
+                            key={survey.kelurahanId}
+                            className="hover:bg-slate-50/50 dark:bg-slate-800/50 dark:hover:bg-slate-800/50 transition-colors group"
+                          >
+                            <td className="px-5 py-4 text-sm font-medium text-slate-500">
+                              {(currentPage - 1) * limit + index + 1}
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className="font-extrabold text-slate-800 dark:text-slate-100 text-[15px]">
+                                {survey.namaKelurahan}
+                              </span>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${prov.badgeClass}`}>
+                                  {prov.label}
+                                </span>
+                                {survey._count?.keyPlayers > 0 && (
+                                  <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
+                                    {survey._count.keyPlayers} Aktor
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={`inline-block w-2.5 h-2.5 rounded-full ${
+                                    pctPilah >= 50
+                                      ? "bg-emerald-500"
+                                      : pctPilah >= 20
+                                      ? "bg-amber-500"
+                                      : "bg-rose-500"
+                                  }`}
+                                />
+                                <span className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">
+                                  {formatPercentString(survey.pemilahanSampah?.persentasePemilahan)}
                                 </span>
                               </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-400">
-                            {survey.kecamatan || "Coblong"}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {survey.tanggalSurvei ? new Date(survey.tanggalSurvei).toLocaleDateString("id-ID") : "—"}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {survey.enumerator || "Mahasiswa KKN"}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex gap-2">
-                              <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold px-2 py-1 rounded border border-slate-200 dark:border-slate-800">
-                                RW: {survey.jumlahRw || 0}
-                              </span>
-                              <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold px-2 py-1 rounded border border-slate-200 dark:border-slate-800">
-                                RT: {survey.jumlahRt || 0}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {canEditKelurahan && (
+                              <div className="text-[11px] text-slate-400 mt-0.5">
+                                {survey.pemilahanSampah?.tingkatPemilahan || "Tingkat pemilahan"}
+                              </div>
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                                {volTotal > 0 ? `${volTotal.toFixed(1)} kg` : "—"}
+                              </div>
+                              <div className="text-[10px] text-slate-400">per hari</div>
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex gap-1.5">
+                                <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold px-2 py-1 rounded border border-slate-200 dark:border-slate-800">
+                                  RW: {survey.jumlahRw || 0}
+                                </span>
+                                <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold px-2 py-1 rounded border border-slate-200 dark:border-slate-800">
+                                  RT: {survey.jumlahRt || 0}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-xs text-slate-600 dark:text-slate-400">
+                              <div className="font-semibold text-slate-700 dark:text-slate-300">
+                                {survey.tanggalSurvei ? new Date(survey.tanggalSurvei).toLocaleDateString("id-ID") : "—"}
+                              </div>
+                              <div className="text-[11px] text-slate-400 mt-0.5">
+                                {survey.enumerator || "Mahasiswa KKN"}
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {canEditKelurahan && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedEditKelurahanId(survey.kelurahanId);
+                                      setIsEditModalOpen(true);
+                                    }}
+                                    className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-all font-bold text-xs cursor-pointer shadow-2xs"
+                                    title="Edit Data Survei"
+                                  >
+                                    <Edit3 size={14} /> Edit
+                                  </button>
+                                )}
                                 <button
-                                  onClick={() => {
-                                    setSelectedEditKelurahanId(survey.kelurahanId);
-                                    setIsEditModalOpen(true);
-                                  }}
-                                  className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-all font-bold text-xs cursor-pointer shadow-2xs"
-                                  title="Edit Data Survei"
+                                  onClick={() => handleOpenDetail(survey.kelurahanId)}
+                                  className="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:border-[#009966] hover:text-[#009966] transition-all font-bold text-xs cursor-pointer shadow-2xs"
                                 >
-                                  <Edit3 size={14} /> Edit
+                                  <Eye size={14} /> Lihat Detail
                                 </button>
-                              )}
-                              <button
-                                onClick={() => handleOpenDetail(survey.kelurahanId)}
-                                className="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:border-[#009966] hover:text-[#009966] transition-all font-bold text-xs cursor-pointer shadow-2xs"
-                              >
-                                <Eye size={14} /> Lihat Detail
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -507,7 +623,7 @@ export default function DataSurveiKkn({ type: propType }: DataSurveiKknProps) {
                       />
                     ) : (
                       paginatedRwSurveys.map((item, idx) => {
-                        const pctPilah = Number(item.persenPilah) || 0;
+                        const pctPilah = normalizePercentage(item.persenPilah);
                         const volTotal = Number(item.volumeTotal) || 0;
 
                         return (
