@@ -16,6 +16,7 @@ import { MahasiswaLogbookMobile } from "./MahasiswaLogbookMobile";
 import { MahasiswaProkerMobile } from "./MahasiswaProkerMobile";
 import { MahasiswaProfilMobile } from "./MahasiswaProfilMobile";
 import { MahasiswaLogbookFormModal } from "./MahasiswaLogbookFormModal";
+import { type LogbookMahasiswaItem } from "../../services/logbookService";
 import api from "../../utils/api";
 
 export const MahasiswaMobileApp: React.FC = () => {
@@ -29,6 +30,7 @@ export const MahasiswaMobileApp: React.FC = () => {
       : "beranda"
   );
   const [isLogbookModalOpen, setIsLogbookModalOpen] = useState(requestedAction === "create-logbook" || searchParams.get("create") === "1");
+  const [editingLogbook, setEditingLogbook] = useState<LogbookMahasiswaItem | null>(null);
   const [logbookRefreshTrigger, setLogbookRefreshTrigger] = useState(0);
   const [prokerList, setProkerList] = useState<any[]>([]);
 
@@ -46,6 +48,7 @@ export const MahasiswaMobileApp: React.FC = () => {
       setActiveTab(requestedTab);
     }
     if (requestedAction === "create-logbook" || searchParams.get("create") === "1") {
+      setEditingLogbook(null);
       setIsLogbookModalOpen(true);
     }
   }, [requestedTab, requestedAction]);
@@ -59,6 +62,21 @@ export const MahasiswaMobileApp: React.FC = () => {
     nextParams.delete("action");
     nextParams.delete("create");
     setSearchParams(nextParams, { replace: true });
+  };
+
+  const handleOpenCreateLogbook = () => {
+    setEditingLogbook(null);
+    setIsLogbookModalOpen(true);
+  };
+
+  const handleOpenEditLogbook = (log: LogbookMahasiswaItem) => {
+    setEditingLogbook(log);
+    setIsLogbookModalOpen(true);
+  };
+
+  const handleCloseLogbookModal = () => {
+    setIsLogbookModalOpen(false);
+    setEditingLogbook(null);
   };
 
   const fetchProkerList = async () => {
@@ -78,7 +96,7 @@ export const MahasiswaMobileApp: React.FC = () => {
             <div className={activeTab === "beranda" ? "block" : "hidden"}>
               <MahasiswaMobileHome
                 onNavigateTab={handleTabChange}
-                onOpenLogbookModal={() => setIsLogbookModalOpen(true)}
+                onOpenLogbookModal={handleOpenCreateLogbook}
                 refreshTrigger={logbookRefreshTrigger}
               />
             </div>
@@ -87,7 +105,8 @@ export const MahasiswaMobileApp: React.FC = () => {
             </div>
             <div className={activeTab === "logbook" ? "block" : "hidden"}>
               <MahasiswaLogbookMobile
-                onOpenCreateModal={() => setIsLogbookModalOpen(true)}
+                onOpenCreateModal={handleOpenCreateLogbook}
+                onOpenEditModal={handleOpenEditLogbook}
                 refreshTrigger={logbookRefreshTrigger}
               />
             </div>
@@ -101,11 +120,13 @@ export const MahasiswaMobileApp: React.FC = () => {
         )}
       </MahasiswaMobileShell>
 
-      {/* Global Logbook Modal */}
+      {/* Global Logbook Modal (Create / Edit) */}
       <MahasiswaLogbookFormModal
         isOpen={isLogbookModalOpen}
-        onClose={() => setIsLogbookModalOpen(false)}
+        initialData={editingLogbook}
+        onClose={handleCloseLogbookModal}
         onSuccess={() => {
+          setEditingLogbook(null);
           setLogbookRefreshTrigger((prev) => prev + 1);
         }}
         prokerList={prokerList}

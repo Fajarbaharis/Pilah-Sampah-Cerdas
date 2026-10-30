@@ -50,7 +50,19 @@ export const surveyController = {
    */
   submitSurvey: async (req: Request, res: Response): Promise<void> => {
     try {
-      const payload = req.body;
+      let payload = req.body;
+      if (typeof payload === "string") {
+        try {
+          payload = JSON.parse(payload);
+        } catch (parseErr) {
+          res.status(400).json({
+            success: false,
+            message: "Format payload survei tidak valid (JSON parse error).",
+          });
+          return;
+        }
+      }
+
       if (!payload || !payload.nim || !payload.kelurahan || !payload.rw) {
         res.status(400).json({
           success: false,

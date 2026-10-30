@@ -48,14 +48,14 @@ export interface SurveySubmitDto {
 }
 
 const KELURAHAN_ID_FALLBACK: Record<string, number> = {
-  dago: 1,
-  lebakgede: 2,
-  "lebak gede": 2,
+  sadangserang: 1,
+  "sadang serang": 1,
+  lebaksiliwangi: 2,
+  "lebak siliwangi": 2,
   sekeloa: 3,
-  lebaksiliwangi: 4,
-  "lebak siliwangi": 4,
-  sadangserang: 5,
-  "sadang serang": 5,
+  dago: 4,
+  lebakgede: 5,
+  "lebak gede": 5,
   cipaganti: 6,
 };
 
@@ -207,10 +207,17 @@ export const surveyService = {
    * Mengagregasi data seluruh RW pada kelurahan tertentu ke tabel SurveiKelurahan / EndlineSurveiKelurahan
    */
   aggregateKelurahan: async (namaKelurahan: string, tahap: string, tahun: string) => {
+    const cleanKelName = namaKelurahan.trim().toLowerCase();
+    const compactKelName = cleanKelName.replace(/\s+/g, "");
+
     // Ambil data survei terbaru per RW untuk kelurahan, tahap, dan tahun yang sesuai
     const allRwSurveys = await prisma.surveiRw.findMany({
       where: {
-        kelurahan: { equals: namaKelurahan, mode: "insensitive" },
+        OR: [
+          { kelurahan: { equals: namaKelurahan.trim(), mode: "insensitive" } },
+          { kelurahan: { contains: cleanKelName, mode: "insensitive" } },
+          { kelurahan: { contains: compactKelName, mode: "insensitive" } },
+        ],
         tahap,
         tahun,
       },
@@ -235,6 +242,8 @@ export const surveyService = {
     let sumTotalVolume = 0;
     let sumRumahPilah = 0;
     let sumRumahTotal = 0;
+    let sumRt = 0;
+    let sumKk = 0;
     let sumBsAktif = 0;
     let sumBsNonaktif = 0;
     let sumKomposter = 0;
@@ -248,6 +257,8 @@ export const surveyService = {
       sumTotalVolume += Number(s.volumeTotal) || 0;
       sumRumahPilah += s.rumahPilah || 0;
       sumRumahTotal += s.rumahTotal || 0;
+      sumRt += s.jumlahRt || 0;
+      sumKk += s.jumlahKk || 0;
       sumBsAktif += s.bankSampahAktif || 0;
       sumBsNonaktif += s.bankSampahTidakAktif || 0;
       sumKomposter += s.unitKomposter || 0;
@@ -268,14 +279,23 @@ export const surveyService = {
             ? "Sebagian besar"
             : "Mayoritas / hampir semua";
 
-    // Cari ID Kelurahan
-    const cleanKelName = namaKelurahan.trim().toLowerCase();
+    // Cari ID Kelurahan yang sesuai di tabel SurveiKelurahan
     const existingKel = await prisma.surveiKelurahan.findFirst({
-      where: { namaKelurahan: { contains: cleanKelName.replace(/\s+/g, ""), mode: "insensitive" } },
+      where: {
+        OR: [
+          { namaKelurahan: { equals: namaKelurahan.trim(), mode: "insensitive" } },
+          { namaKelurahan: { contains: cleanKelName, mode: "insensitive" } },
+          { namaKelurahan: { contains: compactKelName, mode: "insensitive" } },
+        ],
+      },
       select: { kelurahanId: true, namaKelurahan: true },
     });
 
-    const kelurahanId = existingKel?.kelurahanId ?? KELURAHAN_ID_FALLBACK[cleanKelName] ?? 1;
+    const kelurahanId =
+      existingKel?.kelurahanId ??
+      KELURAHAN_ID_FALLBACK[cleanKelName] ??
+      KELURAHAN_ID_FALLBACK[compactKelName] ??
+      1;
     const finalKelName = existingKel?.namaKelurahan || namaKelurahan;
 
     if (tahap === "Endline") {
@@ -373,6 +393,121 @@ export const surveyService = {
       const sampleRisiko = latestSurveys[0]?.risiko;
       if (samplePrioritas || sampleRisiko) {
         await prisma.endlineCatatanKesimpulan.upsert({
+          where: { kelurahanId },
+          create: {
+            kelurahanId,
+            prioritasIntervensi: samplePrioritas || "Optimalisasi pemilahan di sumber",
+            catatanTambahanRisikoSosial: sampleRisiko || null,
+          },
+          update: {
+            prioritasIntervensi: samplePrioritas || undefined,
+            catatanTambahanRisikoSosial: sampleRisiko || undefined,
+          },
+        });
+      }
+    } else if (tahap === "Baseline") {
+      // Upsert Baseline Kelurahan (SurveiKelurahan)
+      await prisma.surveiKelurahan.upsert({
+        where: { kelurahanId },
+        create: {
+          kelurahanId,
+          namaKelurahan: finalKelName,
+          kecamatan: "Coblong",
+          jumlahRw: latestSurveys.length,
+          jumlahRt: sumRt > 0 ? sumRt : undefined,
+          jumlahKk: sumKk > 0 ? sumKk : undefined,
+          jumlahRumahTotal: sumRumahTotal > 0 ? sumRumahTotal : undefined,
+          tanggalSurvei: new Date(),
+          enumerator: `Mahasiswa KKN (${latestSurveys.length} RW)`,
+          catatanData: `Agregasi otomatis dari ${latestSurveys.length} RW via survey.berseka.id`,
+        },
+        update: {
+          namaKelurahan: finalKelName,
+          jumlahRw: latestSurveys.length,
+          jumlahRt: sumRt > 0 ? sumRt : undefined,
+          jumlahKk: sumKk > 0 ? sumKk : undefined,
+          jumlahRumahTotal: sumRumahTotal > 0 ? sumRumahTotal : undefined,
+          tanggalSurvei: new Date(),
+          enumerator: `Mahasiswa KKN (${latestSurveys.length} RW)`,
+          catatanData: `Agregasi otomatis dari ${latestSurveys.length} RW via survey.berseka.id`,
+        },
+      });
+
+      // Upsert Baseline Volume (SurveiVolumeSampah)
+      await prisma.surveiVolumeSampah.upsert({
+        where: { kelurahanId },
+        create: {
+          kelurahanId,
+          organikKgPerHari: new Prisma.Decimal(sumOrganik.toFixed(2)),
+          anorganikKgPerHari: new Prisma.Decimal(sumAnorganik.toFixed(2)),
+          residuKgPerHari: new Prisma.Decimal(sumResidu.toFixed(2)),
+          totalVolumeKgPerHari: new Prisma.Decimal(sumTotalVolume.toFixed(2)),
+          catatan: `Total volume harian baseline dihitung dari akumulasi ${latestSurveys.length} RW.`,
+        },
+        update: {
+          organikKgPerHari: new Prisma.Decimal(sumOrganik.toFixed(2)),
+          anorganikKgPerHari: new Prisma.Decimal(sumAnorganik.toFixed(2)),
+          residuKgPerHari: new Prisma.Decimal(sumResidu.toFixed(2)),
+          totalVolumeKgPerHari: new Prisma.Decimal(sumTotalVolume.toFixed(2)),
+          catatan: `Total volume harian baseline dihitung dari akumulasi ${latestSurveys.length} RW.`,
+        },
+      });
+
+      // Upsert Baseline Pemilahan (SurveiPemilahanSampah)
+      await prisma.surveiPemilahanSampah.upsert({
+        where: { kelurahanId },
+        create: {
+          kelurahanId,
+          jumlahRumahMemilah: sumRumahPilah,
+          totalJumlahRumahDiRw: sumRumahTotal,
+          persentasePemilahan: new Prisma.Decimal(pctPilah.toFixed(4)),
+          tingkatPemilahan: tingkatPilah,
+          catatan: `Tingkat pemilahan rata-rata wilayah baseline dari ${latestSurveys.length} RW.`,
+        },
+        update: {
+          jumlahRumahMemilah: sumRumahPilah,
+          totalJumlahRumahDiRw: sumRumahTotal,
+          persentasePemilahan: new Prisma.Decimal(pctPilah.toFixed(4)),
+          tingkatPemilahan: tingkatPilah,
+          catatan: `Tingkat pemilahan rata-rata wilayah baseline dari ${latestSurveys.length} RW.`,
+        },
+      });
+
+      // Upsert Baseline Bank Sampah & Pengolahan (SurveiBankSampahPengolahan)
+      await prisma.surveiBankSampahPengolahan.upsert({
+        where: { kelurahanId },
+        create: {
+          kelurahanId,
+          bankSampahAktif: sumBsAktif,
+          bankSampahTidakAktif: sumBsNonaktif,
+          jumlahUnitKomposter: String(sumKomposter),
+          jumlahTitikMaggotBsf: String(sumMaggot),
+          bioporiLoseda: allTeknologi.has("Biopori/loseda"),
+          ecobrickKerajinanDaurUlang: allTeknologi.has("Ecobrick/kerajinan daur ulang"),
+          buruanSae: allTeknologi.has("Buruan Sae"),
+          pengepulMitraDaurUlang: allTeknologi.has("Pengepul/mitra daur ulang"),
+          digitalisasiData: allTeknologi.has("Digitalisasi data (WA/aplikasi)"),
+          aktivitasLainnyaKeterangan: `Fasilitas aktif baseline terlaporkan di ${latestSurveys.length} RW`,
+        },
+        update: {
+          bankSampahAktif: sumBsAktif,
+          bankSampahTidakAktif: sumBsNonaktif,
+          jumlahUnitKomposter: String(sumKomposter),
+          jumlahTitikMaggotBsf: String(sumMaggot),
+          bioporiLoseda: allTeknologi.has("Biopori/loseda"),
+          ecobrickKerajinanDaurUlang: allTeknologi.has("Ecobrick/kerajinan daur ulang"),
+          buruanSae: allTeknologi.has("Buruan Sae"),
+          pengepulMitraDaurUlang: allTeknologi.has("Pengepul/mitra daur ulang"),
+          digitalisasiData: allTeknologi.has("Digitalisasi data (WA/aplikasi)"),
+          aktivitasLainnyaKeterangan: `Fasilitas aktif baseline terlaporkan di ${latestSurveys.length} RW`,
+        },
+      });
+
+      // Update kesimpulan baseline dari survei RW terbaru jika ada
+      const samplePrioritas = latestSurveys[0]?.prioritas;
+      const sampleRisiko = latestSurveys[0]?.risiko;
+      if (samplePrioritas || sampleRisiko) {
+        await prisma.surveiCatatanKesimpulan.upsert({
           where: { kelurahanId },
           create: {
             kelurahanId,

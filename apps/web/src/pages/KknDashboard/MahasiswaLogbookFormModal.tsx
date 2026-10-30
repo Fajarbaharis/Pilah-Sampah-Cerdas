@@ -6,7 +6,7 @@
  * Mobile Form Modal for Mahasiswa KKN Logbook Entry (iOS Safari Camera Optimized)
  */
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   X,
@@ -16,9 +16,13 @@ import {
   Loader2,
   CheckCircle2,
   Image as ImageIcon,
+  AlertCircle,
+  Info,
+  Pencil,
 } from "lucide-react";
-import { logbookApiService } from "../../services/logbookService";
+import { logbookApiService, type LogbookMahasiswaItem } from "../../services/logbookService";
 import { compressImage } from "../../utils/compressImage";
+import { resolveImageUrl } from "../../utils/imageUrl";
 import showToast from "../../utils/showToast";
 import { useAuthStore } from "../../store/useAuthStore";
 
@@ -27,6 +31,7 @@ interface MahasiswaLogbookFormModalProps {
   onClose: () => void;
   onSuccess: () => void;
   prokerList?: Array<{ id: string; judul?: string; deskripsi: string }>;
+  initialData?: LogbookMahasiswaItem | null;
 }
 
 export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps> = ({
@@ -34,8 +39,10 @@ export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps>
   onClose,
   onSuccess,
   prokerList = [],
+  initialData = null,
 }) => {
   const { user } = useAuthStore();
+  const isEditMode = Boolean(initialData);
 
   const [tanggal, setTanggal] = useState(new Date().toISOString().split("T")[0]);
   const [waktuMulai, setWaktuMulai] = useState("08:00");
@@ -43,14 +50,56 @@ export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps>
   const [tempat, setTempat] = useState(user?.wilayah || "Wilayah KKN");
   const [deskripsi, setDeskripsi] = useState("");
   const [selectedProkerId, setSelectedProkerId] = useState("");
-  const [tipeAktivitas] = useState<"INDIVIDU">("INDIVIDU");
+  const [tipeAktivitas, setTipeAktivitas] = useState<"INDIVIDU" | "KELOMPOK">("INDIVIDU");
 
+  const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync state when modal opens or initialData changes
+  useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        setTanggal(
+          initialData.tanggalKegiatan
+            ? initialData.tanggalKegiatan.split("T")[0]
+            : new Date().toISOString().split("T")[0]
+        );
+        setWaktuMulai(
+          initialData.waktuMulai ? initialData.waktuMulai.slice(0, 5) : "08:00"
+        );
+        setWaktuSelesai(
+          initialData.waktuSelesai ? initialData.waktuSelesai.slice(0, 5) : "12:00"
+        );
+        setTempat(initialData.tempat || user?.wilayah || "Wilayah KKN");
+        setDeskripsi(initialData.deskripsi || "");
+        setSelectedProkerId(initialData.programKerjaId || "");
+        setTipeAktivitas(
+          initialData.tipeAktivitas === "KELOMPOK" ? "KELOMPOK" : "INDIVIDU"
+        );
+        setFotoFile(null);
+        setExistingPhotoUrl(initialData.fotoBuktiUrl || null);
+        setFotoPreview(
+          initialData.fotoBuktiUrl ? resolveImageUrl(initialData.fotoBuktiUrl) : null
+        );
+      } else {
+        setTanggal(new Date().toISOString().split("T")[0]);
+        setWaktuMulai("08:00");
+        setWaktuSelesai("12:00");
+        setTempat(user?.wilayah || "Wilayah KKN");
+        setDeskripsi("");
+        setSelectedProkerId("");
+        setTipeAktivitas("INDIVIDU");
+        setFotoFile(null);
+        setExistingPhotoUrl(null);
+        setFotoPreview(null);
+      }
+    }
+  }, [isOpen, initialData, user]);
 
   if (!isOpen) return null;
 
@@ -62,15 +111,19 @@ export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps>
       const compressed = await compressImage(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.8 });
       setFotoFile(compressed);
       setFotoPreview(URL.createObjectURL(compressed));
+      setExistingPhotoUrl(null);
       showToast.success("Foto bukti kegiatan berhasil dimuat!");
     } catch {
       setFotoFile(file);
       setFotoPreview(URL.createObjectURL(file));
+      setExistingPhotoUrl(null);
     } finally {
       if (cameraInputRef.current) cameraInputRef.current.value = "";
       if (galleryInputRef.current) galleryInputRef.current.value = "";
     }
   };
+
+  const hasPhoto = Boolean(fotoFile || existingPhotoUrl);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +133,7 @@ export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps>
       return;
     }
 
-    if (!fotoFile) {
+    if (!hasPhoto) {
       showToast.error("Wajib melampirkan foto bukti kegiatan!");
       return;
     }
@@ -94,36 +147,71 @@ export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps>
       formData.append("tempat", tempat);
       formData.append("deskripsi", deskripsi.trim());
       formData.append("tipeAktivitas", tipeAktivitas);
-      if (selectedProkerId) {
+
+      if (isEditMode) {
+        formData.append("programKerjaId", selectedProkerId || "");
+      } else if (selectedProkerId) {
         formData.append("programKerjaId", selectedProkerId);
       }
-      formData.append("foto", fotoFile);
 
-      await logbookApiService.createMahasiswaLogbook(formData);
-      showToast.success("Logbook kegiatan KKN berhasil disimpan!");
+      if (fotoFile) {
+        formData.append("foto", fotoFile);
+      } else if (existingPhotoUrl) {
+        formData.append("fotoBuktiUrl", existingPhotoUrl);
+      }
+
+      if (isEditMode && initialData) {
+        await logbookApiService.updateMahasiswaLogbook(initialData.id, formData);
+        showToast.success(
+          initialData.statusApproval === "DISETUJUI_DPL"
+            ? "Logbook berhasil diperbarui & diajukan verifikasi ulang ke DPL!"
+            : "Logbook kegiatan KKN berhasil diperbarui!"
+        );
+      } else {
+        await logbookApiService.createMahasiswaLogbook(formData);
+        showToast.success("Logbook kegiatan KKN berhasil disimpan!");
+      }
       onSuccess();
       onClose();
     } catch (err: any) {
-      showToast.error(err.response?.data?.message || "Gagal menyimpan logbook kegiatan.");
+      showToast.error(
+        err.response?.data?.message || (isEditMode ? "Gagal memperbarui logbook." : "Gagal menyimpan logbook kegiatan.")
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const isApprovedDpl = isEditMode && initialData?.statusApproval === "DISETUJUI_DPL";
+  const isRevisionDpl = isEditMode && initialData?.statusApproval === "PERLU_REVISI_DPL";
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Click outside backdrop */}
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-200 z-10">
+      <div className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-[88vh] flex flex-col animate-in slide-in-from-bottom duration-200 z-10">
         {/* Header Modal */}
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80 shrink-0">
           <div className="space-y-0.5">
             <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <FileText size={18} className="text-emerald-600" />
-              Catat Logbook Kegiatan
+              {isEditMode ? (
+                <>
+                  <Pencil size={18} className="text-amber-600" />
+                  <span>Koreksi &amp; Edit Logbook</span>
+                </>
+              ) : (
+                <>
+                  <FileText size={18} className="text-emerald-600" />
+                  <span>Catat Logbook Kegiatan</span>
+                </>
+              )}
             </h3>
-            <p className="text-[10px] text-slate-500">Laporan harian aktivitas KKN mahasiswa</p>
+            <p className="text-[10px] text-slate-500">
+              {isEditMode
+                ? "Perbarui rincian logbook atau ajukan ulang verifikasi DPL"
+                : "Laporan harian aktivitas KKN mahasiswa"}
+            </p>
           </div>
           <button
             type="button"
@@ -136,6 +224,31 @@ export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps>
 
         {/* Scrollable Form Body */}
         <form id="form-logbook-modal" onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto overscroll-contain flex-1 text-xs">
+          {/* Status Alert Banners */}
+          {isApprovedDpl && (
+            <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 flex items-start gap-2.5">
+              <Info size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5 text-[11px] text-amber-800 dark:text-amber-300">
+                <p className="font-bold">Pengajuan Ulang Pasca-ACC DPL</p>
+                <p className="leading-relaxed">
+                  Menyimpan perubahan akan mengalihkan status ke antrean verifikasi ulang DPL. Poin harian yang telah diperoleh tetap utuh &amp; aman.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isRevisionDpl && initialData?.catatanDpl && (
+            <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start gap-2.5">
+              <AlertCircle size={16} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5 text-[11px] text-rose-800 dark:text-rose-300">
+                <p className="font-bold">Catatan Arahan Revisi DPL:</p>
+                <p className="leading-relaxed bg-white/60 dark:bg-slate-900/40 p-2 rounded-xl mt-1 font-medium">
+                  {initialData.catatanDpl}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Tanggal & Waktu */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div className="col-span-1 space-y-1">
@@ -167,6 +280,35 @@ export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps>
             </div>
           </div>
 
+          {/* Tipe Aktivitas Toggle */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase">Tipe Aktivitas</label>
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setTipeAktivitas("INDIVIDU")}
+                className={`py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  tipeAktivitas === "INDIVIDU"
+                    ? "bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-2xs font-extrabold"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                👤 Individu
+              </button>
+              <button
+                type="button"
+                onClick={() => setTipeAktivitas("KELOMPOK")}
+                className={`py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  tipeAktivitas === "KELOMPOK"
+                    ? "bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-2xs font-extrabold"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                👥 Kelompok
+              </button>
+            </div>
+          </div>
+
           {/* Tempat Kegiatan */}
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-slate-400 uppercase">Lokasi / Tempat *</label>
@@ -174,7 +316,7 @@ export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps>
               type="text"
               value={tempat}
               onChange={(e) => setTempat(e.target.value)}
-              placeholder="Contoh: Posko RW 06 Dago / Bank Sampah Unit"
+              placeholder="Contoh: Posko RW 06 Dago / Wilayah KKN"
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500"
             />
           </div>
@@ -241,17 +383,18 @@ export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps>
                 <img src={fotoPreview} alt="Bukti Kegiatan" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-black/30 pointer-events-none" />
                 
-                {/* Tombol Hapus */}
+                {/* Tombol Hapus / Ganti Foto */}
                 <button
                   type="button"
                   onClick={() => {
                     setFotoFile(null);
                     setFotoPreview(null);
+                    setExistingPhotoUrl(null);
                     if (cameraInputRef.current) cameraInputRef.current.value = "";
                     if (galleryInputRef.current) galleryInputRef.current.value = "";
                   }}
                   className="absolute top-2 right-2 p-1.5 bg-slate-900/80 hover:bg-rose-600 text-white rounded-full transition cursor-pointer shadow-md"
-                  title="Hapus Foto"
+                  title="Hapus / Ganti Foto"
                 >
                   <X size={14} />
                 </button>
@@ -260,7 +403,9 @@ export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps>
                 <div className="absolute bottom-2 left-2 right-2 py-1.5 px-3 bg-slate-900/85 backdrop-blur-md rounded-xl text-[10px] text-white flex items-center justify-between">
                   <div className="flex items-center gap-1.5 min-w-0 pr-2">
                     <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
-                    <span className="font-semibold truncate">{fotoFile?.name || "Foto Siap Dikirim"}</span>
+                    <span className="font-semibold truncate">
+                      {fotoFile?.name || (isEditMode ? "Foto Bukti Terpasang" : "Foto Siap Dikirim")}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
@@ -323,13 +468,20 @@ export const MahasiswaLogbookFormModal: React.FC<MahasiswaLogbookFormModalProps>
           <button
             type="submit"
             form="form-logbook-modal"
-            disabled={isSubmitting || !deskripsi.trim() || !fotoFile}
-            className="py-3.5 bg-[#035941] hover:bg-emerald-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSubmitting || !deskripsi.trim() || !hasPhoto}
+            className={`py-3.5 ${
+              isEditMode ? "bg-[#035941] hover:bg-[#02402e]" : "bg-[#035941] hover:bg-emerald-700"
+            } text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {isSubmitting ? (
               <>
                 <Loader2 size={15} className="animate-spin" />
                 <span>Menyimpan...</span>
+              </>
+            ) : isEditMode ? (
+              <>
+                <Send size={15} />
+                <span>{isApprovedDpl ? "Simpan & Ajukan Ulang" : "Perbarui Logbook"}</span>
               </>
             ) : (
               <>
