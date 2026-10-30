@@ -22,6 +22,18 @@ vi.mock("../lib/prisma.js", () => ({
       findFirst: vi.fn(),
       upsert: vi.fn(),
     },
+    surveiVolumeSampah: {
+      upsert: vi.fn(),
+    },
+    surveiPemilahanSampah: {
+      upsert: vi.fn(),
+    },
+    surveiBankSampahPengolahan: {
+      upsert: vi.fn(),
+    },
+    surveiCatatanKesimpulan: {
+      upsert: vi.fn(),
+    },
     endlineSurveiKelurahan: {
       upsert: vi.fn(),
     },
@@ -164,6 +176,74 @@ describe("Survey Service & Controller Unit Tests", () => {
       expect(prisma.endlineSurveiKelurahan.upsert).toHaveBeenCalled();
       expect(prisma.endlineVolumeSampah.upsert).toHaveBeenCalled();
       expect(prisma.endlinePemilahanSampah.upsert).toHaveBeenCalled();
+    });
+
+    it("harus berhasil menyimpan survei Baseline dan mengagregasi ke tabel surveiKelurahan", async () => {
+      (prisma.studentKkn.findFirst as any).mockResolvedValue({
+        id: "student-uuid-1",
+        userId: "user-uuid-1",
+        nim: "10122001",
+        jurusan: "Teknik Informatika",
+        fakultas: "Teknik dan Ilmu Komputer",
+        noWa: "081234567890",
+        user: { name: "Bani Haykal" },
+        kelompok: { name: "Kelompok 04", kelurahan: "Dago" },
+      });
+
+      (prisma.surveiRw.create as any).mockResolvedValue({
+        id: "srw-base-1",
+        kodeSurvey: "BRS-BASE-1",
+        tahap: "Baseline",
+        tahun: "2026",
+        kelurahan: "Dago",
+        rw: "RW 01",
+        persenPilah: 25,
+        volumeTotal: 150,
+        createdAt: new Date(),
+      });
+
+      (prisma.surveiRw.findMany as any).mockResolvedValue([
+        {
+          rw: "RW 01",
+          volumeOrganik: 90,
+          volumeAnorganik: 40,
+          volumeResidu: 20,
+          volumeTotal: 150,
+          rumahPilah: 15,
+          rumahTotal: 60,
+          bankSampahAktif: 1,
+          bankSampahTidakAktif: 0,
+          unitKomposter: 1,
+          titikMaggot: 1,
+          teknologi: ["Biopori/loseda"],
+        },
+      ]);
+
+      (prisma.surveiKelurahan.findFirst as any).mockResolvedValue({
+        kelurahanId: 4,
+        namaKelurahan: "Dago",
+      });
+
+      const res = await surveyService.submitSurvey({
+        id: "BRS-BASE-1",
+        tahap: "Baseline",
+        tahun: 2026,
+        nim: "10122001",
+        kelurahan: "Dago",
+        rw: "RW 01",
+        rumah_pilah: 15,
+        rumah_total: 60,
+        vol_organik: 90,
+        vol_anorganik: 40,
+        vol_residu: 20,
+        prioritas: "Sosialisasi awal pemilahan sampah",
+      });
+
+      expect(res.kodeSurvey).toBe("BRS-BASE-1");
+      expect(prisma.surveiRw.create).toHaveBeenCalled();
+      expect(prisma.surveiKelurahan.upsert).toHaveBeenCalled();
+      expect(prisma.surveiVolumeSampah.upsert).toHaveBeenCalled();
+      expect(prisma.surveiPemilahanSampah.upsert).toHaveBeenCalled();
     });
   });
 
