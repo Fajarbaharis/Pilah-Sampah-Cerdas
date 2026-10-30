@@ -10,6 +10,7 @@
 import React, { useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuthStore } from "../../store/useAuthStore";
+import { isStagingEnv } from "../../utils/envUtils";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -75,7 +76,8 @@ export const VerifikasiSertifikatPage: React.FC = () => {
   const { idSertifikat } = useParams<{ idSertifikat: string }>();
   const { user } = useAuthStore();
   const userRole = String(user?.peran || (user as any)?.role || "").toUpperCase();
-  const canAccessAdminSertifikat = userRole === "DEVELOPER" || userRole === "SUPER_USER";
+  const isStaging = isStagingEnv();
+  const canAccessAdminSertifikat = isStaging && (userRole === "DEVELOPER" || userRole === "SUPER_USER");
 
   // Find student by idSertifikat or NIM
   const student = useMemo(() => {

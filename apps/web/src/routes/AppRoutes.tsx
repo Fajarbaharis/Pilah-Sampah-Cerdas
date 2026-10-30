@@ -1000,26 +1000,34 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/e-sertifikat/mahasiswa"
           element={
-            <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
-              <SertifikatKknPage />
-            </ProtectedRoute>
+            isStaging ? (
+              <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
+                <SertifikatKknPage />
+              </ProtectedRoute>
+            ) : (
+              <Navigate to="/dasbor" replace />
+            )
           }
         />
         <Route
           path="/e-sertifikat/dpl"
           element={
-            <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
-              <SertifikatDplPage />
-            </ProtectedRoute>
+            isStaging ? (
+              <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
+                <SertifikatDplPage />
+              </ProtectedRoute>
+            ) : (
+              <Navigate to="/dasbor" replace />
+            )
           }
         />
         <Route
           path="/e-sertifikat"
-          element={<Navigate to="/e-sertifikat/mahasiswa" replace />}
+          element={<Navigate to={isStaging ? "/e-sertifikat/mahasiswa" : "/dasbor"} replace />}
         />
         <Route
           path="/sertifikat-dpl"
-          element={<Navigate to="/e-sertifikat/dpl" replace />}
+          element={<Navigate to={isStaging ? "/e-sertifikat/dpl" : "/dasbor"} replace />}
         />
         <Route
           path="/sertifikat-kkn"
