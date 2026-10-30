@@ -28,6 +28,7 @@ export interface StudentCertData {
   tanggalTerbit: string;
   statusPenilaian?: "SUDAH_DINILAI" | "BELUM_DINILAI";
   sudahDinilai?: boolean;
+  totalPoin?: number;
   nilai: {
     personal: number | null;
     proker: number | null;

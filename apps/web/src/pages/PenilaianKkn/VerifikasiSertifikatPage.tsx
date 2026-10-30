@@ -38,6 +38,7 @@ interface StudentCertData {
   nomorSertifikat: string;
   idSertifikat: string;
   tanggalTerbit: string;
+  totalPoin?: number;
   nilai: {
     personal: number;
     proker: number;
@@ -160,6 +161,9 @@ export const VerifikasiSertifikatPage: React.FC = () => {
                   <p>NIM: <span className="font-mono font-semibold text-amber-300">{student.nim}</span></p>
                   <p>Program Studi: <span className="font-semibold text-white">{student.prodi}</span></p>
                   <p>Beban Studi: <span className="font-semibold text-emerald-300">{student.sks} SKS</span></p>
+                  {typeof student.totalPoin === "number" && (
+                    <p>Poin Berseka: <span className="font-semibold text-emerald-400">{student.totalPoin.toLocaleString("id-ID")} Poin</span></p>
+                  )}
                 </div>
               </div>
 
