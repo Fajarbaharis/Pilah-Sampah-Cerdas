@@ -23,6 +23,11 @@ vi.mock("../lib/prisma.js", () => ({
     kelompokKkn: {
       findMany: vi.fn(),
     },
+    pointHistory: {
+      groupBy: vi.fn(),
+      findMany: vi.fn(),
+      aggregate: vi.fn(),
+    },
   },
 }));
 
@@ -103,6 +108,10 @@ describe("sertifikatKknService - Integrity & Scoping Test Suite", () => {
     vi.mocked(prisma.studentKkn.findMany).mockResolvedValueOnce(mockStudents as any);
     vi.mocked(prisma.programKerjaKkn.findMany).mockResolvedValueOnce(mockProkers as any);
     vi.mocked(prisma.penilaianKknMahasiswa.findMany).mockResolvedValueOnce(mockPenilaian as any);
+    vi.mocked((prisma as any).pointHistory.groupBy).mockResolvedValueOnce([
+      { userId: "user-1", _sum: { points: 150 } },
+      { userId: "user-2", _sum: { points: 345 } },
+    ]);
 
     const list = await sertifikatKknService.getSertifikatList({ peran: "SUPER_USER", id: "u1" });
     expect(list.length).toBe(2);
@@ -112,6 +121,7 @@ describe("sertifikatKknService - Integrity & Scoping Test Suite", () => {
     expect(bani).toBeDefined();
     expect(bani?.statusPenilaian).toBe("BELUM_DINILAI");
     expect(bani?.sudahDinilai).toBe(false);
+    expect(bani?.totalPoin).toBe(150);
     expect(bani?.nilai.total).toBe(0);
     expect(bani?.nilai.predikat).toBe("Belum Dinilai");
     expect(bani?.nomorSertifikat).toContain("KKNT-MHS/DRAFT/");
@@ -124,6 +134,7 @@ describe("sertifikatKknService - Integrity & Scoping Test Suite", () => {
     expect(anugrah).toBeDefined();
     expect(anugrah?.statusPenilaian).toBe("SUDAH_DINILAI");
     expect(anugrah?.sudahDinilai).toBe(true);
+    expect(anugrah?.totalPoin).toBe(345);
     expect(anugrah?.nilai.total).toBe(85.08);
     expect(anugrah?.nilai.predikat).toContain("A");
     expect(anugrah?.nomorSertifikat).toContain("UNIKOM/BATCH-1/XI/2026");

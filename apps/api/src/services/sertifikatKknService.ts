@@ -21,6 +21,7 @@
  */
 
 import { prisma } from "../lib/prisma.js";
+import { calculateValidIndividualPointsForUsers } from "./pointService.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -79,6 +80,7 @@ export interface StudentCertData {
   tanggalTerbit: string;
   statusPenilaian: "SUDAH_DINILAI" | "BELUM_DINILAI";
   sudahDinilai: boolean;
+  totalPoin: number;
   nilai: {
     personal: number | null;
     proker: number | null;
@@ -199,7 +201,16 @@ export const sertifikatKknService = {
       console.warn("[sertifikatKknService] Warning querying penilaian_kkn_mahasiswa:", e);
     }
 
-    // 5. Mapping data live database ke format sertifikat TANPA NILAI FIKTIF
+    // 5. Ambil akumulasi poin riil mahasiswa dari SSOT pointHistory
+    const studentUserIds = dbStudents.map((s) => s.userId).filter(Boolean);
+    let pointsByStudent = new Map<string, number>();
+    try {
+      pointsByStudent = await calculateValidIndividualPointsForUsers(studentUserIds);
+    } catch (e) {
+      console.warn("[sertifikatKknService] Warning querying calculateValidIndividualPointsForUsers:", e);
+    }
+
+    // 6. Mapping data live database ke format sertifikat TANPA NILAI FIKTIF
     const results: StudentCertData[] = [];
     let counter = 1;
 
@@ -289,6 +300,7 @@ export const sertifikatKknService = {
       }
 
       const idSertifikat = `BRSK-2026-KKN-${nim}`;
+      const totalPoin = (s.userId && pointsByStudent.get(s.userId)) ?? 0;
 
       results.push({
         noUrut: counter++,
@@ -304,6 +316,7 @@ export const sertifikatKknService = {
         tanggalTerbit,
         statusPenilaian,
         sudahDinilai,
+        totalPoin,
         nilai,
       });
     }

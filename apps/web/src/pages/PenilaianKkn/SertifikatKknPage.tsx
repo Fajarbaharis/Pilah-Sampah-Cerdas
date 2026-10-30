@@ -166,6 +166,7 @@ export const SertifikatKknPage: React.FC = () => {
       if (match && (
         match.statusPenilaian !== selectedStudent.statusPenilaian ||
         match.sudahDinilai !== selectedStudent.sudahDinilai ||
+        match.totalPoin !== selectedStudent.totalPoin ||
         match.nilai?.total !== selectedStudent.nilai?.total ||
         match.nilai?.proker !== selectedStudent.nilai?.proker ||
         match.nama !== selectedStudent.nama ||
@@ -393,6 +394,7 @@ export const SertifikatKknPage: React.FC = () => {
       "Nomor_Sertifikat",
       "ID_Sertifikat",
       "Total_Jam_KKN",
+      "Poin_Berseka",
       "Nilai_Personal",
       "Nilai_Proker",
       "Nilai_Laporan",
@@ -430,6 +432,7 @@ export const SertifikatKknPage: React.FC = () => {
         escapeCsv(nomor),
         escapeCsv(s.idSertifikat),
         escapeCsv("450 Jam"),
+        escapeCsv(`${(s.totalPoin ?? 0).toLocaleString("id-ID")} Poin`),
         escapeCsv(s.nilai?.personal !== null ? s.nilai.personal.toFixed(1) : "-"),
         escapeCsv(s.nilai?.proker !== null ? s.nilai.proker.toFixed(1) : "-"),
         escapeCsv(s.nilai?.laporan !== null ? s.nilai.laporan.toFixed(1) : "-"),
@@ -600,7 +603,18 @@ export const SertifikatKknPage: React.FC = () => {
           .cert-total-hours {
             font-size: 11pt !important;
             letter-spacing: 2px !important;
-            margin-top: 10px !important;
+            margin-top: 6px !important;
+          }
+          .cert-poin-berseka {
+            display: inline-flex !important;
+            font-size: 8.5pt !important;
+            margin-top: 4px !important;
+            padding: 2px 14px !important;
+            border-radius: 9999px !important;
+            border: 1px solid #10b981 !important;
+            background-color: #f0fdf4 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .cert-sig-date {
             font-size: 8.5pt !important;
@@ -723,7 +737,7 @@ export const SertifikatKknPage: React.FC = () => {
                     )}
                   </div>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                    NIM: <strong className="font-mono text-slate-900 dark:text-slate-100">{selectedStudent.nim}</strong> &bull; Program Studi: <strong>{selectedStudent.prodi}</strong> &bull; {selectedStudent.kelompok} ({selectedStudent.sks} SKS)
+                    NIM: <strong className="font-mono text-slate-900 dark:text-slate-100">{selectedStudent.nim}</strong> &bull; Program Studi: <strong>{selectedStudent.prodi}</strong> &bull; {selectedStudent.kelompok} ({selectedStudent.sks} SKS) &bull; <strong className="text-emerald-600 dark:text-emerald-400">{(selectedStudent.totalPoin ?? 0).toLocaleString("id-ID")} Poin</strong>
                   </p>
                 </div>
               </div>
@@ -949,6 +963,9 @@ export const SertifikatKknPage: React.FC = () => {
                 </span>
                 <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-2 py-0.5 rounded-full text-[10.5px]">
                   {selectedStudent.kelompok}
+                </span>
+                <span className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full text-[10.5px]">
+                  {(selectedStudent.totalPoin ?? 0).toLocaleString("id-ID")} Poin
                 </span>
               </div>
 
@@ -1275,10 +1292,21 @@ export const SertifikatKknPage: React.FC = () => {
             <div className="cert-total-hours font-cinzel text-xs md:text-[12pt] font-extrabold text-[#0A2540] tracking-[2px] mt-2 md:mt-2.5">
               TOTAL 450 JAM
             </div>
+
+            {/* ── AKUMULASI POIN BERSEKA MAHASISWA (DATA RIIL DATABASE) ── */}
+            <div className="cert-poin-berseka inline-flex items-center justify-center gap-1.5 md:gap-2 mt-1.5 md:mt-2 px-3 md:px-4 py-0.5 md:py-1 bg-emerald-50/90 border border-emerald-300/80 rounded-full shadow-2xs">
+              <Sparkles className="w-3 h-3 md:w-3.5 md:h-3.5 text-[#009966] shrink-0" />
+              <span className="font-sans text-[8.5px] md:text-[9.5pt] font-bold text-[#0A2540] tracking-wide">
+                POIN BERSEKA:
+              </span>
+              <span className="font-sans text-[9px] md:text-[10pt] font-extrabold text-[#009966]">
+                {(selectedStudent.totalPoin ?? 0).toLocaleString("id-ID")} POIN
+              </span>
+            </div>
           </div>
 
           {/* Bottom spacer for vertical balance */}
-          <div className="w-full shrink-0 h-4" />
+          <div className="w-full shrink-0 h-2 md:h-3" />
         </div>
       </div>
     </div>
