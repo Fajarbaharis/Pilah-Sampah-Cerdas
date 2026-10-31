@@ -77,7 +77,7 @@ export const evaluasiDampakService = {
   },
 
   getEndlineById: async (kelurahanId: number) => {
-    return prisma.endlineSurveiKelurahan.findUnique({
+    const endline = await prisma.endlineSurveiKelurahan.findUnique({
       where: { kelurahanId },
       include: {
         pemilahanSampah: true,
@@ -87,6 +87,171 @@ export const evaluasiDampakService = {
         validasiDpl: { select: { id: true, name: true } },
       },
     });
+
+    if (!endline) {
+      return null;
+    }
+
+    // Ambil data baseline kelurahan untuk mewarisi identitas wilayah resmi & karakteristik dasar
+    const baseline = await prisma.surveiKelurahan.findUnique({
+      where: { kelurahanId },
+      include: {
+        karakteristikWilayah: true,
+        keyPlayers: true,
+      },
+    });
+
+    // Ambil survei RW Endline untuk menghitung ringkasan cakupan lapangan riil
+    const rwSurveys = await prisma.surveiRw.findMany({
+      where: {
+        kelurahan: { equals: endline.namaKelurahan, mode: "insensitive" },
+        tahap: "Endline",
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Deduplikasi RW (ambil survei terbaru per RW)
+    const rwMap = new Map<string, (typeof rwSurveys)[0]>();
+    rwSurveys.forEach((s) => {
+      if (!rwMap.has(s.rw)) rwMap.set(s.rw, s);
+    });
+    const latestRw = Array.from(rwMap.values());
+
+    let sumRt = 0;
+    let sumKk = 0;
+    let sumRumah = 0;
+    latestRw.forEach((s) => {
+      sumRt += s.jumlahRt || 0;
+      sumKk += s.jumlahKk || 0;
+      sumRumah += s.rumahTotal || 0;
+    });
+
+    // Kumpulkan key players jika ada dari survei RW Endline
+    const rwKeyPlayers: any[] = [];
+    latestRw.forEach((s) => {
+      if (Array.isArray(s.keyPlayer)) {
+        (s.keyPlayer as any[]).forEach((kp: any) => {
+          if (kp && kp.nama && !rwKeyPlayers.some((existing) => existing.nama === kp.nama)) {
+            rwKeyPlayers.push({
+              id: `${s.id}-${kp.aktor || "aktor"}`,
+              kelurahanId,
+              jenisAktor: kp.aktor || null,
+              nama: kp.nama,
+              kontak: kp.kontak || null,
+              peran: kp.peran || null,
+            });
+          }
+        });
+      }
+    });
+
+    // Susun karakteristik wilayah gabungan (jika ada input di RW, atau fallback ke baseline)
+    let sumKos = 0;
+    let sumUmkm = 0;
+    const rwKarakterLain: string[] = [];
+
+    latestRw.forEach((s) => {
+      if (s.jumlahKos && s.jumlahKos > 0) sumKos += s.jumlahKos;
+      if (s.jumlahUmkm && s.jumlahUmkm > 0) sumUmkm += s.jumlahUmkm;
+      if (s.karakterLain && String(s.karakterLain).trim()) {
+        rwKarakterLain.push(String(s.karakterLain).trim());
+      }
+    });
+
+    const hasRwPadat = latestRw.some(
+      (s) => Array.isArray(s.karakter) && (s.karakter as any[]).some((k) => /padat/i.test(String(k)))
+    );
+    const hasRwKos = latestRw.some(
+      (s) => Array.isArray(s.karakter) && (s.karakter as any[]).some((k) => /kos/i.test(String(k))) || (s.jumlahKos && s.jumlahKos > 0)
+    );
+    const hasRwUmkm = latestRw.some(
+      (s) =>
+        Array.isArray(s.karakter) && (s.karakter as any[]).some((k) => /umkm|warung/i.test(String(k))) || (s.jumlahUmkm && s.jumlahUmkm > 0)
+    );
+    const hasRwKampus = latestRw.some(
+      (s) => Array.isArray(s.karakter) && (s.karakter as any[]).some((k) => /kampus|sekolah/i.test(String(k)))
+    );
+    const hasRwPasar = latestRw.some(
+      (s) => Array.isArray(s.karakter) && (s.karakter as any[]).some((k) => /pasar/i.test(String(k)))
+    );
+    const hasRwSungai = latestRw.some(
+      (s) =>
+        Array.isArray(s.karakter) && (s.karakter as any[]).some((k) => /sungai|bantaran/i.test(String(k)))
+    );
+
+    const baseKos = baseline?.karakteristikWilayah?.perkiraanJumlahKosKontrakan || "";
+    const baseUmkm = baseline?.karakteristikWilayah?.perkiraanJumlahUmkmWarungKafe || "";
+    const finalKos = sumKos > 0 ? String(sumKos) : baseKos;
+    const finalUmkm = sumUmkm > 0 ? String(sumUmkm) : baseUmkm;
+
+    const combinedKarakterLain = Array.from(
+      new Set(
+        [baseline?.karakteristikWilayah?.karakterLainnyaKeterangan, ...rwKarakterLain]
+          .filter((item): item is string => Boolean(item && item.trim()))
+      )
+    ).join("; ");
+
+    const karakteristikWilayah = baseline?.karakteristikWilayah
+      ? {
+          ...baseline.karakteristikWilayah,
+          padatPenduduk:
+            latestRw.length > 0
+              ? hasRwPadat || baseline.karakteristikWilayah.padatPenduduk
+              : baseline.karakteristikWilayah.padatPenduduk,
+          banyakKosKontrakan:
+            latestRw.length > 0
+              ? hasRwKos || baseline.karakteristikWilayah.banyakKosKontrakan
+              : baseline.karakteristikWilayah.banyakKosKontrakan,
+          banyakUmkmWarungKafe:
+            latestRw.length > 0
+              ? hasRwUmkm || baseline.karakteristikWilayah.banyakUmkmWarungKafe
+              : baseline.karakteristikWilayah.banyakUmkmWarungKafe,
+          dekatKampusSekolah:
+            latestRw.length > 0
+              ? hasRwKampus || baseline.karakteristikWilayah.dekatKampusSekolah
+              : baseline.karakteristikWilayah.dekatKampusSekolah,
+          pasar:
+            latestRw.length > 0
+              ? hasRwPasar || baseline.karakteristikWilayah.pasar
+              : baseline.karakteristikWilayah.pasar,
+          bantaranSungai:
+            latestRw.length > 0
+              ? hasRwSungai || baseline.karakteristikWilayah.bantaranSungai
+              : baseline.karakteristikWilayah.bantaranSungai,
+          karakterLainnyaFlag: Boolean(combinedKarakterLain) || baseline.karakteristikWilayah.karakterLainnyaFlag,
+          karakterLainnyaKeterangan: combinedKarakterLain || baseline.karakteristikWilayah.karakterLainnyaKeterangan || null,
+          perkiraanJumlahKosKontrakan: finalKos || null,
+          perkiraanJumlahUmkmWarungKafe: finalUmkm || null,
+        }
+      : latestRw.length > 0
+        ? {
+            id: kelurahanId,
+            kelurahanId,
+            padatPenduduk: hasRwPadat,
+            banyakKosKontrakan: hasRwKos,
+            banyakUmkmWarungKafe: hasRwUmkm,
+            dekatKampusSekolah: hasRwKampus,
+            pasar: hasRwPasar,
+            bantaranSungai: hasRwSungai,
+            karakterLainnyaFlag: Boolean(combinedKarakterLain),
+            karakterLainnyaKeterangan: combinedKarakterLain || null,
+            perkiraanJumlahKosKontrakan: finalKos || null,
+            perkiraanJumlahUmkmWarungKafe: finalUmkm || null,
+          }
+        : null;
+
+    const keyPlayers = rwKeyPlayers.length > 0 ? rwKeyPlayers : (baseline?.keyPlayers || []);
+
+    return {
+      ...endline,
+      jumlahRw: latestRw.length > 0 ? latestRw.length : (baseline?.jumlahRw ?? null),
+      jumlahRt: sumRt > 0 ? sumRt : (baseline?.jumlahRt ?? null),
+      jumlahKk: sumKk > 0 ? sumKk : (baseline?.jumlahKk ?? null),
+      jumlahRumahTotal: sumRumah > 0 ? sumRumah : (baseline?.jumlahRumahTotal ?? null),
+      titikKumpulMahasiswa: baseline?.titikKumpulMahasiswa ?? null,
+      karakteristikWilayah,
+      keyPlayers,
+    };
   },
 
   /**

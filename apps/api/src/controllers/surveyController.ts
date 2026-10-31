@@ -87,6 +87,17 @@ export const surveyController = {
         return;
       }
 
+      if (error.message === "BASELINE_REQUIRED") {
+        res.status(400).json({
+          success: false,
+          code: "BASELINE_REQUIRED",
+          message:
+            error.details ||
+            "Survei Endline belum dapat disimpan karena data Baseline belum tersedia. Silakan isi survei Baseline terlebih dahulu.",
+        });
+        return;
+      }
+
       if (error.message === "KELURAHAN_MISMATCH" || error.message === "RW_MISMATCH") {
         res.status(400).json({
           success: false,
@@ -145,27 +156,63 @@ export const surveyController = {
   deleteSurvey: async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const nim = (req.query.nim as string) || undefined;
-      await surveyService.deleteSurvey(id, nim);
+      const user = req.user;
+
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          message: "Autentikasi diperlukan. Silakan login sebagai Super Admin atau Developer.",
+        });
+        return;
+      }
+
+      const roleUpper = String(user.role || "").toUpperCase();
+      const isAllowed = ["SUPER_USER", "SUPERUSER", "SUPER_ADMIN", "ADMIN_DLH", "DEVELOPER"].includes(roleUpper);
+
+      if (!isAllowed) {
+        res.status(403).json({
+          success: false,
+          message: "Akses ditolak. Penghapusan data survei RW secara permanen (hard delete) khusus dibatasi untuk Super Admin atau Developer.",
+        });
+        return;
+      }
+
+      await surveyService.deleteSurvey(id);
 
       res.status(200).json({
         success: true,
-        message: "Survei berhasil dihapus.",
+        message: "Survei RW dan seluruh riwayat revisinya berhasil dihapus secara permanen.",
       });
     } catch (error: any) {
       console.error("Error deleteSurvey:", error);
-      const statusCode =
-        error.message === "FORBIDDEN" ? 403 : error.message === "NOT_FOUND" ? 404 : 500;
-      const message =
-        error.message === "FORBIDDEN"
-          ? "Anda hanya berhak menghapus data survei milik Anda sendiri (NIM tidak cocok)."
-          : error.message === "NOT_FOUND"
-          ? "Data survei tidak ditemukan."
-          : error.message || "Gagal menghapus data survei.";
-
+      const statusCode = error.message === "NOT_FOUND" ? 404 : 500;
       res.status(statusCode).json({
         success: false,
-        message,
+        message: error.message === "NOT_FOUND" ? "Data survei tidak ditemukan." : "Gagal menghapus data survei.",
+      });
+    }
+  },
+
+  getSurveyRiwayat: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const survey = await surveyService.getSurveyRiwayat(id);
+      if (!survey) {
+        res.status(404).json({
+          success: false,
+          message: "Data survei tidak ditemukan.",
+        });
+        return;
+      }
+      res.status(200).json({
+        success: true,
+        data: survey,
+      });
+    } catch (error: any) {
+      console.error("Error getSurveyRiwayat:", error);
+      res.status(500).json({
+        success: false,
+        message: "Gagal mengambil riwayat revisi survei.",
       });
     }
   },

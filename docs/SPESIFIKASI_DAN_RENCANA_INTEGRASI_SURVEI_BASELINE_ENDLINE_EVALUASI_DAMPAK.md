@@ -250,6 +250,38 @@ Sesuai aturan `AGENTS.md` (Iterative Backlog ➡️ QC Loop: 1 item backlog ➡�
 
 ---
 
+### 📌 FASE 6: Collaborative Auto Pre-Fill & Baseline-to-Endline Inheritance
+- [x] **BACKLOG-6: Penyelarasan Pengisian Kolaboratif Form `/survey/`**
+  - **6.1. Backend API (`surveyService.ts` & `surveyController.ts`):**
+    - Perkaya endpoint `GET /api/v1/survey/check-rw` mengembalikan objek survei lengkap, `hasBaseline`, dan `baselineSurvey`.
+    - Tambahkan validasi prasyarat di `submitSurvey`: tolak survei Endline jika RW belum memiliki Baseline (`BASELINE_REQUIRED`).
+  - **6.2. Frontend Form (`apps/web/public/survey/index.html`):**
+    - Mode Edit / Update: pre-fill otomatis data survei RW yang sudah ada tanpa menimpa NIM & identitas pengisi saat ini.
+    - Mode Gating Endline: kunci submit dan tampilkan banner peringatan merah jika Endline dipilih pada RW tanpa Baseline.
+    - Mode Pewarisan (Inheritance): otomatis isi demografi & karakteristik awal dari Baseline ke form Endline.
+    - Auto-update WhatsApp: nomor WhatsApp aktif selalu sinkron berganti mengikuti nomor mahasiswa baru saat ganti NIM.
+  - **QC Gate 6:**
+    - `cd apps/api && npx tsc --noEmit` (0 error - PASS)
+    - `cd apps/web && npx tsc --noEmit` (0 error - PASS)
+
+---
+
+### 📌 FASE 7: Isolasi Scope & Segmented Filter Tahap Rekap pada Tab Data Masuk
+- [x] **BACKLOG-7: Penyelarasan Tab Data Masuk & Card Rekap Volume**
+  - **7.1. Segmented Filter Kapsul `[ Semua ] [ Baseline ] [ Endline ]`:**
+    - Menambahkan tombol kapsul interaktif pada header Card Rekap Volume.
+    - Mengintegrasikan styling CSS modern dengan indikator warna status Baseline (kuning) dan Endline (hijau).
+  - **7.2. Dynamic Computation Engine (`computeRekapFromSurveys`):**
+    - Rekap dihitung langsung dari subset data survei yang aktif sesuai scope saat ini (`scopedSurveys`).
+    - Tab `Survei Saya`: Rekap khusus menghitung data milik surveyor terkait.
+    - Tab `Kelompok Saya`: Rekap khusus menghitung data milik kelompok KKN terkait.
+    - Tab `Semua Wilayah`: Rekap menghitung akumulasi se-Coblong (atau filter kelurahan yang dipilih).
+  - **QC Gate 7:**
+    - `cd apps/api && npx tsc --noEmit` (0 error - PASS)
+    - `cd apps/web && npx tsc --noEmit` (0 error - PASS)
+
+---
+
 ## ✅ 7. KRITERIA KEBERHASILAN (DEFINITION OF DONE)
 1. **Tidak Ada Data Hilang:** Seluruh data baseline lama di VPS Staging/Prod tetap utuh dan terbaca dengan benar.
 2. **Angka Konsisten:** Tidak ada lagi angka persentase ganda seperti `0.25%` berdampingan dengan `42.5%`. Semua tampil rapi dalam skala `0 - 100%`.

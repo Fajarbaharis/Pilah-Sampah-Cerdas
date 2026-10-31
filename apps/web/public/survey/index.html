@@ -201,20 +201,24 @@ input:focus,select:focus,textarea:focus{border-color:var(--g);box-shadow:0 0 0 4
 .btn-sm{padding:8px 12px;min-height:38px;font-size:14px}
 
 /* data view */
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}
-.toolbar input{max-width:280px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search-wrap{position:relative;display:flex;align-items:center;flex:1;max-width:320px;min-width:220px}
+.search-wrap .search-icon{position:absolute;left:13px;color:var(--muted);pointer-events:none}
+.search-wrap input{padding-left:38px;width:100%;max-width:none}
 .scope-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:var(--card);padding:10px 14px;border-radius:14px;border:1px solid var(--line);margin-bottom:14px;box-shadow:var(--shadow)}
 .scope-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .scope-chip{border:1px solid var(--line);background:var(--bg);color:var(--muted);padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:.15s}
-.scope-chip:hover{background:var(--g-ll);color:var(--g-d);border-color:var(--g)}
+.scope-chip:hover:not(:disabled){background:var(--g-ll);color:var(--g-d);border-color:var(--g)}
 .scope-chip.active{background:var(--g);color:#fff;border-color:var(--g);box-shadow:0 2px 6px rgba(0,153,102,.25)}
+.scope-chip.disabled, .scope-chip:disabled{opacity:.4;cursor:not-allowed;background:#f1f5f9;color:#94a3b8;border-color:#cbd5e1;filter:grayscale(1);box-shadow:none}
+.scope-chip.disabled:hover, .scope-chip:disabled:hover{background:#f1f5f9;color:#94a3b8;border-color:#cbd5e1}
 .scope-chip .chip-count{font-size:11px;padding:1px 7px;border-radius:999px;background:rgba(0,0,0,.08);font-weight:700}
 .scope-chip.active .chip-count{background:rgba(255,255,255,.25);color:#fff}
 .scope-meta{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .scope-meta b{color:var(--ink);font-weight:700}
 .scope-alert{background:#fffbeb;border:1px solid #fef3c7;color:#92400e;padding:10px 14px;border-radius:12px;font-size:12.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.scope-select{border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:13px;font-weight:600;padding:7px 12px;border-radius:10px;outline:none}
-.scope-select:focus{border-color:var(--g)}
+.scope-select{width:auto !important;max-width:180px;min-height:46px;height:46px;border:1.5px solid var(--line);background-color:var(--card);color:var(--ink);font-size:13.5px;font-weight:600;padding:0 34px 0 12px;border-radius:12px;outline:none;transition:border-color .15s,box-shadow .15s}
+.scope-select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(11,168,74,.14)}
 .sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
 .sum div{background:var(--card);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
 .sum b{display:block;font-size:26px;color:var(--g-d);line-height:1.1}
@@ -228,6 +232,26 @@ table.data td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:
 .pill.end{background:var(--g-l);color:var(--g-d)}
 .empty{text-align:center;padding:48px 16px;color:var(--muted)}
 .empty img{width:64px;margin:0 auto 12px;opacity:.85}
+
+/* pagination bar */
+.pagination-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--card);border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r);font-size:13px;color:var(--muted);flex-wrap:wrap}
+.pagination-info b{color:var(--ink);font-weight:600}
+.pagination-controls{display:inline-flex;align-items:center;gap:4px}
+.pg-btn{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s}
+.pg-btn:hover:not(:disabled){background:var(--g-ll);border-color:var(--g);color:var(--g-d)}
+.pg-btn:disabled{opacity:.45;cursor:not-allowed;background:#f8faf9;border-color:var(--line)}
+.pg-btn.active{background:var(--g);border-color:var(--g);color:#fff;cursor:default}
+.pg-dots{padding:0 4px;color:var(--muted)}
+
+/* rekap tabs header */
+.rekap-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.rekap-header .card-h{margin-bottom:0;flex:1;min-width:280px}
+.rekap-tabs{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px;box-shadow:inset 0 1px 2px rgba(0,0,0,.03)}
+.rekap-tab-btn{border:none;background:transparent;color:var(--muted);padding:5px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.rekap-tab-btn:hover{color:var(--ink)}
+.rekap-tab-btn.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.rekap-tab-btn.active[data-tahap="Baseline"]{color:#8A5A00;background:#FFF3D6}
+.rekap-tab-btn.active[data-tahap="Endline"]{color:var(--g-d);background:var(--g-l)}
 
 /* modal + toast */
 .modal{position:fixed;inset:0;background:rgba(11,30,20,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
@@ -612,6 +636,18 @@ table.data td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:
   background: #fffbeb;
   border-color: #fde68a;
 }
+.detail-inset.red {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.detail-inset.blue {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.detail-inset.purple {
+  background: #faf5ff;
+  border-color: #e9d5ff;
+}
 .detail-inset-title {
   font-size: 11.5px;
   font-weight: 700;
@@ -630,6 +666,15 @@ table.data td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:
 }
 .detail-inset.amber .detail-inset-title {
   color: #92400e;
+}
+.detail-inset.red .detail-inset-title {
+  color: #991b1b;
+}
+.detail-inset.blue .detail-inset-title {
+  color: #1e40af;
+}
+.detail-inset.purple .detail-inset-title {
+  color: #6b21a8;
 }
 @media print {
   body.printing-modal header, body.printing-modal main, body.printing-modal .actions, body.printing-modal .tabs { display: none !important; }
@@ -707,7 +752,7 @@ table.data td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:
                   <line x1="8" y1="2" x2="8" y2="6"/>
                   <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                <input type="text" id="tanggalDisplay" placeholder="DD/MM/YYYY (cth: 30/10/2026)" inputmode="numeric" maxlength="10" autocomplete="off">
+                <input type="text" id="tanggalDisplay" placeholder="DD/MM/YYYY" inputmode="numeric" maxlength="10" autocomplete="off">
                 <input type="date" id="tanggal" name="tanggal" required class="native-date-hidden" tabindex="-1" aria-hidden="true">
                 <button type="button" class="btn-open-calendar" id="btnPickDate" title="Pilih Tanggal dari Kalender">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -720,8 +765,8 @@ table.data td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:
           <div class="field col-all">
             <span class="lbl" id="lbl-tahap">Tahap survey<span class="req">*</span></span>
             <div class="seg" role="radiogroup" aria-labelledby="lbl-tahap">
-              <label><input type="radio" name="tahap" value="Baseline"><span class="opt"><span class="dot"></span><span><b>Baseline (Awal)</b><small>Kondisi sebelum program KKN berjalan</small></span></span></label>
-              <label><input type="radio" name="tahap" value="Endline" checked required><span class="opt"><span class="dot"></span><span><b>Endline (Akhir)</b><small>Kondisi setelah program KKN selesai</small></span></span></label>
+              <label><input type="radio" name="tahap" value="Baseline" required><span class="opt"><span class="dot"></span><span><b>Baseline (Awal)</b><small>Kondisi sebelum program KKN berjalan</small></span></span></label>
+              <label><input type="radio" name="tahap" value="Endline" required><span class="opt"><span class="dot"></span><span><b>Endline (Akhir)</b><small>Kondisi setelah program KKN selesai</small></span></span></label>
             </div>
             <div class="err-msg">Pilih baseline atau endline.</div>
           </div>
@@ -985,17 +1030,17 @@ table.data td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:
     <!-- Scope Selector & Surveyor Identity -->
     <div class="scope-bar" id="scopeBar">
       <div class="scope-chips" id="scopeChips">
-        <button type="button" class="scope-chip active" data-scope="kelompok" id="btnScopeKelompok">
+        <button type="button" class="scope-chip disabled" data-scope="kelompok" id="btnScopeKelompok" disabled title="Verifikasi NIM Anda pada tab Isi Survey untuk mengakses data kelompok">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span>Kelompok Saya</span>
           <span class="chip-count" id="chipCountKelompok">0</span>
         </button>
-        <button type="button" class="scope-chip" data-scope="saya" id="btnScopeSaya">
+        <button type="button" class="scope-chip disabled" data-scope="saya" id="btnScopeSaya" disabled title="Verifikasi NIM Anda pada tab Isi Survey untuk mengakses data survei pribadi">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <span>Survei Saya</span>
           <span class="chip-count" id="chipCountSaya">0</span>
         </button>
-        <button type="button" class="scope-chip" data-scope="semua" id="btnScopeSemua">
+        <button type="button" class="scope-chip active" data-scope="semua" id="btnScopeSemua">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
           <span>Semua Wilayah</span>
           <span class="chip-count" id="chipCountSemua">0</span>
@@ -1019,12 +1064,39 @@ table.data td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:
       <div><b id="sumRW">0</b><small>RW tercakup</small></div>
     </div>
     <div class="card">
-      <div class="card-h" style="margin-bottom:10px"><div class="badge">Σ</div><div><h2>Rekap Volume per Kelurahan</h2><p>Penjumlahan total volume seluruh RW, dipisah baseline dan endline.</p></div></div>
+      <div class="rekap-header">
+        <div class="card-h">
+          <div class="badge">Σ</div>
+          <div>
+            <h2>Rekap Volume per Kelurahan</h2>
+            <p>Penjumlahan total volume seluruh RW, dipisah baseline dan endline.</p>
+          </div>
+        </div>
+        <div class="rekap-tabs" id="rekapTahapTabs" role="tablist" aria-label="Filter Tahap Rekap">
+          <button type="button" class="rekap-tab-btn active" data-tahap="semua">Semua</button>
+          <button type="button" class="rekap-tab-btn" data-tahap="Baseline">Baseline</button>
+          <button type="button" class="rekap-tab-btn" data-tahap="Endline">Endline</button>
+        </div>
+      </div>
       <div class="tbl-wrap" style="box-shadow:none;border:1px solid var(--line)"><table class="data" style="min-width:560px"><thead><tr><th>Kelurahan</th><th>Tahap</th><th>RW</th><th>Organik</th><th>Anorganik</th><th>Residu</th><th>Total/hari</th><th>Rata pemilahan</th></tr></thead><tbody id="rekapBody"></tbody></table></div>
     </div>
-    <div class="toolbar">
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; flex:1;">
-        <input type="text" id="cari" placeholder="Cari nama, NIM, kelurahan, RW…" aria-label="Cari data">
+    <div class="card">
+      <div class="rekap-header">
+        <div class="card-h">
+          <div class="badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div>
+            <h2 id="tableDataTitle">Data Survei Semua Wilayah</h2>
+            <p id="tableDataSubtitle">Menampilkan seluruh data survei yang masuk dari semua kelurahan dan RW.</p>
+          </div>
+        </div>
+      </div>
+      <div class="toolbar" style="margin-bottom:14px;">
+        <div class="search-wrap">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="cari" placeholder="Cari nama, NIM, kelurahan, RW…" aria-label="Cari data">
+        </div>
         <select id="filterKelData" class="scope-select" style="display:none;" aria-label="Filter Kelurahan">
           <option value="">Semua Kelurahan</option>
           <option value="Sadang Serang">Sadang Serang</option>
@@ -1035,13 +1107,14 @@ table.data td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:
           <option value="Cipaganti">Cipaganti</option>
         </select>
       </div>
-      <div class="btns" style="flex-wrap:wrap">
-        <button class="btn btn-sec btn-sm" type="button" id="btnCsv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Unduh CSV</button>
-        <button class="btn btn-ghost btn-sm" type="button" id="btnJson">Unduh JSON</button>
+      <div class="tbl-wrap" style="box-shadow:none;border:1px solid var(--line)">
+        <table class="data"><thead><tr><th>Waktu</th><th>Tahap</th><th>Wilayah</th><th>Pelaku survey</th><th>Pemilahan</th><th>Volume/hari</th><th></th></tr></thead><tbody id="dataBody"></tbody></table>
+        <!-- Widget Pagination Navigasi -->
+        <div class="pagination-bar" id="paginationBar" style="display:none;">
+          <div class="pagination-info" id="paginationInfo">Menampilkan 0 data</div>
+          <div class="pagination-controls" id="paginationControls"></div>
+        </div>
       </div>
-    </div>
-    <div class="tbl-wrap">
-      <table class="data"><thead><tr><th>Waktu</th><th>Tahap</th><th>Wilayah</th><th>Pelaku survey</th><th>Pemilahan</th><th>Volume/hari</th><th></th></tr></thead><tbody id="dataBody"></tbody></table>
     </div>
   </section>
 </main>
@@ -1081,13 +1154,28 @@ table.data td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:
   </div>
 </div>
 
+<div class="modal" id="errModal" role="dialog" aria-modal="true" aria-labelledby="errTitle">
+  <div class="modal-box">
+    <div class="ok" style="background:#fee2e2; color:#b91c1c;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <h3 id="errTitle" style="color:#991b1b;">Gagal Mengirim ke Server</h3>
+    <p id="errText" style="color:var(--ink); font-size:14px; line-height:1.5;">Pesan kesalahan server.</p>
+    <div style="font-size:12px; color:var(--muted); margin-top:8px; padding:10px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; text-align:left;">
+      💡 <b>Catatan:</b> Isian formulir Anda tetap tersimpan aman di peramban ini. Silakan periksa kembali isian Anda sesuai petunjuk di atas, lalu coba kirim ulang.
+    </div>
+    <div class="btns" style="margin-top:16px;">
+      <button class="btn btn-pri" type="button" id="errCloseBtn" style="background:#b91c1c; border-color:#991b1b; color:#fff;">Perbaiki Isian</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="dModalTitle">
   <div class="modal-box detail-modal-box">
     <div class="detail-header">
       <div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
           <span class="pill" id="dModalPill">Baseline 2026</span>
-          <span style="font-size:12px; color:var(--muted); font-family:monospace;" id="dModalKode">BRS-XXXX</span>
         </div>
         <h3 id="dModalTitle" style="font-size:20px; font-weight:700; color:var(--ink); margin:0;">Lembar Hasil Survei RW</h3>
         <p style="font-size:13px; color:var(--muted); margin:2px 0 0;" id="dModalSub">Kelurahan · RW · Coblong</p>
@@ -1166,10 +1254,11 @@ const yDefault = String(Math.min(Math.max(yNow, CONFIG.tahunMulai), CONFIG.tahun
 let yHtml = opt("", "Pilih tahun");
 for (let y = CONFIG.tahunSampai; y >= CONFIG.tahunMulai; y--) yHtml += opt(y);
 $("#tahun").innerHTML = yHtml;
-$("#tahun").value = yDefault;
-$("#tanggal").value = todayStr();
+$("#tahun").value = "";
+$("#tanggal").value = "";
 $("#tanggal").max = todayStr();
 $("#tanggal").min = CONFIG.tahunMulai + "-01-01";
+syncTanggalDisplay();
 
 /* --- Format Tanggal/Bulan/Tahun Interaktif --- */
 function syncTanggalDisplay() {
@@ -1265,8 +1354,42 @@ try {
 let currentScope = CURRENT_STUDENT ? "kelompok" : "semua"; // "kelompok" | "saya" | "semua"
 let studentVerifiedKelompok = CURRENT_STUDENT ? (CURRENT_STUDENT.kelompok || null) : null;
 let studentCakupanRw = CURRENT_STUDENT ? (CURRENT_STUDENT.cakupanRw || null) : null;
+let currentPage = 1;
+const PAGE_SIZE = 10;
 
 function updateScopeUi() {
+  const isGuest = !CURRENT_STUDENT;
+  if (isGuest && currentScope !== "semua") {
+    currentScope = "semua";
+  }
+
+  const btnKelompok = $("#btnScopeKelompok");
+  const btnSaya = $("#btnScopeSaya");
+
+  if (isGuest) {
+    if (btnKelompok) {
+      btnKelompok.disabled = true;
+      btnKelompok.classList.add("disabled");
+      btnKelompok.title = "Verifikasi NIM Anda pada tab Isi Survey untuk mengakses data kelompok";
+    }
+    if (btnSaya) {
+      btnSaya.disabled = true;
+      btnSaya.classList.add("disabled");
+      btnSaya.title = "Verifikasi NIM Anda pada tab Isi Survey untuk mengakses data survei pribadi";
+    }
+  } else {
+    if (btnKelompok) {
+      btnKelompok.disabled = false;
+      btnKelompok.classList.remove("disabled");
+      btnKelompok.title = "";
+    }
+    if (btnSaya) {
+      btnSaya.disabled = false;
+      btnSaya.classList.remove("disabled");
+      btnSaya.title = "";
+    }
+  }
+
   $$(".scope-chip").forEach(b => {
     b.classList.toggle("active", b.dataset.scope === currentScope);
   });
@@ -1276,12 +1399,33 @@ function updateScopeUi() {
   }
   const alertEl = $("#unverifiedScopeAlert");
   if (alertEl) {
-    alertEl.style.display = (!CURRENT_STUDENT && currentScope !== "semua") ? "flex" : "none";
+    alertEl.style.display = isGuest ? "flex" : "none";
+  }
+
+  const titleEl = $("#tableDataTitle");
+  const subEl = $("#tableDataSubtitle");
+  if (titleEl && subEl) {
+    if (currentScope === "kelompok") {
+      titleEl.textContent = "Data Survei Kelompok Saya";
+      const kelNama = CURRENT_STUDENT && CURRENT_STUDENT.kelompok ? CURRENT_STUDENT.kelompok : "kelompok Anda";
+      subEl.textContent = `Menampilkan data survei yang dikirimkan oleh ${kelNama}.`;
+    } else if (currentScope === "saya") {
+      titleEl.textContent = "Data Survei Saya";
+      subEl.textContent = "Menampilkan riwayat data survei yang Anda kirimkan sendiri.";
+    } else {
+      titleEl.textContent = "Data Survei Semua Wilayah";
+      subEl.textContent = "Menampilkan seluruh data survei yang masuk dari semua kelurahan dan RW.";
+    }
   }
 }
 
 function setScope(scope) {
+  if (!CURRENT_STUDENT && scope !== "semua") {
+    toast("Verifikasi NIM Anda pada tab Isi Survey untuk membuka filter Kelompok Saya dan Survei Saya", true);
+    return;
+  }
   currentScope = scope;
+  currentPage = 1;
   updateScopeUi();
   if (SERVER_DATA) {
     renderServerData(SERVER_DATA);
@@ -1386,6 +1530,127 @@ function fillRw() {
   checkRwStatus();
 }
 
+let lastLoadedRwKey = "";
+
+function clearSurveyDataInputs() {
+  $$("#f input, #f select, #f textarea").forEach(el => {
+    if (!el.name || ["kota", "kecamatan", "kelurahan", "rw", "nim", "nama", "prodi", "kelompok", "wa", "tahap", "tahun"].includes(el.name)) return;
+    if (el.type === "checkbox") {
+      el.checked = false;
+    } else if (el.type === "radio") {
+      el.checked = false;
+    } else {
+      el.value = "";
+    }
+  });
+  $$("input[data-other]").forEach(cb => {
+    const box = $("#box-" + cb.dataset.other);
+    if (box) box.classList.toggle("show", false);
+  });
+  syncTanggalDisplay();
+  syncRumahTotalFromKk();
+  calcPilah();
+  calcVol();
+  refreshCards();
+  showInlineWarns();
+  updateProgress();
+}
+
+function parseArrayField(v) {
+  if (!v) return [];
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string") {
+    try {
+      const p = JSON.parse(v);
+      if (Array.isArray(p)) return p;
+    } catch {
+      return v.split(",").map(s => s.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
+function populateFromExistingSurvey(s, isInherited) {
+  if (!s) return;
+
+  const o = {};
+  if (s.jumlahRt != null) o.jml_rt = s.jumlahRt;
+  if (s.jumlahKk != null) o.jml_kk = s.jumlahKk;
+  if (s.karakter != null) o.karakter = parseArrayField(s.karakter);
+  if (s.karakterLain) o.karakter_lain = s.karakterLain;
+  if (s.jumlahKos != null) o.jml_kos = s.jumlahKos;
+  if (s.jumlahUmkm != null) o.jml_umkm = s.jumlahUmkm;
+
+  if (s.rumahPilah != null) o.rumah_pilah = s.rumahPilah;
+  if (s.rumahTotal != null) o.rumah_total = s.rumahTotal;
+  if (s.tingkatPilah) o.tingkat_pilah = s.tingkatPilah;
+
+  if (s.bankSampahAktif != null) o.bs_aktif = s.bankSampahAktif;
+  if (s.bankSampahTidakAktif != null) o.bs_nonaktif = s.bankSampahTidakAktif;
+  if (s.unitKomposter != null) o.komposter = s.unitKomposter;
+  if (s.titikMaggot != null) o.maggot = s.titikMaggot;
+  if (s.keteranganBankSampah) o.bs_catatan = s.keteranganBankSampah;
+  if (s.teknologi != null) o.teknologi = parseArrayField(s.teknologi);
+  if (s.teknologiLain) o.teknologi_lain = s.teknologiLain;
+
+  if (s.volumeOrganik != null) o.vol_organik = Number(s.volumeOrganik);
+  if (s.volumeAnorganik != null) o.vol_anorganik = Number(s.volumeAnorganik);
+  if (s.volumeResidu != null) o.vol_residu = Number(s.volumeResidu);
+
+  if (s.prioritas) o.prioritas = s.prioritas;
+  if (s.risiko) o.risiko = s.risiko;
+
+  // Tanggal survei: jika bukan pewarisan (edit data yang sama), gunakan tanggal survei yang tersimpan
+  if (!isInherited && s.tanggalSurvei) {
+    try {
+      const dtStr = new Date(s.tanggalSurvei).toISOString().slice(0, 10);
+      o.tanggal = dtStr;
+    } catch {}
+  }
+
+  // Key Player
+  let kpList = [];
+  if (Array.isArray(s.keyPlayer)) kpList = s.keyPlayer;
+  else if (typeof s.keyPlayer === "string") {
+    try { kpList = JSON.parse(s.keyPlayer); } catch {}
+  }
+  AKTOR.forEach((a, idx) => {
+    const match = kpList.find(k => (k.aktor || k.jenis || k.jenisAktor) === a) || kpList[idx];
+    if (match) {
+      if (match.nama) o[`kp_${idx}_nama`] = match.nama;
+      if (match.kontak) o[`kp_${idx}_kontak`] = match.kontak;
+      if (match.peran) o[`kp_${idx}_peran`] = match.peran;
+    }
+  });
+
+  // Terapkan ke form (kecuali identitas mahasiswa dan wilayah utama)
+  $$("#f input, #f select, #f textarea").forEach(el => {
+    if (!el.name || ["kota", "kecamatan", "kelurahan", "rw", "nim", "nama", "prodi", "kelompok", "wa", "tahap", "tahun"].includes(el.name)) return;
+    const v = o[el.name];
+    if (el.type === "checkbox") {
+      el.checked = Array.isArray(v) && v.includes(el.value);
+    } else if (el.type === "radio") {
+      el.checked = v === el.value;
+    } else if (v !== undefined) {
+      el.value = v;
+    }
+  });
+
+  // Sinkronkan elemen 'lainnya'
+  $$("input[data-other]").forEach(cb => {
+    const otherBox = $("#box-" + cb.dataset.other);
+    if (otherBox) otherBox.classList.toggle("show", cb.checked);
+  });
+
+  syncTanggalDisplay();
+  syncRumahTotalFromKk();
+  calcPilah();
+  calcVol();
+  refreshCards();
+  showInlineWarns();
+  updateProgress();
+}
+
 async function checkRwStatus() {
   const box = $("#rwWarningBox");
   if (!box) return;
@@ -1394,39 +1659,135 @@ async function checkRwStatus() {
   const tahapEl = $('input[name="tahap"]:checked');
   const tahapVal = tahapEl ? tahapEl.value : "Endline";
   const tahunVal = $("#tahun") ? $("#tahun").value : "2026";
+  const btnSubmit = $("#btnSubmit");
 
   if (!kelVal || !rwVal) {
     box.style.display = "none";
     box.innerHTML = "";
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.style.opacity = "";
+      btnSubmit.style.cursor = "";
+    }
+    clearSurveyDataInputs();
+    lastLoadedRwKey = "";
     return;
   }
+
+  const currentKey = `${kelVal}|${rwVal}|${tahapVal}|${tahunVal}`;
 
   try {
     const url = CONFIG.checkRwEndpoint + "?kelurahan=" + encodeURIComponent(kelVal) + "&rw=" + encodeURIComponent(rwVal) + "&tahap=" + encodeURIComponent(tahapVal) + "&tahun=" + encodeURIComponent(tahunVal);
     const res = await fetch(url);
     const json = await res.json();
-    if (res.ok && json.success && json.data && json.data.exists && json.data.survey) {
-      const s = json.data.survey;
-      const tgl = new Date(s.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-      box.className = "detail-inset amber";
-      box.style.display = "block";
-      box.innerHTML = `
-        <div class="detail-inset-title" style="margin-bottom:4px; font-weight:700;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          Perhatian: ${esc(s.rw)} ${esc(s.kelurahan)} Sudah Pernah Disurvei (${esc(s.tahap)})
-        </div>
-        <div style="font-size:12px; line-height:1.5; color:#78350f;">
-          Wilayah ini telah disurvei tahap <b>${esc(s.tahap)}</b> oleh <b>${esc(s.namaSurveyor)}</b> (NIM: ${esc(s.nim)} · ${esc(s.kelompok)}) pada <b>${esc(tgl)}</b>.<br>
-          <span style="color:#92400e;">💡 <i>Jika Anda bukan petugas survei RW ini, mohon cek kembali pilihan RW. Namun jika Anda sedang memperbarui data resmi, Anda tetap dapat melanjutkan pengisian.</i></span>
-        </div>
-      `;
+    if (res.ok && json.success && json.data) {
+      const { exists, survey, hasBaseline, baselineSurvey } = json.data;
+
+      // KASUS 1: Mahasiswa memilih Endline, tapi Baseline BELUM ada
+      if (tahapVal === "Endline" && !hasBaseline) {
+        if (btnSubmit) {
+          btnSubmit.disabled = true;
+          btnSubmit.style.opacity = "0.5";
+          btnSubmit.style.cursor = "not-allowed";
+        }
+        box.className = "detail-inset red";
+        box.style.display = "block";
+        box.innerHTML = `
+          <div class="detail-inset-title" style="margin-bottom:4px; font-weight:700;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Survei Endline Belum Dapat Diisi
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#991b1b;">
+            <b>${esc(rwVal)} ${esc(kelVal)}</b> belum memiliki data <b>Baseline (Kondisi Awal)</b>.<br>
+            Sesuai panduan evaluasi dampak KKN Tematik BERSEKA, tahap Endline hanya dapat diisi jika data survei Baseline sudah tercatat.
+            <div style="margin-top:6px; font-weight:600;">
+              👉 <i>Silakan ganti pilihan <b>Tahap Survey</b> di atas menjadi <b>Baseline</b> terlebih dahulu untuk memulai pengisian.</i>
+            </div>
+          </div>
+        `;
+        if (lastLoadedRwKey !== currentKey) {
+          clearSurveyDataInputs();
+          lastLoadedRwKey = currentKey;
+        }
+        return;
+      }
+
+      // Pastikan tombol submit aktif jika bukan kasus blokir
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.style.opacity = "";
+        btnSubmit.style.cursor = "";
+      }
+
+      // KASUS 2: Data untuk tahap saat ini SUDAH ADA (baik Baseline maupun Endline)
+      if (exists && survey) {
+        const tgl = new Date(survey.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+        box.className = "detail-inset blue";
+        box.style.display = "block";
+        box.innerHTML = `
+          <div class="detail-inset-title" style="margin-bottom:4px; font-weight:700;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            Mode Pembaruan Data ${esc(survey.tahap)} (${esc(survey.rw)} ${esc(survey.kelurahan)})
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#1e40af;">
+            Wilayah ini sebelumnya telah disurvei tahap <b>${esc(survey.tahap)}</b> oleh <b>${esc(survey.namaSurveyor)}</b> (NIM: ${esc(survey.nim)} · ${esc(survey.kelompok)}) pada <b>${esc(tgl)}</b>.<br>
+            Formulir telah otomatis memuat isian sebelumnya. Anda dapat langsung meninjau dan memperbarui angka yang perlu disesuaikan tanpa menginput ulang dari awal.
+          </div>
+        `;
+        if (lastLoadedRwKey !== currentKey) {
+          populateFromExistingSurvey(survey, false);
+          lastLoadedRwKey = currentKey;
+        }
+        return;
+      }
+
+      // KASUS 3: Mahasiswa memilih Endline, belum ada Endline, TAPI sudah ada Baseline
+      if (tahapVal === "Endline" && hasBaseline && baselineSurvey) {
+        const tgl = new Date(baselineSurvey.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+        box.className = "detail-inset purple";
+        box.style.display = "block";
+        box.innerHTML = `
+          <div class="detail-inset-title" style="margin-bottom:4px; font-weight:700;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+            Pewarisan Data Baseline (${esc(baselineSurvey.rw)} ${esc(baselineSurvey.kelurahan)})
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#6b21a8;">
+            Data demografi, karakteristik wilayah, dan estimasi awal telah dimuat otomatis dari <b>Baseline (${esc(tgl)})</b>.<br>
+            Silakan perbarui metrik capaian akhir (persentase pemilahan, berat timbulan sampah, dan bank sampah aktif) berdasarkan hasil intervensi KKN Anda.
+          </div>
+        `;
+        if (lastLoadedRwKey !== currentKey) {
+          populateFromExistingSurvey(baselineSurvey, true);
+          lastLoadedRwKey = currentKey;
+        }
+        return;
+      }
+
+      // KASUS 4: Pengisian baru bersih (misal Baseline baru belum pernah diisi)
+      box.style.display = "none";
+      box.innerHTML = "";
+      if (lastLoadedRwKey !== currentKey) {
+        clearSurveyDataInputs();
+        lastLoadedRwKey = currentKey;
+      }
     } else {
       box.style.display = "none";
       box.innerHTML = "";
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.style.opacity = "";
+        btnSubmit.style.cursor = "";
+      }
+      lastLoadedRwKey = "";
     }
   } catch (err) {
     console.warn("Gagal mengecek status RW:", err);
     box.style.display = "none";
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.style.opacity = "";
+      btnSubmit.style.cursor = "";
+    }
   }
 }
 
@@ -1771,14 +2132,6 @@ function serialize() {
 function restore(o) {
   if (!o) return;
 
-  // Restore hidden inputs wilayah resmi
-  if (o.kota && kota) kota.value = o.kota;
-  if (o.kecamatan && kec) kec.value = o.kecamatan;
-  if (o.kelurahan && kel) {
-    kel.value = o.kelurahan;
-    updateWilayahDisplay(o.kelurahan, o.kelompok);
-  }
-
   // Restore status verifikasi surveyor jika ada NIM dan nama tersimpan
   if (o.nim && o.nim.length === 8) {
     if (o.nama) {
@@ -1797,14 +2150,45 @@ function restore(o) {
     }
   }
 
+  // Jika surveyor belum terverifikasi (Mode Tamu), bersihkan data lapangan dan jangan pulihkan
+  if (!studentVerified && !(CURRENT_STUDENT && CURRENT_STUDENT.registered)) {
+    clearSurveyDataInputs();
+    return;
+  }
+
+  // Restore hidden inputs wilayah resmi
+  if (o.kota && kota) kota.value = o.kota;
+  if (o.kecamatan && kec) kec.value = o.kecamatan;
+  if (o.kelurahan && kel) {
+    kel.value = o.kelurahan;
+    updateWilayahDisplay(o.kelurahan, o.kelompok);
+  }
+
+  // Restore periode hanya jika surveyor sudah terverifikasi
+  if (o.tahun && $("#tahun")) $("#tahun").value = o.tahun;
+  if (o.tanggal && $("#tanggal")) {
+    $("#tanggal").value = o.tanggal;
+    syncTanggalDisplay();
+  }
+  if (o.tahap) {
+    const radioTahap = $(`input[name="tahap"][value="${o.tahap}"]`);
+    if (radioTahap) radioTahap.checked = true;
+  }
+
   // Restore RW jika elemen dropdown rw memiliki opsi yang cocok
   if (o.rw && rw && rw.options && [...rw.options].some(op => op.value === o.rw)) {
     rw.value = o.rw;
     checkRwStatus();
+  } else {
+    // Jika RW belum dipilih, bersihkan data lapangan
+    clearSurveyDataInputs();
+    return;
   }
 
+  // Pulihkan data lapangan jika RW terpilih
+  const reservedFields = ["kota", "kecamatan", "kelurahan", "rw", "nim", "nama", "prodi", "kelompok", "wa", "tahap", "tahun", "tingkat_pilah"];
   $$("#f input, #f select, #f textarea").forEach(el => {
-    if (!el.name || ["kota", "kecamatan", "kelurahan", "rw", "tingkat_pilah"].includes(el.name)) return;
+    if (!el.name || reservedFields.includes(el.name)) return;
     const v = o[el.name];
     if (el.type === "checkbox") el.checked = Array.isArray(v) && v.includes(el.value);
     else if (el.type === "radio") el.checked = v === el.value;
@@ -1818,6 +2202,7 @@ let saveT;
 function saveDraft() {
   clearTimeout(saveT);
   saveT = setTimeout(() => {
+    if (!studentVerified || !rw || !rw.value) return;
     const ok = store.set(K_DRAFT, serialize());
     const t = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
     $("#saveSt").textContent = ok ? `Draf tersimpan ${t}` : "Draf tidak dapat disimpan di browser ini";
@@ -1837,6 +2222,14 @@ function trySubmit() {
   if (!studentVerified) {
     toast("Harap masukkan dan verifikasi NIM Mahasiswa KKN terlebih dahulu", true);
     goTo($("#nim"));
+    return;
+  }
+  const tahapEl = $('input[name="tahap"]:checked');
+  const tahapVal = tahapEl ? tahapEl.value : "Endline";
+  const box = $("#rwWarningBox");
+  if (tahapVal === "Endline" && box && box.classList.contains("red") && box.style.display !== "none") {
+    toast("Survei Endline belum dapat dikirim karena data Baseline belum tersedia", true);
+    goTo($("#rw"));
     return;
   }
   $$("#f input, #f select, #f textarea").forEach(el => el.id && touched.add(el.id));
@@ -1864,7 +2257,7 @@ async function submit(warnings) {
   d.kota = "Kota Bandung";
   d.kecamatan = "Coblong";
   d.wa = d.wa.replace(/\D/g, "").replace(/^62/, "0");
-  ["vol_organik", "vol_anorganik", "vol_residu"].forEach(k => d[k] = d[k].replace(",", "."));
+  ["vol_organik", "vol_anorganik", "vol_residu"].forEach(k => d[k] = (d[k] || "0").replace(",", "."));
   const vol = ["vol_organik", "vol_anorganik", "vol_residu"].map(k => +d[k] || 0);
   const rec = Object.assign({
     id: "BRS-" + Date.now().toString(36).toUpperCase(),
@@ -1875,12 +2268,16 @@ async function submit(warnings) {
     key_player: AKTOR.map((a, i) => ({ aktor: a, nama: d[`kp_${i}_nama`] || "", kontak: (d[`kp_${i}_kontak`] || "").replace(/\D/g, ""), peran: d[`kp_${i}_peran`] || "" }))
   }, d);
   AKTOR.forEach((a, i) => { delete rec[`kp_${i}_nama`]; delete rec[`kp_${i}_kontak`]; delete rec[`kp_${i}_peran`]; });
+  if (!Array.isArray(rec.karakter)) rec.karakter = [];
   if (!rec.karakter.includes("Lainnya")) rec.karakter_lain = "";
-  if (!(rec.teknologi || []).includes("Lainnya")) rec.teknologi_lain = "";
+  if (!Array.isArray(rec.teknologi)) rec.teknologi = [];
+  if (!rec.teknologi.includes("Lainnya")) rec.teknologi_lain = "";
 
   const btn = $("#btnSubmit"); btn.disabled = true; const old = btn.innerHTML; btn.textContent = "Mengirim…";
   let sent = false;
   let serverMessage = "";
+  let errCode = "";
+
   if (CONFIG.endpoint) {
     try {
       const r = await fetch(CONFIG.endpoint, {
@@ -1894,19 +2291,49 @@ async function submit(warnings) {
         if (resJson.data && resJson.data.id) rec.id = resJson.data.id;
       } else {
         sent = false;
-        serverMessage = (resJson && resJson.message) ? resJson.message : "Gagal menyimpan ke server.";
+        errCode = (resJson && (resJson.code || resJson.error)) || "";
+        serverMessage = (resJson && resJson.message) ? resJson.message : `Gagal menyimpan ke server (Kode HTTP ${r.status}).`;
       }
     } catch (e) {
       sent = false;
+      errCode = "NETWORK_ERROR";
+      serverMessage = "Koneksi ke server gagal atau terputus. Pastikan perangkat Anda terhubung ke jaringan internet.";
     }
   }
-  rec.status_kirim = CONFIG.endpoint ? (sent ? "Terkirim ke server" : "Tersimpan lokal, gagal ke server") : "Mode demo (lokal)";
-  DATA.unshift(rec); store.set(K_DATA, DATA);
+
   btn.disabled = false; btn.innerHTML = old;
 
-  $("#mText").textContent = CONFIG.endpoint && !sent
-    ? (serverMessage ? `Catatan server: ${serverMessage}. Data dicadangkan di perangkat ini.` : "Server tidak dapat dijangkau. Data disimpan di perangkat ini dan bisa diunduh dari menu Data Masuk.")
-    : "Terima kasih, data survey sudah tercatat di database.";
+  // JIKA PENGIRIMAN GAGAL KE SERVER: Jangan buka modal sukses, tampilkan modal error transparan
+  if (CONFIG.endpoint && !sent) {
+    try { store.set(K_DRAFT, serialize()); } catch (e) {}
+    toast(serverMessage, true);
+    const errModal = $("#errModal");
+    if (errModal) {
+      $("#errText").textContent = serverMessage;
+      errModal.classList.add("show");
+      const errBtn = $("#errCloseBtn");
+      if (errBtn) {
+        errBtn.onclick = () => {
+          errModal.classList.remove("show");
+          if (errCode === "BASELINE_REQUIRED") {
+            checkRwStatus();
+            goTo($("#rw"));
+          } else if (errCode === "STUDENT_NOT_VERIFIED") {
+            goTo($("#nim"));
+          } else if (errCode === "RW_MISMATCH" || errCode === "KELURAHAN_MISMATCH") {
+            goTo($("#rw"));
+          }
+        };
+        errBtn.focus();
+      }
+    }
+    return;
+  }
+
+  rec.status_kirim = CONFIG.endpoint ? "Terkirim ke server" : "Mode demo (lokal)";
+  DATA.unshift(rec); store.set(K_DATA, DATA);
+
+  $("#mText").textContent = "Terima kasih, data survey sudah tercatat resmi di database.";
   $("#mDl").innerHTML = [["ID", rec.id], ["Tahap", rec.tahap + " " + rec.tahun], ["Wilayah", `${rec.kelurahan}, ${rec.rw}`], ["Pemilahan", fmt(rec.persen_pilah) + "%"], ["Volume", fmt(rec.vol_total) + " kg/hari"]]
     .map(([a, b]) => `<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("");
   $("#toast").classList.remove("show");
@@ -1919,10 +2346,12 @@ async function submit(warnings) {
 $("#btnSubmit").addEventListener("click", trySubmit);
 
 function resetForm(keepSurveyor) {
+  lastLoadedRwKey = "";
   const keep = keepSurveyor ? serialize() : null;
   $("#f").reset(); touched.clear();
   $$(".field.err, .other-box.err").forEach(f => f.classList.remove("err"));
-  $("#tahun").value = yDefault; $("#tanggal").value = todayStr();
+  $("#tahun").value = ""; $("#tanggal").value = "";
+  $$('input[name="tahap"]').forEach(r => r.checked = false);
   syncTanggalDisplay();
   if (keep) {
     restore({
@@ -1942,7 +2371,12 @@ function resetForm(keepSurveyor) {
     clearSurveyorIdentity();
   }
   $$("input[data-other]").forEach(cb => cb._sync());
-  calcPilah(); calcVol(); refreshCards(); showInlineWarns(); updateProgress(); store.set(K_DRAFT, serialize());
+  calcPilah(); calcVol(); refreshCards(); showInlineWarns(); updateProgress();
+  if (keep && studentVerified && rw && rw.value) {
+    store.set(K_DRAFT, serialize());
+  } else {
+    try { localStorage.removeItem(K_DRAFT); } catch (e) {}
+  }
 }
 $("#mNew").addEventListener("click", () => { $("#modal").classList.remove("show"); resetForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); toast("Data pelaku survey dan kelurahan dipertahankan"); });
 $("#mData").addEventListener("click", () => {
@@ -1960,6 +2394,40 @@ $("#btnReset").addEventListener("click", e => {
 document.addEventListener("keydown", e => { if (e.key === "Escape") { $("#modal").classList.remove("show"); $("#wModal").classList.remove("show"); } });
 
 /* ================= data masuk ================= */
+let currentRekapTahap = "semua";
+
+function computeRekapFromSurveys(surveyList, tahapFilter) {
+  if (!Array.isArray(surveyList) || surveyList.length === 0) return [];
+
+  let filtered = surveyList;
+  if (tahapFilter && tahapFilter !== "semua") {
+    filtered = surveyList.filter(s => String(s.tahap || "").toLowerCase() === tahapFilter.toLowerCase());
+  }
+
+  const latest = {};
+  filtered.forEach(d => {
+    const k = [(d.tahun || "2026"), d.tahap, d.kelurahan, d.rw].join("|");
+    if (!latest[k]) latest[k] = d;
+  });
+
+  const g = {};
+  Object.values(latest).forEach(d => {
+    const k = d.kelurahan + "|" + d.tahap + "|" + (d.tahun || "2026");
+    if (!g[k]) {
+      g[k] = { kel: d.kelurahan, tahap: d.tahap, tahun: (d.tahun || "2026"), rw: 0, o: 0, a: 0, r: 0, t: 0, p: 0 };
+    }
+    const x = g[k];
+    x.rw++;
+    x.o += Number(d.volumeOrganik != null ? d.volumeOrganik : (d.vol_organik || 0)) || 0;
+    x.a += Number(d.volumeAnorganik != null ? d.volumeAnorganik : (d.vol_anorganik || 0)) || 0;
+    x.r += Number(d.volumeResidu != null ? d.volumeResidu : (d.vol_residu || 0)) || 0;
+    x.t += Number(d.volumeTotal != null ? d.volumeTotal : (d.vol_total || 0)) || 0;
+    x.p += Number(d.persenPilah != null ? d.persenPilah : (d.persen_pilah || 0)) || 0;
+  });
+
+  return Object.values(g).sort((a, b) => a.kel.localeCompare(b.kel) || a.tahap.localeCompare(b.tahap));
+}
+
 function showView(v) {
   $$(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.view === v));
   $("#view-form").hidden = v !== "form"; $("#view-data").hidden = v !== "data";
@@ -1995,15 +2463,15 @@ function renderData() {
   if (currentScope === "saya") {
     scopedData = myNim ? allData.filter(d => String(d.nim || "").trim() === myNim) : [];
   } else if (currentScope === "kelompok") {
-    if (CURRENT_STUDENT) {
-      scopedData = allData.filter(d => {
-        const dKel = String(d.kelompok || "").trim().toLowerCase();
-        const dWil = String(d.kelurahan || "").trim().toLowerCase();
-        if (myKelompok && dKel && (dKel === myKelompok || dKel.includes(myKelompok) || myKelompok.includes(dKel))) return true;
-        if (myKelurahan && dWil && (dWil === myKelurahan || dWil.includes(myKelurahan) || myKelurahan.includes(dWil))) return true;
-        return false;
-      });
-    }
+    scopedData = CURRENT_STUDENT
+      ? allData.filter(d => {
+          const dKel = String(d.kelompok || "").trim().toLowerCase();
+          const dWil = String(d.kelurahan || "").trim().toLowerCase();
+          if (myKelompok && dKel && (dKel === myKelompok || dKel.includes(myKelompok) || myKelompok.includes(dKel))) return true;
+          if (myKelurahan && dWil && (dWil === myKelurahan || dWil.includes(myKelurahan) || myKelurahan.includes(dWil))) return true;
+          return false;
+        })
+      : [];
   } else if (currentScope === "semua") {
     const filterKel = ($("#filterKelData")?.value || "").trim().toLowerCase();
     if (filterKel) {
@@ -2017,22 +2485,27 @@ function renderData() {
   $("#sumEnd").textContent = scopedData.filter(d => d.tahap === "Endline").length;
   $("#sumRW").textContent = new Set(scopedData.map(d => d.kelurahan + "|" + d.rw)).size;
 
-  const latest = {};
-  scopedData.forEach(d => { const k = [d.tahun, d.tahap, d.kelurahan, d.rw].join("|"); if (!latest[k]) latest[k] = d; });
-  const g = {};
-  Object.values(latest).forEach(d => {
-    const k = d.kelurahan + "|" + d.tahap + "|" + d.tahun;
-    g[k] = g[k] || { kel: d.kelurahan, tahap: d.tahap, tahun: d.tahun, rw: 0, o: 0, a: 0, r: 0, t: 0, p: 0 };
-    const x = g[k]; x.rw++; x.o += +d.vol_organik || 0; x.a += +d.vol_anorganik || 0; x.r += +d.vol_residu || 0; x.t += d.vol_total || 0; x.p += d.persen_pilah || 0;
-  });
-  const rows = Object.values(g).sort((a, b) => a.kel.localeCompare(b.kel) || a.tahap.localeCompare(b.tahap));
-  $("#rekapBody").innerHTML = rows.length ? rows.map(x => `<tr><td><b>${esc(x.kel)}</b></td><td><span class="pill ${x.tahap === "Baseline" ? "base" : "end"}">${esc(x.tahap)} ${esc(x.tahun)}</span></td><td>${x.rw}</td><td>${fmt(x.o)} kg</td><td>${fmt(x.a)} kg</td><td>${fmt(x.r)} kg</td><td><b>${fmt(x.t)} kg</b></td><td>${fmt(x.p / x.rw)}%</td></tr>`).join("")
-    : `<tr><td colspan="8" class="empty" style="padding:22px">Belum ada data untuk direkap pada filter ini.</td></tr>`;
+  const rows = computeRekapFromSurveys(scopedData, currentRekapTahap);
+  $("#rekapBody").innerHTML = rows.length ? rows.map(x => `<tr><td><b>${esc(x.kel)}</b></td><td><span class="pill ${x.tahap === "Baseline" ? "base" : "end"}">${esc(x.tahap)} ${esc(x.tahun)}</span></td><td>${x.rw}</td><td>${fmt(x.o)} kg</td><td>${fmt(x.a)} kg</td><td>${fmt(x.r)} kg</td><td><b>${fmt(x.t)} kg</b></td><td>${fmt(x.p / (x.rw || 1))}%</td></tr>`).join("")
+    : `<tr><td colspan="8" class="empty" style="padding:22px">Belum ada data untuk direkap ${currentRekapTahap !== "semua" ? 'tahap ' + esc(currentRekapTahap) : ''} pada filter ini.</td></tr>`;
 
   const q = ($("#cari").value || "").toLowerCase();
   const list = scopedData.filter(d => !q || [d.nama, d.nim, d.kelurahan, d.rw, d.kelompok, d.prodi, d.tahap].join(" ").toLowerCase().includes(q));
-  $("#dataBody").innerHTML = list.length ? list.map(d => `<tr>
-    <td>${esc(new Date(d.waktu_kirim).toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }))}<br><small style="color:var(--muted)">${esc(d.id)}</small></td>
+  
+  // Pagination calculation
+  const totalItems = list.length;
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const endIdx = Math.min(startIdx + PAGE_SIZE, totalItems);
+  const pagedList = list.slice(startIdx, endIdx);
+
+  renderPaginationControls(totalItems, totalPages);
+
+  $("#dataBody").innerHTML = pagedList.length ? pagedList.map(d => `<tr>
+    <td>${esc(new Date(d.waktu_kirim).toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }))}</td>
     <td><span class="pill ${d.tahap === "Baseline" ? "base" : "end"}">${esc(d.tahap)}</span><br><small style="color:var(--muted)">${esc(d.tahun)}</small></td>
     <td><b>${esc(d.kelurahan)}</b> · ${esc(d.rw)}<br><small style="color:var(--muted)">${esc(d.kecamatan)}, ${esc(d.kota)}</small></td>
     <td>${esc(d.nama)}<br><small style="color:var(--muted)">${esc(d.nim)} · ${esc(d.kelompok)}</small></td>
@@ -2045,6 +2518,7 @@ function renderData() {
   </tr>`).join("") : `<tr><td colspan="7"><div class="empty"><img src="data:image/webp;base64,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" alt="">${DATA.length ? "Tidak ada data yang cocok dengan pencarian." : "Belum ada survey yang dikirim dari perangkat ini."}</div></td></tr>`;
 }
 function handleSearch() {
+  currentPage = 1;
   if (SERVER_DATA) {
     renderServerData(SERVER_DATA);
   } else {
@@ -2059,46 +2533,21 @@ $("#btnScopeKelompok")?.addEventListener("click", () => setScope("kelompok"));
 $("#btnScopeSaya")?.addEventListener("click", () => setScope("saya"));
 $("#btnScopeSemua")?.addEventListener("click", () => setScope("semua"));
 
+$("#rekapTahapTabs")?.addEventListener("click", e => {
+  const btn = e.target.closest(".rekap-tab-btn");
+  if (!btn) return;
+  const tahap = btn.dataset.tahap || "semua";
+  if (currentRekapTahap === tahap) return;
+  currentRekapTahap = tahap;
+  $$(".rekap-tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+  if (SERVER_DATA) renderServerData(SERVER_DATA);
+  else renderData();
+});
+
 let delArm = {};
-let delServerArm = {};
 
 $("#dataBody").addEventListener("click", async e => {
-  // 1. Hapus Server
-  const bServer = e.target.closest("[data-del-server]");
-  if (bServer) {
-    const id = bServer.dataset.delServer;
-    const nim = bServer.dataset.nim || (CURRENT_STUDENT ? CURRENT_STUDENT.nim : "");
-    if (delServerArm[id] && Date.now() - delServerArm[id] < 3000) {
-      bServer.disabled = true;
-      bServer.textContent = "Menghapus…";
-      try {
-        const url = `/api/v1/survey/${encodeURIComponent(id)}?nim=${encodeURIComponent(nim)}`;
-        const res = await fetch(url, { method: "DELETE" });
-        const resJson = await res.json().catch(() => null);
-        if (res.ok && resJson && resJson.success) {
-          toast("Survei berhasil dihapus dari server");
-          DATA = DATA.filter(d => d.id !== id);
-          store.set(K_DATA, DATA);
-          await fetchServerData();
-        } else {
-          toast(resJson?.message || "Gagal menghapus data dari server", true);
-          bServer.disabled = false;
-          bServer.textContent = "Hapus";
-        }
-      } catch (err) {
-        toast("Koneksi gagal saat menghapus data", true);
-        bServer.disabled = false;
-        bServer.textContent = "Hapus";
-      }
-      return;
-    }
-    delServerArm[id] = Date.now();
-    bServer.textContent = "Yakin?";
-    setTimeout(() => { if (bServer && bServer.textContent === "Yakin?") bServer.textContent = "Hapus"; }, 3000);
-    return;
-  }
-
-  // 2. Hapus Lokal
+  // Hapus Lokal (Draft yang belum dikirim ke server)
   const b = e.target.closest("[data-del]");
   if (b) {
     const id = b.dataset.del;
@@ -2106,7 +2555,7 @@ $("#dataBody").addEventListener("click", async e => {
       DATA = DATA.filter(d => d.id !== id);
       store.set(K_DATA, DATA);
       renderData();
-      toast("Data lokal dihapus");
+      toast("Draft survei lokal berhasil dihapus");
       return;
     }
     delArm[id] = Date.now();
@@ -2131,7 +2580,7 @@ function download(name, text, type) {
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 const COLS = [["id","ID"],["waktu_kirim","Waktu kirim"],["tahun","Tahun"],["tahap","Tahap"],["tanggal","Tanggal survey"],["nama","Nama"],["nim","NIM"],["prodi","Prodi"],["kelompok","Kelompok"],["wa","No WA"],["kota","Kab/Kota"],["kecamatan","Kecamatan"],["kelurahan","Kelurahan/Desa"],["rw","RW"],["jml_rt","Jumlah RT"],["jml_kk","Jumlah KK"],["karakter","Karakter wilayah"],["karakter_lain","Karakter lainnya"],["jml_kos","Kos/kontrakan"],["jml_umkm","UMKM/warung/kafe"],["rumah_pilah","Rumah memilah"],["rumah_total","Total rumah"],["persen_pilah","% pemilahan"],["tingkat_pilah","Tingkat pemilahan"],["bs_aktif","Bank sampah aktif"],["bs_nonaktif","Bank sampah tidak aktif"],["bs_catatan","Keterangan bank sampah"],["komposter","Komposter"],["maggot","Titik maggot/BSF"],["teknologi","Teknologi lain"],["teknologi_lain","Teknologi lainnya"],["vol_organik","Organik kg/hari"],["vol_anorganik","Anorganik kg/hari"],["vol_residu","Residu kg/hari"],["vol_total","Total kg/hari"],["prioritas","Prioritas intervensi"],["risiko","Catatan/risiko sosial"],["catatan_validasi","Catatan validasi"],["status_kirim","Status"]];
-$("#btnCsv").addEventListener("click", () => {
+$("#btnCsv")?.addEventListener("click", () => {
   if (!DATA.length) return toast("Belum ada data untuk diunduh", true);
   const cell = v => { v = Array.isArray(v) ? v.join("; ") : (v ?? ""); v = String(v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
   const kpCols = AKTOR.flatMap(a => [a + " - Nama", a + " - Kontak", a + " - Peran"]);
@@ -2139,7 +2588,7 @@ $("#btnCsv").addEventListener("click", () => {
   const lines = DATA.map(d => COLS.map(c => cell(d[c[0]])).concat((d.key_player || []).flatMap(k => [cell(k.nama), cell(k.kontak), cell(k.peran)])).join(","));
   download(`survey-berseka-${todayStr()}.csv`, "﻿" + [head.map(cell).join(",")].concat(lines).join("\n"), "text/csv;charset=utf-8");
 });
-$("#btnJson").addEventListener("click", () => {
+$("#btnJson")?.addEventListener("click", () => {
   if (!DATA.length) return toast("Belum ada data untuk diunduh", true);
   download(`survey-berseka-${todayStr()}.json`, JSON.stringify(DATA, null, 2), "application/json");
 });
@@ -2205,8 +2654,10 @@ function renderSurveyorIdentity(s) {
     updateWilayahDisplay(s.kelurahan, s.kelompok);
     fillRw();
 
-    // Auto-fill WA bila belum diisi
-    if (s.wa && !$("#wa").value.trim()) $("#wa").value = fmtPhone(s.wa);
+    // Auto-fill WA sesuai data mahasiswa yang terverifikasi
+    if ($("#wa")) {
+      $("#wa").value = s.wa ? fmtPhone(s.wa) : "";
+    }
 
     // Hapus error state jika ada
     $("#fieldNimWrap")?.classList.remove("err");
@@ -2223,6 +2674,7 @@ function clearSurveyorIdentity() {
   studentVerifiedKelompok = null;
   studentCakupanRw = null;
   CURRENT_STUDENT = null;
+  currentScope = "semua";
   try { sessionStorage.removeItem(SESSION_KEY_STUDENT); } catch (e) {}
   if (typeof updateScopeUi === "function") updateScopeUi();
 
@@ -2238,6 +2690,7 @@ function clearSurveyorIdentity() {
   if ($("#nama")) $("#nama").value = "";
   if ($("#prodi")) $("#prodi").value = "";
   if ($("#kelompok")) $("#kelompok").value = "";
+  if ($("#wa")) $("#wa").value = "";
 
   // Kunci kembali card formulir di bawahnya
   $("#lockedCardsWrap")?.classList.add("cards-locked");
@@ -2254,6 +2707,11 @@ function clearSurveyorIdentity() {
   if (badge) badge.style.display = "none";
   const box = $("#rwWarningBox");
   if (box) { box.style.display = "none"; box.innerHTML = ""; }
+  lastLoadedRwKey = "";
+
+  // Reset isian data lapangan
+  clearSurveyDataInputs();
+  try { localStorage.removeItem(K_DRAFT); } catch (e) {}
 
   updateProgress();
 }
@@ -2419,15 +2877,15 @@ function renderServerData(d) {
   if (currentScope === "saya") {
     scopedSurveys = myNim ? allSurveys.filter(s => String(s.nim || "").trim() === myNim) : [];
   } else if (currentScope === "kelompok") {
-    if (CURRENT_STUDENT) {
-      scopedSurveys = allSurveys.filter(s => {
-        const sKel = String(s.kelompok || "").trim().toLowerCase();
-        const sWil = String(s.kelurahan || "").trim().toLowerCase();
-        if (myKelompok && sKel && (sKel === myKelompok || sKel.includes(myKelompok) || myKelompok.includes(sKel))) return true;
-        if (myKelurahan && sWil && (sWil === myKelurahan || sWil.includes(myKelurahan) || myKelurahan.includes(sWil))) return true;
-        return false;
-      });
-    }
+    scopedSurveys = CURRENT_STUDENT
+      ? allSurveys.filter(s => {
+          const sKel = String(s.kelompok || "").trim().toLowerCase();
+          const sWil = String(s.kelurahan || "").trim().toLowerCase();
+          if (myKelompok && sKel && (sKel === myKelompok || sKel.includes(myKelompok) || myKelompok.includes(sKel))) return true;
+          if (myKelurahan && sWil && (sWil === myKelurahan || sWil.includes(myKelurahan) || myKelurahan.includes(sWil))) return true;
+          return false;
+        })
+      : [];
   } else if (currentScope === "semua") {
     const filterKel = ($("#filterKelData")?.value || "").trim().toLowerCase();
     if (filterKel) {
@@ -2456,23 +2914,27 @@ function renderServerData(d) {
   $("#sumRW").textContent = new Set(scopedSurveys.map(s => s.kelurahan + "|" + s.rw)).size;
 
   // 6. Render Rekap Kelurahan
-  let rekap = d.rekap || [];
-  if (currentScope === "kelompok" && myKelurahan) {
-    const filteredRekap = rekap.filter(x => String(x.kel || "").toLowerCase().includes(myKelurahan) || myKelurahan.includes(String(x.kel || "").toLowerCase()));
-    if (filteredRekap.length) rekap = filteredRekap;
-  } else if (currentScope === "semua" && $("#filterKelData")?.value) {
-    const kelVal = $("#filterKelData").value.toLowerCase();
-    rekap = rekap.filter(x => String(x.kel || "").toLowerCase() === kelVal);
-  }
+  const rekap = computeRekapFromSurveys(scopedSurveys, currentRekapTahap);
 
   $("#rekapBody").innerHTML = rekap.length ? rekap.map(x => '<tr><td><b>' + esc(x.kel) + '</b></td><td><span class="pill ' + (x.tahap === "Baseline" ? "base" : "end") + '">' + esc(x.tahap) + ' ' + esc(x.tahun) + '</span></td><td>' + x.rw + '</td><td>' + fmt(x.o) + ' kg</td><td>' + fmt(x.a) + ' kg</td><td>' + fmt(x.r) + ' kg</td><td><b>' + fmt(x.t) + ' kg</b></td><td>' + fmt(x.p / (x.rw || 1)) + '%</td></tr>').join("")
-    : '<tr><td colspan="8" class="empty">Belum ada rekap survei untuk filter ini.</td></tr>';
+    : '<tr><td colspan="8" class="empty">Belum ada rekap survei ' + (currentRekapTahap !== "semua" ? 'tahap ' + esc(currentRekapTahap) : '') + ' untuk cakupan ini.</td></tr>';
 
-  // 7. Render Data Survei RW
-  $("#dataBody").innerHTML = list.length ? list.map(s => {
+  // 7. Render Data Survei RW dengan Pagination
+  const totalItems = list.length;
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const endIdx = Math.min(startIdx + PAGE_SIZE, totalItems);
+  const pagedList = list.slice(startIdx, endIdx);
+
+  renderPaginationControls(totalItems, totalPages);
+
+  $("#dataBody").innerHTML = pagedList.length ? pagedList.map(s => {
     const isOwner = CURRENT_STUDENT && CURRENT_STUDENT.nim && (String(s.nim || "").trim() === String(CURRENT_STUDENT.nim).trim());
     return '<tr>' +
-      '<td>' + new Date(s.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) + '<br><small style="color:var(--muted); font-family:monospace;">' + esc(s.id) + '</small></td>' +
+      '<td>' + new Date(s.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) + '</td>' +
       '<td><span class="pill ' + (s.tahap === "Baseline" ? "base" : "end") + '">' + esc(s.tahap) + '</span><br><small style="color:var(--muted)">' + esc(s.tahun || "2026") + '</small></td>' +
       '<td><b>' + esc(s.kelurahan) + '</b><br><small>' + esc(s.rw) + '</small></td>' +
       '<td>' + esc(s.namaSurveyor) + '<br><small>' + esc(s.nim) + ' · ' + esc(s.kelompok) + '</small></td>' +
@@ -2480,13 +2942,90 @@ function renderServerData(d) {
       '<td><b>' + fmt(Number(s.volumeTotal)) + ' kg</b><br><small>O: ' + fmt(Number(s.volumeOrganik)) + ' kg</small></td>' +
       '<td style="white-space:nowrap; display:flex; gap:6px; align-items:center;">' +
         '<button class="btn btn-sec btn-sm" type="button" data-detail="' + esc(s.id) + '" style="padding:4px 10px; font-size:12px;">Detail</button>' +
-        (isOwner ? '<button class="btn btn-danger btn-sm" type="button" data-del-server="' + esc(s.id) + '" data-nim="' + esc(s.nim) + '" style="padding:4px 8px; font-size:12px;" title="Hapus survei saya">Hapus</button>' : '') +
+        (s.versi > 1 ? '<span style="font-size:11px; padding:2px 8px; border-radius:10px; background:#fef3c7; color:#92400e; font-weight:700;">v' + s.versi + ' • Revisi</span>' : '') +
         '<span style="font-size:11px; padding:2px 8px; border-radius:10px; background:#dcfce7; color:#166534; font-weight:600;">DB</span>' +
       '</td>' +
     '</tr>';
   }).join("")
   : '<tr><td colspan="7" class="empty">' + (list.length ? "Tidak ada hasil cocok." : (currentScope === "saya" ? "Anda belum mengisi data survei. Silakan gunakan tab Form Survey untuk menginput data lapangan." : "Belum ada survei tersimpan pada scope ini.")) + '</td></tr>';
 }
+
+/* ================= Pagination Renderer ================= */
+function renderPaginationControls(totalItems, totalPages) {
+  const bar = $("#paginationBar");
+  const info = $("#paginationInfo");
+  const ctrl = $("#paginationControls");
+  if (!bar || !info || !ctrl) return;
+
+  if (totalItems === 0) {
+    bar.style.display = "none";
+    ctrl.innerHTML = "";
+    info.innerHTML = "Menampilkan 0 data";
+    return;
+  }
+
+  bar.style.display = "flex";
+  const start = (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, totalItems);
+  info.innerHTML = `Menampilkan <b>${start}–${end}</b> dari <b>${totalItems}</b> survei`;
+
+  if (totalPages <= 1) {
+    ctrl.innerHTML = "";
+    return;
+  }
+
+  let html = `<button type="button" class="pg-btn" id="pgPrev" ${currentPage === 1 ? "disabled" : ""} title="Halaman sebelumnya" aria-label="Sebelumnya">‹</button>`;
+
+  // Hitung jendela nomor halaman (misal 1, 2, 3...)
+  const maxButtons = 5;
+  let startPage = Math.max(1, currentPage - 2);
+  let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+  if (endPage - startPage < maxButtons - 1) {
+    startPage = Math.max(1, endPage - maxButtons + 1);
+  }
+
+  if (startPage > 1) {
+    html += `<button type="button" class="pg-btn" data-page="1">1</button>`;
+    if (startPage > 2) html += `<span class="pg-dots">…</span>`;
+  }
+
+  for (let p = startPage; p <= endPage; p++) {
+    html += `<button type="button" class="pg-btn ${p === currentPage ? "active" : ""}" data-page="${p}">${p}</button>`;
+  }
+
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) html += `<span class="pg-dots">…</span>`;
+    html += `<button type="button" class="pg-btn" data-page="${totalPages}">${totalPages}</button>`;
+  }
+
+  html += `<button type="button" class="pg-btn" id="pgNext" ${currentPage === totalPages ? "disabled" : ""} title="Halaman berikutnya" aria-label="Berikutnya">›</button>`;
+  ctrl.innerHTML = html;
+}
+
+$("#paginationControls")?.addEventListener("click", e => {
+  const btn = e.target.closest("button");
+  if (!btn || btn.disabled) return;
+
+  if (btn.id === "pgPrev") {
+    if (currentPage > 1) {
+      currentPage--;
+      if (SERVER_DATA) renderServerData(SERVER_DATA); else renderData();
+    }
+    return;
+  }
+  if (btn.id === "pgNext") {
+    currentPage++;
+    if (SERVER_DATA) renderServerData(SERVER_DATA); else renderData();
+    return;
+  }
+  if (btn.dataset.page) {
+    const target = parseInt(btn.dataset.page, 10);
+    if (!isNaN(target) && target !== currentPage) {
+      currentPage = target;
+      if (SERVER_DATA) renderServerData(SERVER_DATA); else renderData();
+    }
+  }
+});
 
 const origShowView = showView;
 showView = function(v) {
@@ -2569,7 +3108,7 @@ function openDetailModal(raw) {
 
   $("#dModalPill").textContent = d.tahap + " " + d.tahun;
   $("#dModalPill").className = "pill " + (d.tahap === "Baseline" ? "base" : "end");
-  $("#dModalKode").textContent = d.id;
+  if ($("#dModalKode")) $("#dModalKode").textContent = "";
   $("#dModalSub").textContent = d.kelurahan + " · " + d.rw + " · " + d.kecamatan + ", " + d.kota + " (Tanggal: " + d.tanggal + ")";
 
   const pctOrg = d.volTotal > 0 ? ((d.volOrganik / d.volTotal) * 100).toFixed(1) : "0.0";
@@ -2847,9 +3386,18 @@ if (!studentVerified) {
   if (CURRENT_STUDENT && CURRENT_STUDENT.registered) {
     if ($("#nim")) $("#nim").value = CURRENT_STUDENT.nim || "";
     renderSurveyorIdentity(CURRENT_STUDENT);
+  } else {
+    // Mode Tamu: Bersihkan form data lapangan dan periode survey
+    clearSurveyDataInputs();
+    if ($("#tahun")) $("#tahun").value = "";
+    if ($("#tanggal")) $("#tanggal").value = "";
+    $$('input[name="tahap"]').forEach(r => r.checked = false);
+    syncTanggalDisplay();
   }
+} else if (!rw || !rw.value) {
+  clearSurveyDataInputs();
 }
-calcPilah(); calcVol(); updateProgress(); showInlineWarns();
+calcPilah(); calcVol(); updateProgress(); showInlineWarns(); updateScopeUi();
 // Inisialisasi awal: Muat data server secara otomatis agar countBadge dan metrik langsung sinkron
 fetchServerData();
 

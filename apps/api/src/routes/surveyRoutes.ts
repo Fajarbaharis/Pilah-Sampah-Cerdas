@@ -5,6 +5,7 @@
 
 import { Router } from "express";
 import { surveyController } from "../controllers/surveyController.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
@@ -14,6 +15,9 @@ router.get("/kelompok-list", surveyController.getKelompokList); // daftar kelomp
 router.get("/check-rw", surveyController.checkRw); // Cek status survei RW real-time
 router.post("/submit", surveyController.submitSurvey);
 router.get("/data", surveyController.getSurveyData);
-router.delete("/:id", surveyController.deleteSurvey);
+router.get("/:id/riwayat", surveyController.getSurveyRiwayat); // Linimasa riwayat revisi RW
+
+// Protected routes (khusus Super Admin / Developer untuk hard delete)
+router.delete("/:id", authMiddleware, surveyController.deleteSurvey);
 
 export default router;
