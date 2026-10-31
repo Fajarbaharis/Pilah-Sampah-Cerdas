@@ -1000,32 +1000,40 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/e-sertifikat/mahasiswa"
           element={
-            <ProtectedRoute allowedRoles={["DEVELOPER", "DPL", "DOSEN_PEMBIMBING", "MPL", "ADMIN_DLH", "LURAH", "CAMAT", "RW", "SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "MAHASISWA_KKN"]}>
-              <SertifikatKknPage />
-            </ProtectedRoute>
+            isStaging ? (
+              <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
+                <SertifikatKknPage />
+              </ProtectedRoute>
+            ) : (
+              <Navigate to="/dasbor" replace />
+            )
           }
         />
         <Route
           path="/e-sertifikat/dpl"
           element={
-            <ProtectedRoute allowedRoles={["DEVELOPER", "DPL", "DOSEN_PEMBIMBING", "MPL", "ADMIN_DLH", "LURAH", "CAMAT", "RW", "SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN"]}>
-              <SertifikatDplPage />
-            </ProtectedRoute>
+            isStaging ? (
+              <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
+                <SertifikatDplPage />
+              </ProtectedRoute>
+            ) : (
+              <Navigate to="/dasbor" replace />
+            )
           }
         />
         <Route
           path="/e-sertifikat"
-          element={<Navigate to="/e-sertifikat/mahasiswa" replace />}
+          element={<Navigate to={isStaging ? "/e-sertifikat/mahasiswa" : "/dasbor"} replace />}
         />
         <Route
           path="/sertifikat-dpl"
-          element={<Navigate to="/e-sertifikat/dpl" replace />}
+          element={<Navigate to={isStaging ? "/e-sertifikat/dpl" : "/dasbor"} replace />}
         />
         <Route
           path="/sertifikat-kkn"
           element={
             isStaging ? (
-              <ProtectedRoute allowedRoles={["DEVELOPER", "DPL", "DOSEN_PEMBIMBING", "MPL", "ADMIN_DLH", "LURAH", "CAMAT", "RW", "SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "MAHASISWA_KKN"]}>
+              <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
                 <SertifikatKknPage />
               </ProtectedRoute>
             ) : (
@@ -1037,7 +1045,7 @@ const AppRoutes: React.FC = () => {
           path="/penilaian-kkn/sertifikat"
           element={
             isStaging ? (
-              <ProtectedRoute allowedRoles={["DEVELOPER", "DPL", "DOSEN_PEMBIMBING", "MPL", "ADMIN_DLH", "LURAH", "CAMAT", "RW", "SUPER_USER", "PANITIA_TASKFORCE", "PIMPINAN", "MAHASISWA_KKN"]}>
+              <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
                 <SertifikatKknPage />
               </ProtectedRoute>
             ) : (

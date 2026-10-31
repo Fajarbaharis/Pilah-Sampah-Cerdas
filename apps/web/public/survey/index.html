@@ -2543,7 +2543,6 @@ $("#rekapTahapTabs")?.addEventListener("click", e => {
   if (SERVER_DATA) renderServerData(SERVER_DATA);
   else renderData();
 });
-
 let delArm = {};
 
 $("#dataBody").addEventListener("click", async e => {
@@ -2581,16 +2580,65 @@ function download(name, text, type) {
 }
 const COLS = [["id","ID"],["waktu_kirim","Waktu kirim"],["tahun","Tahun"],["tahap","Tahap"],["tanggal","Tanggal survey"],["nama","Nama"],["nim","NIM"],["prodi","Prodi"],["kelompok","Kelompok"],["wa","No WA"],["kota","Kab/Kota"],["kecamatan","Kecamatan"],["kelurahan","Kelurahan/Desa"],["rw","RW"],["jml_rt","Jumlah RT"],["jml_kk","Jumlah KK"],["karakter","Karakter wilayah"],["karakter_lain","Karakter lainnya"],["jml_kos","Kos/kontrakan"],["jml_umkm","UMKM/warung/kafe"],["rumah_pilah","Rumah memilah"],["rumah_total","Total rumah"],["persen_pilah","% pemilahan"],["tingkat_pilah","Tingkat pemilahan"],["bs_aktif","Bank sampah aktif"],["bs_nonaktif","Bank sampah tidak aktif"],["bs_catatan","Keterangan bank sampah"],["komposter","Komposter"],["maggot","Titik maggot/BSF"],["teknologi","Teknologi lain"],["teknologi_lain","Teknologi lainnya"],["vol_organik","Organik kg/hari"],["vol_anorganik","Anorganik kg/hari"],["vol_residu","Residu kg/hari"],["vol_total","Total kg/hari"],["prioritas","Prioritas intervensi"],["risiko","Catatan/risiko sosial"],["catatan_validasi","Catatan validasi"],["status_kirim","Status"]];
 $("#btnCsv")?.addEventListener("click", () => {
-  if (!DATA.length) return toast("Belum ada data untuk diunduh", true);
+  const source = (SERVER_DATA && SERVER_DATA.surveys && SERVER_DATA.surveys.length)
+    ? SERVER_DATA.surveys.map(s => ({
+        id: s.kodeSurvey || s.id,
+        waktu_kirim: s.createdAt,
+        tahun: s.tahun,
+        tahap: s.tahap,
+        tanggal: s.tanggalSurvei,
+        nama: s.namaSurveyor,
+        nim: s.nim,
+        prodi: s.prodi,
+        kelompok: s.kelompok,
+        wa: s.noWa,
+        kota: s.kota,
+        kecamatan: s.kecamatan,
+        kelurahan: s.kelurahan,
+        rw: s.rw,
+        jml_rt: s.jumlahRt,
+        jml_kk: s.jumlahKk,
+        karakter: s.karakter,
+        karakter_lain: s.karakterLain,
+        jml_kos: s.jumlahKos,
+        jml_umkm: s.jumlahUmkm,
+        rumah_pilah: s.rumahPilah,
+        rumah_total: s.rumahTotal,
+        persen_pilah: s.persenPilah,
+        tingkat_pilah: s.tingkatPilah,
+        bs_aktif: s.bankSampahAktif,
+        bs_nonaktif: s.bankSampahTidakAktif,
+        bs_catatan: s.keteranganBankSampah,
+        komposter: s.unitKomposter,
+        maggot: s.titikMaggot,
+        teknologi: s.teknologi,
+        teknologi_lain: s.teknologiLain,
+        vol_organik: s.volumeOrganik,
+        vol_anorganik: s.volumeAnorganik,
+        vol_residu: s.volumeResidu,
+        vol_total: s.volumeTotal,
+        prioritas: s.prioritas,
+        risiko: s.risiko,
+        catatan_validasi: s.catatanValidasi,
+        status_kirim: s.status,
+        key_player: s.keyPlayer
+      }))
+    : DATA;
+
+  if (!source.length) return toast("Belum ada data untuk diunduh", true);
   const cell = v => { v = Array.isArray(v) ? v.join("; ") : (v ?? ""); v = String(v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
   const kpCols = AKTOR.flatMap(a => [a + " - Nama", a + " - Kontak", a + " - Peran"]);
   const head = COLS.map(c => c[1]).concat(kpCols);
-  const lines = DATA.map(d => COLS.map(c => cell(d[c[0]])).concat((d.key_player || []).flatMap(k => [cell(k.nama), cell(k.kontak), cell(k.peran)])).join(","));
+  const lines = source.map(d => COLS.map(c => cell(d[c[0]])).concat((d.key_player || []).flatMap(k => [cell(k.nama), cell(k.kontak), cell(k.peran)])).join(","));
   download(`survey-berseka-${todayStr()}.csv`, "﻿" + [head.map(cell).join(",")].concat(lines).join("\n"), "text/csv;charset=utf-8");
 });
+
 $("#btnJson")?.addEventListener("click", () => {
-  if (!DATA.length) return toast("Belum ada data untuk diunduh", true);
-  download(`survey-berseka-${todayStr()}.json`, JSON.stringify(DATA, null, 2), "application/json");
+  const source = (SERVER_DATA && SERVER_DATA.surveys && SERVER_DATA.surveys.length)
+    ? SERVER_DATA.surveys
+    : DATA;
+  if (!source.length) return toast("Belum ada data untuk diunduh", true);
+  download(`survey-berseka-${todayStr()}.json`, JSON.stringify(source, null, 2), "application/json");
 });
 
 /* ================= init ================= */

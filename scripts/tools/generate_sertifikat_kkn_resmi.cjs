@@ -618,28 +618,33 @@ function buildStudentHtml(s) {
           <tbody>
             <tr>
               <td class="col-no">1</td>
-              <td class="col-aspect">Nilai personal</td>
-              <td class="col-val">${s.nilai.personal !== null && s.nilai.personal > 0 ? s.nilai.personal.toFixed(1) : '-'}</td>
+              <td class="col-aspect">Nilai kehadiran</td>
+              <td class="col-val">${(s.nilai && typeof s.nilai.kehadiran === 'number' && s.nilai.kehadiran > 0) ? s.nilai.kehadiran.toFixed(1) : (typeof s.kehadiran === 'number' && s.kehadiran > 0 ? s.kehadiran.toFixed(1) : '-')}</td>
             </tr>
             <tr>
               <td class="col-no">2</td>
-              <td class="col-aspect">Program kerja kelompok</td>
-              <td class="col-val">${s.nilai.proker !== null && s.nilai.proker > 0 ? s.nilai.proker.toFixed(1) : '-'}</td>
+              <td class="col-aspect">Nilai personal</td>
+              <td class="col-val">${s.nilai && s.nilai.personal !== null && s.nilai.personal > 0 ? s.nilai.personal.toFixed(1) : '-'}</td>
             </tr>
             <tr>
               <td class="col-no">3</td>
-              <td class="col-aspect">Laporan akhir</td>
-              <td class="col-val">${s.nilai.laporan !== null && s.nilai.laporan > 0 ? s.nilai.laporan.toFixed(1) : '-'}</td>
+              <td class="col-aspect">Program kerja kelompok</td>
+              <td class="col-val">${s.nilai && s.nilai.proker !== null && s.nilai.proker > 0 ? s.nilai.proker.toFixed(1) : '-'}</td>
             </tr>
             <tr>
               <td class="col-no">4</td>
-              <td class="col-aspect">Paper</td>
-              <td class="col-val">${s.nilai.paper !== null && s.nilai.paper > 0 ? s.nilai.paper.toFixed(1) : '-'}</td>
+              <td class="col-aspect">Laporan akhir</td>
+              <td class="col-val">${s.nilai && s.nilai.laporan !== null && s.nilai.laporan > 0 ? s.nilai.laporan.toFixed(1) : '-'}</td>
             </tr>
             <tr>
               <td class="col-no">5</td>
+              <td class="col-aspect">Paper</td>
+              <td class="col-val">${s.nilai && s.nilai.paper !== null && s.nilai.paper > 0 ? s.nilai.paper.toFixed(1) : '-'}</td>
+            </tr>
+            <tr>
+              <td class="col-no">6</td>
               <td class="col-aspect">Video</td>
-              <td class="col-val">${s.nilai.video !== null && s.nilai.video > 0 ? s.nilai.video.toFixed(1) : '-'}</td>
+              <td class="col-val">${s.nilai && s.nilai.video !== null && s.nilai.video > 0 ? s.nilai.video.toFixed(1) : '-'}</td>
             </tr>
           </tbody>
         </table>

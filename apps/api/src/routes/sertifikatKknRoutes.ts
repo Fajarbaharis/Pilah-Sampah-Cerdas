@@ -13,23 +13,10 @@ import { roleMiddleware } from "../middlewares/roleMiddleware.js";
 
 const router = Router();
 
-// Seluruh role yang berhak melihat sertifikat (termasuk Mahasiswa untuk dirinya sendiri)
+// Seluruh role yang berhak melihat sertifikat (Khusus Admin Teknis: DEVELOPER & SUPER_USER)
 const SERTIFIKAT_READ_ROLES = [
   "DEVELOPER",
   "SUPER_USER",
-  "ADMIN_DLH",
-  "DPL",
-  "DOSEN_PEMBIMBING",
-  "DOSEN_PENDAMPING",
-  "DOSEN_PENDAMPING_LAPANGAN",
-  "MPL",
-  "PANITIA_TASKFORCE",
-  "PEMIMPIN",
-  "PIMPINAN",
-  "CAMAT",
-  "LURAH",
-  "RW",
-  "MAHASISWA_KKN",
 ] as const;
 
 // 1. Endpoint Daftar Sertifikat (Live DB Scoped by Role)

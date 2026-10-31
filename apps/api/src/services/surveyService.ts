@@ -617,17 +617,23 @@ export const surveyService = {
   aggregateKelurahan: async (namaKelurahan: string, tahap: string, tahun: string) => {
     // Cari ID dan Nama Resmi Kelurahan terlebih dahulu agar pencarian RW mencakup variasi penulisan
     const cleanKelName = namaKelurahan.trim().toLowerCase();
+    const compactKelName = cleanKelName.replace(/\s+/g, "");
     const existingKel = await prisma.surveiKelurahan.findFirst({
       where: {
         OR: [
           { namaKelurahan: { equals: namaKelurahan.trim(), mode: "insensitive" } },
           { namaKelurahan: { contains: cleanKelName, mode: "insensitive" } },
+          { namaKelurahan: { contains: compactKelName, mode: "insensitive" } },
         ],
       },
       select: { kelurahanId: true, namaKelurahan: true },
     });
 
-    const kelurahanId = existingKel?.kelurahanId ?? KELURAHAN_ID_FALLBACK[cleanKelName] ?? 1;
+    const kelurahanId =
+      existingKel?.kelurahanId ??
+      KELURAHAN_ID_FALLBACK[cleanKelName] ??
+      KELURAHAN_ID_FALLBACK[compactKelName] ??
+      1;
     const finalKelName = existingKel?.namaKelurahan ?? OFFICIAL_KELURAHAN_NAMES[kelurahanId] ?? namaKelurahan;
 
     // Ambil data survei terbaru per RW untuk kelurahan, tahap, dan tahun yang sesuai
@@ -636,7 +642,8 @@ export const surveyService = {
         OR: [
           { kelurahan: { equals: namaKelurahan.trim(), mode: "insensitive" } },
           { kelurahan: { equals: finalKelName, mode: "insensitive" } },
-          { kelurahan: { contains: cleanKelName.replace(/\s+/g, ""), mode: "insensitive" } },
+          { kelurahan: { contains: cleanKelName, mode: "insensitive" } },
+          { kelurahan: { contains: compactKelName, mode: "insensitive" } },
         ],
         tahap,
         tahun,
@@ -660,6 +667,8 @@ export const surveyService = {
     let sumTotalVolume = 0;
     let sumRumahPilah = 0;
     let sumRumahTotal = 0;
+    let sumRt = 0;
+    let sumKk = 0;
     let sumBsAktif = 0;
     let sumBsNonaktif = 0;
     let sumKomposter = 0;
@@ -682,6 +691,8 @@ export const surveyService = {
       sumTotalVolume += Number(s.volumeTotal) || 0;
       sumRumahPilah += s.rumahPilah || 0;
       sumRumahTotal += s.rumahTotal || 0;
+      sumRt += s.jumlahRt || 0;
+      sumKk += s.jumlahKk || 0;
       sumBsAktif += s.bankSampahAktif || 0;
       sumBsNonaktif += s.bankSampahTidakAktif || 0;
       sumKomposter += s.unitKomposter || 0;
@@ -937,26 +948,34 @@ export const surveyService = {
         });
       }
     } else if (tahap === "Baseline") {
-      // Upsert Baseline Kelurahan
+      // Upsert Baseline Kelurahan (SurveiKelurahan)
       await prisma.surveiKelurahan.upsert({
         where: { kelurahanId },
         create: {
           kelurahanId,
           namaKelurahan: finalKelName,
           kecamatan: "Coblong",
+          jumlahRw: latestSurveys.length,
+          jumlahRt: sumRt > 0 ? sumRt : undefined,
+          jumlahKk: sumKk > 0 ? sumKk : undefined,
+          jumlahRumahTotal: sumRumahTotal > 0 ? sumRumahTotal : undefined,
           tanggalSurvei: new Date(),
           enumerator: `Mahasiswa KKN (${latestSurveys.length} RW)`,
           catatanData: `Agregasi otomatis Baseline dari ${latestSurveys.length} RW via survey.berseka.id`,
         },
         update: {
           namaKelurahan: finalKelName,
+          jumlahRw: latestSurveys.length,
+          jumlahRt: sumRt > 0 ? sumRt : undefined,
+          jumlahKk: sumKk > 0 ? sumKk : undefined,
+          jumlahRumahTotal: sumRumahTotal > 0 ? sumRumahTotal : undefined,
           tanggalSurvei: new Date(),
           enumerator: `Mahasiswa KKN (${latestSurveys.length} RW)`,
           catatanData: `Agregasi otomatis Baseline dari ${latestSurveys.length} RW via survey.berseka.id`,
         },
       });
 
-      // Upsert Baseline Volume
+      // Upsert Baseline Volume (SurveiVolumeSampah)
       await prisma.surveiVolumeSampah.upsert({
         where: { kelurahanId },
         create: {
@@ -976,7 +995,7 @@ export const surveyService = {
         },
       });
 
-      // Upsert Baseline Pemilahan
+      // Upsert Baseline Pemilahan (SurveiPemilahanSampah)
       await prisma.surveiPemilahanSampah.upsert({
         where: { kelurahanId },
         create: {
@@ -996,7 +1015,7 @@ export const surveyService = {
         },
       });
 
-      // Upsert Baseline Bank Sampah & Pengolahan
+      // Upsert Baseline Bank Sampah & Pengolahan (SurveiBankSampahPengolahan)
       await prisma.surveiBankSampahPengolahan.upsert({
         where: { kelurahanId },
         create: {
@@ -1010,7 +1029,7 @@ export const surveyService = {
           buruanSae: allTeknologi.has("Buruan Sae"),
           pengepulMitraDaurUlang: allTeknologi.has("Pengepul/mitra daur ulang"),
           digitalisasiData: allTeknologi.has("Digitalisasi data (WA/aplikasi)"),
-          aktivitasLainnyaKeterangan: `Fasilitas aktif terlaporkan di ${latestSurveys.length} RW`,
+          aktivitasLainnyaKeterangan: `Fasilitas aktif baseline terlaporkan di ${latestSurveys.length} RW`,
         },
         update: {
           bankSampahAktif: sumBsAktif,
@@ -1022,11 +1041,11 @@ export const surveyService = {
           buruanSae: allTeknologi.has("Buruan Sae"),
           pengepulMitraDaurUlang: allTeknologi.has("Pengepul/mitra daur ulang"),
           digitalisasiData: allTeknologi.has("Digitalisasi data (WA/aplikasi)"),
-          aktivitasLainnyaKeterangan: `Fasilitas aktif terlaporkan di ${latestSurveys.length} RW`,
+          aktivitasLainnyaKeterangan: `Fasilitas aktif baseline terlaporkan di ${latestSurveys.length} RW`,
         },
       });
 
-      // Update kesimpulan dari survei RW terbaru jika ada
+      // Update kesimpulan baseline dari survei RW terbaru jika ada
       const samplePrioritas = latestSurveys[0]?.prioritas;
       const sampleRisiko = latestSurveys[0]?.risiko;
       if (samplePrioritas || sampleRisiko) {
