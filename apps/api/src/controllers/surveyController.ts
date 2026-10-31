@@ -99,6 +99,27 @@ export const surveyController = {
         return;
       }
 
+      if (error.message === "BASELINE_REQUIRED") {
+        res.status(400).json({
+          success: false,
+          code: "BASELINE_REQUIRED",
+          message:
+            error.details ||
+            "Survei Endline belum dapat disimpan karena data Baseline belum tersedia. Silakan isi survei Baseline terlebih dahulu.",
+        });
+        return;
+      }
+
+      if (error.message === "KELURAHAN_MISMATCH" || error.message === "RW_MISMATCH") {
+        res.status(400).json({
+          success: false,
+          message:
+            error.details || "Wilayah survei tidak sesuai dengan wilayah penugasan kelompok Anda.",
+          code: error.message,
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         message: error.message || "Terjadi kesalahan saat memproses data survei.",
@@ -113,7 +134,9 @@ export const surveyController = {
   getSurveyData: async (req: Request, res: Response): Promise<void> => {
     try {
       const search = (req.query.search as string) || "";
-      const data = await surveyService.getSurveyData(search);
+      const tahap = (req.query.tahap as string) || "";
+      const kelurahan = (req.query.kelurahan as string) || "";
+      const data = await surveyService.getSurveyData(search, tahap, kelurahan);
 
       res.status(200).json({
         success: true,
@@ -145,17 +168,96 @@ export const surveyController = {
   deleteSurvey: async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
+      const user = req.user;
+
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          message: "Autentikasi diperlukan. Silakan login sebagai Super Admin atau Developer.",
+        });
+        return;
+      }
+
+      const roleUpper = String(user.role || "").toUpperCase();
+      const isAllowed = ["SUPER_USER", "SUPERUSER", "SUPER_ADMIN", "ADMIN_DLH", "DEVELOPER"].includes(roleUpper);
+
+      if (!isAllowed) {
+        res.status(403).json({
+          success: false,
+          message: "Akses ditolak. Penghapusan data survei RW secara permanen (hard delete) khusus dibatasi untuk Super Admin atau Developer.",
+        });
+        return;
+      }
+
       await surveyService.deleteSurvey(id);
 
       res.status(200).json({
         success: true,
-        message: "Survei berhasil dihapus.",
+        message: "Survei RW dan seluruh riwayat revisinya berhasil dihapus secara permanen.",
       });
     } catch (error: any) {
       console.error("Error deleteSurvey:", error);
+      const statusCode = error.message === "NOT_FOUND" ? 404 : 500;
+      res.status(statusCode).json({
+        success: false,
+        message: error.message === "NOT_FOUND" ? "Data survei tidak ditemukan." : "Gagal menghapus data survei.",
+      });
+    }
+  },
+
+  getSurveyRiwayat: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const survey = await surveyService.getSurveyRiwayat(id);
+      if (!survey) {
+        res.status(404).json({
+          success: false,
+          message: "Data survei tidak ditemukan.",
+        });
+        return;
+      }
+      res.status(200).json({
+        success: true,
+        data: survey,
+      });
+    } catch (error: any) {
+      console.error("Error getSurveyRiwayat:", error);
       res.status(500).json({
         success: false,
-        message: error.message || "Gagal menghapus data survei.",
+        message: "Gagal mengambil riwayat revisi survei.",
+      });
+    }
+  },
+
+  /**
+   * GET /api/v1/survey/check-rw
+   * Pengecekan real-time apakah RW sudah pernah disurvei
+   */
+  checkRw: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const kelurahan = (req.query.kelurahan as string) || "";
+      const rw = (req.query.rw as string) || "";
+      const tahap = (req.query.tahap as string) || "Endline";
+      const tahun = (req.query.tahun as string) || "2026";
+
+      if (!kelurahan || !rw) {
+        res.status(400).json({
+          success: false,
+          message: "Parameter kelurahan dan rw wajib disertakan.",
+        });
+        return;
+      }
+
+      const result = await surveyService.checkRwSurvey(kelurahan, rw, tahap, tahun);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      console.error("Error checkRw:", error);
+      res.status(500).json({
+        success: false,
+        message: "Gagal memeriksa status RW.",
       });
     }
   },

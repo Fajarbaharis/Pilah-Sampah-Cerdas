@@ -14,6 +14,7 @@ vi.mock("../lib/prisma.js", () => ({
     },
     surveiRw: {
       create: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
       delete: vi.fn(),
@@ -108,6 +109,64 @@ describe("Survey Service & Controller Unit Tests", () => {
           prioritas: "Sosialisasi pemilahan sampah organik rumah tangga",
         })
       ).rejects.toThrow("STUDENT_NOT_VERIFIED");
+    });
+
+    it("harus menolak submit jika kelurahan tidak sesuai dengan wilayah kelompok", async () => {
+      (prisma.studentKkn.findFirst as any).mockResolvedValue({
+        id: "student-uuid-1",
+        userId: "user-uuid-1",
+        nim: "10122001",
+        jurusan: "Teknik Informatika",
+        user: { name: "Bani Haykal" },
+        kelompok: {
+          name: "Kelompok 04",
+          kelurahan: "Dago",
+          cakupanRw: ["01", "02"],
+        },
+      });
+
+      await expect(
+        surveyService.submitSurvey({
+          nim: "10122001",
+          kelurahan: "Sadang Serang",
+          rw: "RW 01",
+          rumah_pilah: 10,
+          rumah_total: 50,
+          vol_organik: 100,
+          vol_anorganik: 50,
+          vol_residu: 20,
+          prioritas: "Sosialisasi pemilahan sampah",
+        })
+      ).rejects.toThrow("KELURAHAN_MISMATCH");
+    });
+
+    it("harus menolak submit jika RW di luar cakupan RW binaan kelompok", async () => {
+      (prisma.studentKkn.findFirst as any).mockResolvedValue({
+        id: "student-uuid-1",
+        userId: "user-uuid-1",
+        nim: "10122001",
+        jurusan: "Teknik Informatika",
+        user: { name: "Bani Haykal" },
+        kelompok: {
+          name: "Kelompok 04",
+          kelurahan: "Dago",
+          cakupanRw: ["01", "02"],
+        },
+      });
+
+      await expect(
+        surveyService.submitSurvey({
+          nim: "10122001",
+          kelurahan: "Dago",
+          rw: "RW 05",
+          rumah_pilah: 10,
+          rumah_total: 50,
+          vol_organik: 100,
+          vol_anorganik: 50,
+          vol_residu: 20,
+          prioritas: "Sosialisasi pemilahan sampah",
+        })
+      ).rejects.toThrow("RW_MISMATCH");
     });
 
     it("harus berhasil menyimpan survei jika NIM valid dan melakukan auto-agregasi", async () => {
@@ -271,6 +330,105 @@ describe("Survey Service & Controller Unit Tests", () => {
       req.body = { nim: "10122001" };
       await surveyController.submitSurvey(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("submitSurvey handler harus mengembalikan 400 jika wilayah RW atau kelurahan mismatch", async () => {
+      req.body = { nim: "10122001", kelurahan: "Dago", rw: "RW 99" };
+      vi.spyOn(surveyService, "submitSurvey").mockRejectedValueOnce(
+        Object.assign(new Error("RW_MISMATCH"), {
+          details: "RW RW 99 bukan bagian dari cakupan RW binaan kelompok Anda (RW 01, RW 02).",
+        })
+      );
+
+      await surveyController.submitSurvey(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          code: "RW_MISMATCH",
+          message: expect.stringContaining("bukan bagian dari cakupan RW binaan"),
+        })
+      );
+    });
+
+    it("checkRw handler harus mengembalikan 400 jika parameter kelurahan atau rw tidak ada", async () => {
+      req.query = { kelurahan: "Dago" };
+      await surveyController.checkRw(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false, message: "Parameter kelurahan dan rw wajib disertakan." })
+      );
+    });
+
+    it("checkRw handler harus mengembalikan status exists jika RW sudah disurvei", async () => {
+      req.query = { kelurahan: "Dago", rw: "RW 01", tahap: "Endline", tahun: "2026" };
+      (prisma.surveiRw.findFirst as any).mockResolvedValue({
+        id: "srw-1",
+        kodeSurvey: "BRS-123",
+        namaSurveyor: "Bani",
+        nim: "10122001",
+        kelompok: "Kelompok 04",
+        kelurahan: "Dago",
+        rw: "RW 01",
+        tahap: "Endline",
+        tahun: "2026",
+        createdAt: new Date(),
+      });
+
+      await surveyController.checkRw(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: {
+          exists: true,
+          survey: expect.objectContaining({
+            kodeSurvey: "BRS-123",
+            kelurahan: "Dago",
+            rw: "RW 01",
+          }),
+        },
+      });
+    });
+
+    it("deleteSurvey handler harus mengembalikan 403 jika NIM tidak cocok", async () => {
+      req.params = { id: "srw-1" };
+      req.query = { nim: "10122999" };
+      (prisma.surveiRw.findUnique as any).mockResolvedValue({
+        id: "srw-1",
+        nim: "10122001",
+        kelurahan: "Dago",
+        tahap: "Endline",
+        tahun: "2026",
+      });
+
+      await surveyController.deleteSurvey(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.stringContaining("hanya berhak menghapus"),
+        })
+      );
+    });
+
+    it("deleteSurvey handler harus mengembalikan 200 jika NIM cocok", async () => {
+      req.params = { id: "srw-1" };
+      req.query = { nim: "10122001" };
+      (prisma.surveiRw.findUnique as any).mockResolvedValue({
+        id: "srw-1",
+        nim: "10122001",
+        kelurahan: "Dago",
+        tahap: "Endline",
+        tahun: "2026",
+      });
+      (prisma.surveiRw.delete as any).mockResolvedValue({ id: "srw-1" });
+      (prisma.surveiRw.findMany as any).mockResolvedValue([]);
+
+      await surveyController.deleteSurvey(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, message: "Survei berhasil dihapus." })
+      );
     });
   });
 });

@@ -539,6 +539,8 @@ export async function getAllSurveys(
       take: limit,
       orderBy: { namaKelurahan: "asc" },
       include: {
+        pemilahanSampah: true,
+        volumeSampah: true,
         _count: {
           select: { keyPlayers: true },
         },
@@ -547,8 +549,44 @@ export async function getAllSurveys(
     prisma.surveiKelurahan.count({ where }),
   ]);
 
+  // Enrich data dengan akumulasi RW & RT terkini dari survei_rw (Baseline)
+  const enrichedData = await Promise.all(
+    data.map(async (item) => {
+      try {
+        const rwSurveys = await prisma.surveiRw.findMany({
+          where: {
+            kelurahan: { equals: item.namaKelurahan, mode: "insensitive" },
+            tahap: "Baseline",
+          },
+          select: { rw: true, jumlahRt: true },
+        });
+
+        const uniqueRw = new Map<string, number>();
+        rwSurveys.forEach((s) => {
+          if (!uniqueRw.has(s.rw)) {
+            uniqueRw.set(s.rw, s.jumlahRt || 0);
+          }
+        });
+
+        const dynamicRwCount = uniqueRw.size;
+        let dynamicRtCount = 0;
+        uniqueRw.forEach((rtCount) => {
+          dynamicRtCount += rtCount;
+        });
+
+        return {
+          ...item,
+          jumlahRw: dynamicRwCount > 0 ? dynamicRwCount : item.jumlahRw || 0,
+          jumlahRt: dynamicRtCount > 0 ? dynamicRtCount : item.jumlahRt || 0,
+        };
+      } catch {
+        return item;
+      }
+    })
+  );
+
   return {
-    data,
+    data: enrichedData,
     meta: {
       total,
       page,

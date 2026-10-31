@@ -5,6 +5,7 @@
 
 import express, { Router } from "express";
 import { surveyController } from "../controllers/surveyController.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
@@ -17,8 +18,12 @@ const surveyBodyParser = [
 // Public routes untuk enumerator lapangan (mahasiswa KKN dengan validasi NIM)
 router.get("/verify-student", surveyController.verifyStudent);
 router.get("/kelompok-list", surveyController.getKelompokList); // daftar kelompok KKN dari DB
+router.get("/check-rw", surveyController.checkRw); // Cek status survei RW real-time
 router.post("/submit", surveyBodyParser, surveyController.submitSurvey);
 router.get("/data", surveyController.getSurveyData);
-router.delete("/:id", surveyController.deleteSurvey);
+router.get("/:id/riwayat", surveyController.getSurveyRiwayat); // Linimasa riwayat revisi RW
+
+// Protected routes (khusus Super Admin / Developer untuk hard delete)
+router.delete("/:id", authMiddleware, surveyController.deleteSurvey);
 
 export default router;

@@ -126,3 +126,5 @@ scripts/find-all-backups.js
 scripts/inspect-db.js
 scripts/*.json
 sample_output.svg
+.aider*
+.opencode/
