@@ -1441,8 +1441,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
             },
           ],
         },
-        /* 
-        // Modul E-Sertifikat di-hide total dari seluruh role sesuai arahan rilis produksi
         {
           type: "group",
           label: "E-Sertifikat",
@@ -1461,7 +1459,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed = false 
             },
           ],
         },
-        */
         {
           type: "group",
           label: "Log Aktivitas",

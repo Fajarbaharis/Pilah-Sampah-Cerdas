@@ -1147,18 +1147,8 @@ export const SertifikatKknPage: React.FC = () => {
                   Wakil Rektor I UNIKOM<br />Bidang Akademik dan Kemahasiswaan
                 </div>
 
-                <div className="my-1 border border-slate-300 rounded-md p-1 bg-white flex items-center gap-2 w-44 md:w-52 h-11 md:h-13 shadow-2xs">
-                  <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 p-0.5">
-                    <QrSvgComponent idSertifikat={selectedStudent.idSertifikat} />
-                  </div>
-                  <div className="text-[6px] md:text-[6.5pt] font-mono text-left text-[#0A2540] leading-tight">
-                    <strong className="block text-[#005AA9] font-sans text-[6.5px] md:text-[7pt]">
-                      TANDA TANGAN ELEKTRONIK
-                    </strong>
-                    <span>{selectedStudent.idSertifikat.slice(0, 18)}</span><br />
-                    <span className="text-emerald-600 font-bold">VERIFIKASI SAH LPPM</span>
-                  </div>
-                </div>
+                {/* Ruang kosong untuk tanda tangan manual / basah */}
+                <div className="h-12 md:h-16 w-full" />
 
                 <div className="cert-sig-name text-[8px] md:text-[9.5pt] font-bold text-[#0A2540] whitespace-nowrap">
                   Prof. Dr. Hj. Umi Narimawati, Dra., S.E., M.Si.

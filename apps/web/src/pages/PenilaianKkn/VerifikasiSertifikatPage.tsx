@@ -76,8 +76,7 @@ export const VerifikasiSertifikatPage: React.FC = () => {
   const { idSertifikat } = useParams<{ idSertifikat: string }>();
   const { user } = useAuthStore();
   const userRole = String(user?.peran || (user as any)?.role || "").toUpperCase();
-  const isStaging = isStagingEnv();
-  const canAccessAdminSertifikat = isStaging && (userRole === "DEVELOPER" || userRole === "SUPER_USER");
+  const canAccessAdminSertifikat = userRole === "DEVELOPER" || userRole === "SUPER_USER";
 
   // Find student by idSertifikat or NIM
   const student = useMemo(() => {
