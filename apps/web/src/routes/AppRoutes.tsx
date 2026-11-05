@@ -1000,57 +1000,41 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/e-sertifikat/mahasiswa"
           element={
-            isStaging ? (
-              <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
-                <SertifikatKknPage />
-              </ProtectedRoute>
-            ) : (
-              <Navigate to="/dasbor" replace />
-            )
+            <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
+              <SertifikatKknPage />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/e-sertifikat/dpl"
           element={
-            isStaging ? (
-              <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
-                <SertifikatDplPage />
-              </ProtectedRoute>
-            ) : (
-              <Navigate to="/dasbor" replace />
-            )
+            <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
+              <SertifikatDplPage />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/e-sertifikat"
-          element={<Navigate to={isStaging ? "/e-sertifikat/mahasiswa" : "/dasbor"} replace />}
+          element={<Navigate to="/e-sertifikat/mahasiswa" replace />}
         />
         <Route
           path="/sertifikat-dpl"
-          element={<Navigate to={isStaging ? "/e-sertifikat/dpl" : "/dasbor"} replace />}
+          element={<Navigate to="/e-sertifikat/dpl" replace />}
         />
         <Route
           path="/sertifikat-kkn"
           element={
-            isStaging ? (
-              <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
-                <SertifikatKknPage />
-              </ProtectedRoute>
-            ) : (
-              <Navigate to="/dasbor" replace />
-            )
+            <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
+              <SertifikatKknPage />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/penilaian-kkn/sertifikat"
           element={
-            isStaging ? (
-              <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
-                <SertifikatKknPage />
-              </ProtectedRoute>
-            ) : (
-              <Navigate to="/dasbor" replace />
-            )
+            <ProtectedRoute allowedRoles={["DEVELOPER", "SUPER_USER"]}>
+              <SertifikatKknPage />
+            </ProtectedRoute>
           }
         />
         <Route
