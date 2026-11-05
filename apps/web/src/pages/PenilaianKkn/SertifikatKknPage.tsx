@@ -23,7 +23,6 @@ import {
   ChevronRight,
   GraduationCap,
   ShieldCheck,
-  FileDown,
   Printer,
   Download,
   X,
@@ -54,7 +53,6 @@ export const SertifikatKknPage: React.FC = () => {
   const [isLiveDatabase, setIsLiveDatabase] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>("Tersinkron");
-  const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [showCanvaModal, setShowCanvaModal] = useState<boolean>(false);
   const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
   const [hasCopiedId, setHasCopiedId] = useState<boolean>(false);
@@ -289,52 +287,23 @@ export const SertifikatKknPage: React.FC = () => {
     }
   };
 
-  // Direct Official High-Res PDF Download with strict validation & seamless vector print fallback
-  const handleDirectDownloadPdf = async () => {
-    setIsDownloading(true);
-    const safeName = selectedStudent.nama.replace(/[^a-zA-Z0-9]/g, '_');
-    const fileName = `SERTIFIKAT_KKN_${selectedStudent.nim}_${safeName}.pdf`;
-    const directUrl = `/certificates/${fileName}`;
-
-    try {
-      // Check if pre-generated official PDF exists and verify it's genuine binary PDF (never SPA HTML fallback)
-      const res = await fetch(directUrl);
-      const contentType = res.headers.get("content-type") || "";
-
-      if (res.ok && contentType.toLowerCase().includes("application/pdf")) {
-        const blob = await res.blob();
-        // Verify magic bytes %PDF
-        const header = await blob.slice(0, 5).text();
-        if (header.startsWith("%PDF")) {
-          const blobUrl = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = blobUrl;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-          toast.success(`Berhasil mengunduh PDF resmi: ${selectedStudent.nama}`);
-          setIsDownloading(false);
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn("[SertifikatKknPage] Direct PDF fetch fallback:", err);
-    }
-
-    setIsDownloading(false);
-    toast.dismiss();
-    setTimeout(() => {
-      window.print();
-    }, 100);
-  };
-
   const handlePrintCertificate = () => {
     toast.dismiss();
+    const originalTitle = document.title;
+    const safeName = (selectedStudent.nama || "Mahasiswa").trim().replace(/[^a-zA-Z0-9]/g, "_");
+    const dynamicTitle = `SERTIFIKAT_KKN_${selectedStudent.nim}_${safeName}`;
+    
+    document.title = dynamicTitle;
+
+    const restoreTitle = () => {
+      document.title = originalTitle;
+      window.removeEventListener("afterprint", restoreTitle);
+    };
+    window.addEventListener("afterprint", restoreTitle);
+
     setTimeout(() => {
       window.print();
-    }, 100);
+    }, 200);
   };
 
   const handleCopyId = () => {
@@ -544,6 +513,398 @@ export const SertifikatKknPage: React.FC = () => {
           margin: 0;
         }
 
+        /* ── NATIVE EXACT CANVA CSS ENGINE (IDENTIK BAIK DI LAYAR MAUPUN CETAK PDF) ── */
+        .cert-stage-wrapper {
+          container-type: inline-size;
+        }
+
+        .cert-stage-wrapper .aspects-table {
+          width: 100% !important;
+          table-layout: fixed !important;
+          border-collapse: collapse !important;
+          border: 1.5px solid #0D2C54 !important;
+          background: #FFFFFF !important;
+        }
+
+        .cert-stage-wrapper .aspects-table th,
+        .cert-stage-wrapper .aspects-table td {
+          box-sizing: border-box !important;
+        }
+
+        .cert-stage-wrapper .aspects-table th.col-no,
+        .cert-stage-wrapper .aspects-table td.col-no,
+        .cert-stage-wrapper .aspects-table col.col-no {
+          width: 8% !important;
+          text-align: center !important;
+        }
+
+        .cert-stage-wrapper .aspects-table th.col-aspect,
+        .cert-stage-wrapper .aspects-table td.col-aspect,
+        .cert-stage-wrapper .aspects-table col.col-aspect {
+          width: 72% !important;
+          text-align: left !important;
+        }
+
+        .cert-stage-wrapper .aspects-table th.col-val,
+        .cert-stage-wrapper .aspects-table td.col-val,
+        .cert-stage-wrapper .aspects-table col.col-val {
+          width: 20% !important;
+          text-align: center !important;
+        }
+
+        .cert-inner {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: space-between;
+          padding: 24px 50px 20px 50px;
+          box-sizing: border-box;
+        }
+
+        .header-block {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 100%;
+          margin-top: 2px;
+        }
+
+        .univ-title {
+          font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+          font-size: 19pt;
+          font-weight: 800;
+          color: #0A2540;
+          letter-spacing: 0.5px;
+          margin: 0;
+          line-height: 1.1;
+          text-align: center;
+        }
+
+        .title-wrapper {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          width: 100%;
+          margin-top: 8px;
+        }
+
+        .title-line {
+          height: 1.5px;
+          background-color: #C5A059;
+          width: 55px;
+          flex-shrink: 0;
+        }
+
+        .title-main {
+          font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+          font-size: 28pt;
+          font-weight: 800;
+          color: #0A2540;
+          letter-spacing: 4px;
+          margin: 0;
+          line-height: 1;
+        }
+
+        .title-sub1 {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 13pt;
+          font-weight: 800;
+          color: #005AA9;
+          letter-spacing: 0.8px;
+          margin-top: 5px;
+          text-transform: uppercase;
+        }
+
+        .title-sub2 {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 11pt;
+          font-weight: 800;
+          color: #0A2540;
+          letter-spacing: 0.6px;
+          margin-top: 2px;
+          text-transform: uppercase;
+        }
+
+        .cert-number {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 9.5pt;
+          font-weight: 600;
+          color: #0A2540;
+          margin-top: 4px;
+        }
+
+        .cert-center-body {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          margin: auto 0;
+        }
+
+        .given-to {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: 12pt;
+          font-style: italic;
+          font-weight: 700;
+          color: #0A2540;
+          margin-top: 0;
+          margin-bottom: 4px;
+        }
+
+        .recipient-name {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: 30pt;
+          font-weight: 900;
+          color: #0A2540;
+          letter-spacing: 1px;
+          margin-top: 0;
+          text-transform: uppercase;
+          text-align: center;
+          white-space: nowrap;
+          line-height: 1.15;
+        }
+
+        .diamond-divider {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          width: 100%;
+          max-width: 480px;
+          margin-top: 6px;
+          margin-bottom: 6px;
+        }
+
+        .diamond-line {
+          height: 1.5px;
+          background-color: #C5A059;
+          flex: 1;
+        }
+
+        .diamond-shape {
+          color: #C5A059;
+          font-size: 8.5pt;
+          line-height: 1;
+        }
+
+        .bio-text {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 11pt;
+          font-weight: 700;
+          color: #0A2540;
+          margin-top: 1.5px;
+        }
+
+        .narration {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 11pt;
+          line-height: 1.6;
+          color: #0A2540;
+          text-align: center;
+          margin-top: 12px;
+          max-width: 720px;
+          font-weight: 500;
+        }
+
+        .page1-bottom {
+          width: 100%;
+          display: flex;
+          justify-content: flex-end;
+          align-items: flex-end;
+          flex-shrink: 0;
+          padding-right: 32px;
+          padding-bottom: 8px;
+        }
+
+        .sig-block {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          width: 280px;
+        }
+
+        .sig-date {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 9.5pt;
+          color: #0A2540;
+          font-weight: 600;
+          margin-bottom: 2px;
+        }
+
+        .sig-role {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 9pt;
+          font-weight: 700;
+          color: #0A2540;
+          line-height: 1.25;
+        }
+
+        .sig-space {
+          height: 48px;
+          width: 100%;
+        }
+
+        .sig-name {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 10.5pt;
+          font-weight: 800;
+          color: #0A2540;
+          margin-top: 1px;
+          white-space: nowrap;
+        }
+
+        /* ── PAGE 2 STYLES ── */
+        .page2-title {
+          font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+          font-size: 20pt;
+          font-weight: 800;
+          color: #0A2540;
+          letter-spacing: 2px;
+          margin: 0;
+          line-height: 1;
+        }
+
+        .student-card-4col {
+          display: flex;
+          align-items: center;
+          width: 100%;
+          margin-bottom: 12px;
+        }
+
+        .card-col {
+          flex: 1;
+          text-align: center;
+          padding: 0 6px;
+        }
+
+        .card-label {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 9pt;
+          color: #0A2540;
+          font-weight: 700;
+          margin-bottom: 2px;
+        }
+
+        .card-val {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 10.5pt;
+          font-weight: 800;
+          color: #005AA9;
+          text-transform: uppercase;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .card-divider {
+          width: 1.5px;
+          height: 28px;
+          background-color: #C5A059;
+          flex-shrink: 0;
+        }
+
+        .aspects-table {
+          width: 100%;
+          border-collapse: collapse;
+          border: 1.5px solid #0D2C54;
+          background: #FFFFFF;
+        }
+
+        .aspects-table th {
+          background-color: #0D2C54;
+          color: #FFFFFF;
+          font-size: 9.5pt;
+          font-weight: 700;
+          padding: 8px 12px;
+          border: 1px solid #0D2C54;
+          text-align: center;
+        }
+
+        .aspects-table td {
+          padding: 7px 14px;
+          font-size: 9pt;
+          color: #0A2540;
+          border: 1px solid #CBD5E1;
+        }
+
+        .aspects-table tr:nth-child(even) {
+          background-color: #F0F7FF;
+        }
+
+        .aspects-table th.col-no,
+        .aspects-table td.col-no {
+          text-align: center;
+          font-weight: 700;
+          width: 8%;
+        }
+
+        .aspects-table th.col-aspect,
+        .aspects-table td.col-aspect {
+          font-weight: 600;
+          width: 72%;
+          text-align: left;
+        }
+
+        .aspects-table th.col-val,
+        .aspects-table td.col-val {
+          text-align: center;
+          font-weight: 800;
+          color: #005AA9;
+          width: 20%;
+        }
+
+        .hours-container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 14px;
+          width: 100%;
+          background: rgba(240, 247, 255, 0.7);
+          border: 1px solid #CBD5E1;
+          border-radius: 10px;
+          padding: 8px 18px;
+        }
+
+        .hours-col {
+          flex: 1;
+          text-align: center;
+          padding: 0 10px;
+        }
+
+        .hours-label {
+          font-size: 8pt;
+          color: #0A2540;
+          font-weight: 600;
+          margin-bottom: 2px;
+        }
+
+        .hours-val {
+          font-size: 13pt;
+          font-weight: 800;
+          color: #005AA9;
+        }
+
+        .hours-divider {
+          width: 1.5px;
+          height: 30px;
+          background-color: #C5A059;
+        }
+
+        .total-hours-label {
+          font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+          font-size: 11pt;
+          font-weight: 800;
+          color: #0A2540;
+          letter-spacing: 2px;
+          margin-top: 10px;
+        }
+
         @media print {
           @page {
             size: A4 landscape;
@@ -574,7 +935,7 @@ export const SertifikatKknPage: React.FC = () => {
             width: 100% !important;
             gap: 0 !important;
           }
-          .cert-print-sheet {
+          .cert-stage-wrapper {
             box-shadow: none !important;
             border-radius: 0 !important;
             margin: 0 !important;
@@ -584,129 +945,33 @@ export const SertifikatKknPage: React.FC = () => {
             page-break-after: always !important;
             break-after: page !important;
           }
-          .cert-print-sheet:last-child {
+          .cert-stage-wrapper:last-child {
             page-break-after: avoid !important;
             break-after: avoid !important;
           }
-
-          /* Exact Canva Typography & Proportions in Print */
-          .cert-univ-title {
-            font-size: 18pt !important;
-            line-height: 1.1 !important;
-          }
-          .cert-univ-tagline {
-            font-size: 7.5pt !important;
-            letter-spacing: 2.5px !important;
-          }
-          .cert-title-main {
-            font-size: 26pt !important;
-            line-height: 1 !important;
-            letter-spacing: 2.5px !important;
-          }
-          .cert-title-sub1 {
-            font-size: 12pt !important;
-            margin-top: 5px !important;
-          }
-          .cert-title-sub2 {
-            font-size: 10.5pt !important;
-            margin-top: 2px !important;
-          }
-          .cert-number {
-            font-size: 9.5pt !important;
-            margin-top: 4px !important;
-          }
-          .cert-center-body {
-            flex: 1 1 auto !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: auto 0 !important;
-          }
-          .cert-given-to {
-            font-size: 11pt !important;
-            margin-top: 0 !important;
-            margin-bottom: 4px !important;
-          }
-          .cert-recipient-name {
-            font-size: 22pt !important;
-            letter-spacing: 1px !important;
-            margin-top: 0 !important;
-            line-height: 1.2 !important;
-          }
-          .cert-bio-text {
-            font-size: 9.5pt !important;
-            margin-top: 1.5px !important;
-          }
-          .cert-sks-pill {
-            font-size: 9.5pt !important;
-            margin-top: 6px !important;
-            padding: 2.5px 18px !important;
-          }
-          .cert-narration {
-            font-size: 10pt !important;
-            line-height: 1.5 !important;
-            margin-top: 12px !important;
-            max-width: 660px !important;
-          }
-          .page1-bottom {
+          .cert-stage-wrapper table {
             width: 100% !important;
-            display: flex !important;
-            justify-content: flex-end !important;
-            align-items: flex-end !important;
-            flex-shrink: 0 !important;
-            padding-right: 20px !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
           }
-          .cert-hours-label {
-            font-size: 8pt !important;
+          .cert-stage-wrapper th,
+          .cert-stage-wrapper td {
+            box-sizing: border-box !important;
           }
-          .cert-hours-val {
-            font-size: 13pt !important;
+          .cert-stage-wrapper col:nth-child(1),
+          .cert-stage-wrapper th:nth-child(1),
+          .cert-stage-wrapper td:nth-child(1) {
+            width: 8% !important;
           }
-          .cert-total-hours {
-            font-size: 11pt !important;
-            letter-spacing: 2px !important;
-            margin-top: 6px !important;
+          .cert-stage-wrapper col:nth-child(2),
+          .cert-stage-wrapper th:nth-child(2),
+          .cert-stage-wrapper td:nth-child(2) {
+            width: 72% !important;
           }
-          .cert-poin-berseka {
-            display: inline-flex !important;
-            font-size: 8.5pt !important;
-            margin-top: 4px !important;
-            padding: 2px 14px !important;
-            border-radius: 9999px !important;
-            border: 1px solid #10b981 !important;
-            background-color: #f0fdf4 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          .cert-sig-date {
-            font-size: 8.5pt !important;
-          }
-          .cert-sig-role {
-            font-size: 8pt !important;
-            line-height: 1.2 !important;
-          }
-          .cert-sig-name {
-            font-size: 8.5pt !important;
-            margin-top: 1px !important;
-          }
-          .cert-page2-title {
-            font-size: 20pt !important;
-            letter-spacing: 2px !important;
-          }
-          .cert-card-label {
-            font-size: 9pt !important;
-          }
-          .cert-card-val {
-            font-size: 10.5pt !important;
-          }
-          .cert-table th {
-            font-size: 9.5pt !important;
-            padding: 7px 12px !important;
-          }
-          .cert-table td {
-            font-size: 9pt !important;
-            padding: 7px 14px !important;
+          .cert-stage-wrapper col:nth-child(3),
+          .cert-stage-wrapper th:nth-child(3),
+          .cert-stage-wrapper td:nth-child(3) {
+            width: 20% !important;
           }
         }
       `}</style>
@@ -749,27 +1014,15 @@ export const SertifikatKknPage: React.FC = () => {
                 </button>
               )}
 
-              {/* Cetak / Simpan PDF Vektor Button */}
+              {/* Cetak / Simpan PDF Vektor Button (Single Action) */}
               <button
                 type="button"
                 onClick={handlePrintCertificate}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-xs font-bold shadow-2xs transition cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#009966] hover:bg-[#008055] text-white text-xs font-bold shadow-xs transition cursor-pointer"
                 title="Cetak Langsung atau Simpan sebagai PDF Vektor (A4 Landscape)"
               >
-                <Printer className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                <Printer className="w-4 h-4" />
                 <span>Cetak / Simpan PDF</span>
-              </button>
-
-              {/* Unduh Berkas PDF Resmi Button */}
-              <button
-                type="button"
-                onClick={handleDirectDownloadPdf}
-                disabled={isDownloading}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#009966] hover:bg-[#008055] text-white text-xs font-bold shadow-xs transition cursor-pointer disabled:opacity-60"
-                title="Unduh Berkas PDF Resmi Resolusi Cetak"
-              >
-                <FileDown className="w-4 h-4" />
-                <span>{isDownloading ? "Menyiapkan PDF..." : "Unduh PDF Resmi"}</span>
               </button>
             </div>
           }
@@ -1067,90 +1320,100 @@ export const SertifikatKknPage: React.FC = () => {
       <div className="cert-export-wrapper max-w-[1150px] mx-auto mt-4 px-2 flex flex-col items-center gap-8 print:p-0 print:m-0 print:max-w-none print:w-full">
         
         {/* ==================== HALAMAN 1: SERTIFIKAT ==================== */}
-        <div
-          className="cert-print-sheet relative w-full aspect-[1.414/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.414/1] print:break-after-page"
-          style={{
-            backgroundImage: "url('/image/serti/certificate_frame_hires.png')",
-            backgroundSize: "100% 100%",
-            backgroundRepeat: "no-repeat",
-          }}
-        >
-          {/* Inner Content Area */}
-          <div className="absolute inset-0 flex flex-col items-center justify-between px-8 md:px-16 pt-7 md:pt-9 pb-6 select-none box-border">
-            {/* Header UNIKOM & Title Block (Top) */}
-            <div className="flex flex-col items-center w-full shrink-0">
-              <div className="flex flex-col items-center w-full mt-0.5 md:mt-1">
-                <h1 className="cert-univ-title font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
-                  UNIVERSITAS KOMPUTER INDONESIA
-                </h1>
-              </div>
+        <div className="cert-stage-wrapper relative w-full aspect-[1.4153/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.4153/1] print:break-after-page">
+          {/* Elemen fisik bingkai sertifikat */}
+          <img
+            src="/image/serti/certificate_frame_hires.png"
+            alt="Bingkai Sertifikat"
+            className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-0"
+          />
 
-              {/* Title SERTIFIKAT - Safe Decorative Lines Flanking (Anti-Bentrok Logo) */}
-              <div className="flex items-center justify-center gap-3 md:gap-4 mt-2.5 md:mt-3.5 w-full">
-                <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
-                <h2 className="cert-title-main font-cinzel text-2xl md:text-4xl font-extrabold text-[#0A2540] tracking-[3px] m-0 leading-none">
-                  SERTIFIKAT
-                </h2>
-                <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
-              </div>
+          {/* Absolute Structured Vector Stage (Identik 1:1 Image 1) */}
+          <div className="absolute inset-0 z-10 w-full h-full pointer-events-none select-none">
+            {/* 1. Header Universitas */}
+            <div className="absolute left-0 right-0 text-center" style={{ top: "4.8%" }}>
+              <h1 className="font-playfair text-[2.2cqw] font-bold text-[#0A2540] tracking-[0.5px] leading-tight m-0">
+                UNIVERSITAS KOMPUTER INDONESIA
+              </h1>
+            </div>
 
-              <div className="cert-title-sub1 text-xs md:text-[15.5pt] font-extrabold text-[#005AA9] tracking-wide mt-1 md:mt-1.5 uppercase">
+            {/* 2. Judul Sertifikat & Garis Emas */}
+            <div className="absolute left-0 right-0 flex items-center justify-center gap-[1.5cqw]" style={{ top: "8.8%" }}>
+              <div className="h-[1.5px] bg-[#C5A059] w-[5.5cqw] shrink-0" />
+              <h2 className="font-playfair text-[2.6cqw] font-black text-[#0A2540] tracking-[4px] leading-none m-0">
+                SERTIFIKAT
+              </h2>
+              <div className="h-[1.5px] bg-[#C5A059] w-[5.5cqw] shrink-0" />
+            </div>
+
+            {/* 3. Subtitle KKN Batch I & Tahun Akademik */}
+            <div className="absolute left-0 right-0 text-center" style={{ top: "13.2%" }}>
+              <div className="font-sans text-[1.4cqw] font-extrabold text-[#005AA9] tracking-wider uppercase leading-tight">
                 PESERTA KKN TEMATIK BATCH I
               </div>
-              <div className="cert-title-sub2 text-[11px] md:text-[13.5pt] font-extrabold text-[#005AA9] tracking-wide mt-0.5 uppercase">
+              <div className="font-sans text-[1.25cqw] font-bold text-[#0A2540] tracking-wide uppercase leading-tight mt-[0.3cqw]">
                 TAHUN AKADEMIK 2026/2027
               </div>
-              <div className="cert-number text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-1">
+              <div className="font-sans text-[1.05cqw] font-semibold text-[#0A2540] leading-tight mt-[0.4cqw]">
                 {formattedNomor.startsWith("Nomor:") ? formattedNomor : `Nomor: ${formattedNomor}`}
               </div>
             </div>
 
-            {/* ── CENTER PROPORTIONAL SECTION (SIMETRIS & ELEGAN DI TENGAH LAYAKNYA SERTIFIKAT PROFESIONAL) ── */}
-            <div className="cert-center-body flex-1 flex flex-col items-center justify-center w-full my-auto py-2">
-              <div className="cert-given-to font-playfair text-[10.5px] md:text-[12.5pt] italic text-[#0A2540] mb-1">
+            {/* 4. Diberikan kepada: */}
+            <div className="absolute left-0 right-0 text-center" style={{ top: "27.2%" }}>
+              <div className="font-playfair text-[1.4cqw] italic font-bold text-[#0A2540] m-0">
                 Diberikan kepada:
               </div>
+            </div>
 
-              {/* Recipient Name */}
-              <div className="cert-recipient-name font-playfair text-xl md:text-[28pt] font-black text-[#0A2540] tracking-wide uppercase text-center whitespace-nowrap leading-tight">
+            {/* 5. Nama Penerima (Dominan Besar) */}
+            <div className="absolute left-0 right-0 text-center px-[5cqw]" style={{ top: "32.8%" }}>
+              <div className="font-playfair text-[3.2cqw] font-black text-[#0A2540] tracking-[0.5px] uppercase whitespace-nowrap leading-tight">
                 {formattedName}
               </div>
+            </div>
 
-              {/* Diamond Divider */}
-              <div className="flex items-center justify-center gap-3 w-full max-w-[420px] md:max-w-[480px] my-1.5 md:my-2">
-                <div className="h-[1px] bg-[#C5A059] flex-1" />
-                <span className="text-[#C5A059] text-[8pt] md:text-[10pt] leading-none">&#9670;</span>
-                <div className="h-[1px] bg-[#C5A059] flex-1" />
-              </div>
+            {/* 6. Diamond Divider Emas */}
+            <div className="absolute left-0 right-0 flex items-center justify-center gap-[1cqw] px-[15cqw]" style={{ top: "39.4%" }}>
+              <div className="h-[1.5px] bg-[#C5A059] w-[26cqw]" />
+              <span className="text-[#C5A059] text-[0.9cqw] leading-none">&#9670;</span>
+              <div className="h-[1.5px] bg-[#C5A059] w-[26cqw]" />
+            </div>
 
-              {/* NIM & Prodi */}
-              <div className="cert-bio-text text-[10px] md:text-[11pt] font-semibold text-[#0A2540]">
+            {/* 7. NIM & Program Studi */}
+            <div className="absolute left-0 right-0 text-center" style={{ top: "42.8%" }}>
+              <div className="font-sans text-[1.3cqw] font-bold text-[#0A2540] leading-tight">
                 NIM: {selectedStudent.nim}
               </div>
-              <div className="cert-bio-text text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-0.5">
+              <div className="font-sans text-[1.3cqw] font-bold text-[#0A2540] leading-tight mt-[0.4cqw]">
                 Program Studi: {selectedStudent.prodi}
               </div>
+            </div>
 
-              {/* Narration 450 Jam */}
-              <div className="cert-narration text-[10px] md:text-[11.5pt] text-[#0A2540] text-center max-w-[620px] md:max-w-[700px] leading-relaxed mt-4 md:mt-5 font-sans">
+            {/* 8. Deskripsi Beban 450 Jam */}
+            <div className="absolute left-0 right-0 flex justify-center text-center px-[6cqw]" style={{ top: "52.2%" }}>
+              <div className="font-sans text-[1.45cqw] font-medium text-[#0A2540] leading-[1.65] max-w-[66cqw]">
                 Telah mengikuti Kuliah Kerja Nyata (KKN) Tematik Batch I Universitas Komputer Indonesia pada periode Juli–Oktober 2026 dengan total beban kegiatan 450 jam.
               </div>
             </div>
 
-            {/* Page 1 Bottom: Signature Block */}
-            <div className="page1-bottom w-full flex justify-end items-end shrink-0 pr-4 md:pr-8">
-              <div className="flex flex-col items-center text-center w-64 md:w-80">
-                <div className="cert-sig-date text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540]">
+            {/* 9. Blok Penandatangan (Center Horizontal, Top 67.5% Persis Image 1) */}
+            <div className="absolute left-0 right-0 flex justify-center text-center" style={{ top: "67.5%" }}>
+              <div className="flex flex-col items-center">
+                <div className="font-sans text-[1.15cqw] font-semibold text-[#0A2540] leading-tight">
                   Bandung, {tanggalTerbit}
                 </div>
-                <div className="cert-sig-role text-[8px] md:text-[9pt] font-bold text-[#0A2540] leading-tight mt-0.5">
-                  Wakil Rektor I UNIKOM<br />Bidang Akademik dan Kemahasiswaan
+                <div className="font-sans text-[1.05cqw] font-bold text-[#0A2540] leading-tight mt-[0.4cqw]">
+                  Wakil Rektor I UNIKOM
+                </div>
+                <div className="font-sans text-[1.05cqw] font-bold text-[#0A2540] leading-tight">
+                  Bidang Akademik dan Kemahasiswaan
                 </div>
 
-                {/* Ruang kosong untuk tanda tangan manual / basah */}
-                <div className="h-12 md:h-16 w-full" />
+                {/* Ruang tanda tangan manual */}
+                <div className="h-[6cqw] w-full" />
 
-                <div className="cert-sig-name text-[8px] md:text-[9.5pt] font-bold text-[#0A2540] whitespace-nowrap">
+                <div className="font-sans text-[1.25cqw] font-bold text-[#0A2540] whitespace-nowrap leading-tight">
                   Prof. Dr. Hj. Umi Narimawati, Dra., S.E., M.Si.
                 </div>
               </div>
@@ -1158,213 +1421,171 @@ export const SertifikatKknPage: React.FC = () => {
           </div>
         </div>
 
-              
         {/* ==================== HALAMAN 2: REKAP PENILAIAN ==================== */}
-        <div
-          className="cert-print-sheet relative w-full aspect-[1.414/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.414/1] print:break-after-avoid"
-          style={{
-            backgroundImage: "url('/image/serti/certificate_frame_hires.png')",
-            backgroundSize: "100% 100%",
-            backgroundRepeat: "no-repeat",
-          }}
-        >
-          {/* Inner Content Area */}
-          <div className="absolute inset-0 flex flex-col items-center justify-between px-8 md:px-16 pt-6 md:pt-8 pb-7 select-none box-border">
-            {/* Header UNIKOM & Title Block (Top) */}
-            <div className="flex flex-col items-center w-full shrink-0">
-              <div className="flex flex-col items-center w-full mt-0.5 md:mt-1">
-                <h1 className="cert-univ-title font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
-                  UNIVERSITAS KOMPUTER INDONESIA
-                </h1>
-              </div>
+        <div className="cert-stage-wrapper relative w-full aspect-[1.4144/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.4144/1] print:break-after-avoid">
+          {/* Elemen fisik bingkai sertifikat */}
+          <img
+            src="/image/serti/certificate_frame_hires.png"
+            alt="Bingkai Sertifikat Halaman 2"
+            className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-0"
+          />
 
-              {/* Title REKAP PENILAIAN PESERTA - Safe Decorative Lines */}
-              <div className="flex items-center justify-center gap-3 md:gap-4 mt-2 md:mt-3 w-full">
-                <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
-                <h2 className="cert-page2-title font-cinzel text-xl md:text-[22pt] font-extrabold text-[#0A2540] tracking-[2px] m-0 leading-none">
-                  REKAP PENILAIAN PESERTA
-                </h2>
-                <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
-              </div>
+          {/* Absolute Vector Stage 1:1 Canva Canvas Architecture */}
+          <div className="absolute inset-0 z-10 w-full h-full pointer-events-none select-none">
+            {/* 1. Header UNIKOM */}
+            <div className="absolute left-0 right-0 text-center" style={{ top: "6.2%" }}>
+              <h1 className="font-playfair text-[2.2cqw] font-bold text-[#0A2540] tracking-[0.5px] leading-tight m-0">
+                UNIVERSITAS KOMPUTER INDONESIA
+              </h1>
+            </div>
 
-              <div className="cert-title-sub1 text-[11px] md:text-[12pt] font-extrabold text-[#005AA9] tracking-wide mt-1 uppercase">
+            {/* 2. Subtitle REKAP PENILAIAN PESERTA & Garis Emas */}
+            <div className="absolute left-0 right-0 flex items-center justify-center gap-[1.5cqw]" style={{ top: "11.6%" }}>
+              <div className="h-[1.5px] bg-[#C5A059] w-[5.5cqw] shrink-0" />
+              <h2 className="font-playfair text-[2.3cqw] font-black text-[#0A2540] tracking-[2.5px] leading-none m-0">
+                REKAP PENILAIAN PESERTA
+              </h2>
+              <div className="h-[1.5px] bg-[#C5A059] w-[5.5cqw] shrink-0" />
+            </div>
+
+            {/* 3. Batch KKN & Periode */}
+            <div className="absolute left-0 right-0 text-center" style={{ top: "16.8%" }}>
+              <div className="font-sans text-[1.25cqw] font-extrabold text-[#005AA9] tracking-wider uppercase leading-tight">
                 KKN TEMATIK BATCH I &bull; PERIODE JULI–OKTOBER 2026
               </div>
             </div>
 
-            {/* ── CENTER PROPORTIONAL SECTION (SIMETRIS & ELEGAN DI TENGAH) ── */}
-            <div className="cert-center-body flex-1 flex flex-col items-center justify-center w-full my-auto py-2">
-              {/* ── 4-COLUMN STUDENT IDENTITY (100% CANVA EXACT & SEJAJAR) ── */}
-              <div className="flex items-center w-full max-w-[840px] mb-2.5">
-                <div className="flex-1 text-center px-1 md:px-2">
-                  <div className="cert-card-label font-sans text-[9px] md:text-[9.5pt] font-bold text-[#0A2540] mb-0.5">
-                    NAMA:
-                  </div>
-                  <div className="cert-card-val font-sans text-[10px] md:text-[11pt] font-extrabold text-[#005AA9] uppercase truncate">
-                    {formattedName}
-                  </div>
-                </div>
-                
-                <div className="w-[1.5px] h-6 md:h-[28px] bg-[#C5A059] shrink-0" />
-
-                <div className="flex-1 text-center px-1 md:px-2">
-                  <div className="cert-card-label font-sans text-[9px] md:text-[9.5pt] font-bold text-[#0A2540] mb-0.5">
-                    NIM:
-                  </div>
-                  <div className="cert-card-val font-sans text-[10px] md:text-[11pt] font-extrabold text-[#005AA9]">
-                    {selectedStudent.nim}
-                  </div>
-                </div>
-
-                <div className="w-[1.5px] h-6 md:h-[28px] bg-[#C5A059] shrink-0" />
-
-                <div className="flex-1 text-center px-1 md:px-2">
-                  <div className="cert-card-label font-sans text-[9px] md:text-[9.5pt] font-bold text-[#0A2540] mb-0.5">
-                    PROGRAM STUDI:
-                  </div>
-                  <div className="cert-card-val font-sans text-[10px] md:text-[11pt] font-extrabold text-[#005AA9] uppercase truncate">
-                    {selectedStudent.prodi.toUpperCase()}
-                  </div>
-                </div>
-
-                <div className="w-[1.5px] h-6 md:h-[28px] bg-[#C5A059] shrink-0" />
-
-                <div className="flex-1 text-center px-1 md:px-2">
-                  <div className="cert-card-label font-sans text-[9px] md:text-[9.5pt] font-bold text-[#0A2540] mb-0.5">
-                    SKS DIAMBIL:
-                  </div>
-                  <div className="cert-card-val font-sans text-[10px] md:text-[11pt] font-extrabold text-[#005AA9]">
-                    {selectedStudent.sks} SKS
-                  </div>
+            {/* 4. Student Metadata Row (4 Kolom Canva Sempurna) */}
+            <div className="absolute left-[13.3%] right-[13.3%] flex items-center justify-between" style={{ top: "21.8%", height: "7.8%" }}>
+              <div className="flex-1 text-center px-[0.5cqw]">
+                <div className="font-sans text-[0.9cqw] font-bold text-[#0A2540] mb-[0.2cqw]">NAMA:</div>
+                <div className="font-sans text-[1.15cqw] font-extrabold text-[#005AA9] uppercase whitespace-nowrap overflow-hidden text-ellipsis">
+                  {formattedName}
                 </div>
               </div>
+              <div className="w-[1.5px] h-[55%] bg-[#C5A059] shrink-0" />
 
-              {/* ── 6 ASPECTS TABLE (MATCHING WIDTH & BORDER 100%) ── */}
-              <table className="cert-table w-full max-w-[840px] border-collapse border-[1.5px] border-[#0D2C54] bg-white shadow-2xs">
-              <thead>
-                <tr className="bg-[#0D2C54] text-white">
-                  <th className="py-1.5 md:py-2 px-3 border border-[#0D2C54] text-center text-[10px] md:text-[11pt] font-bold w-[10%]">
-                    No.
-                  </th>
-                  <th className="py-1.5 md:py-2 px-4 border border-[#0D2C54] text-left text-[10px] md:text-[11pt] font-bold w-[68%]">
-                    Aspek
-                  </th>
-                  <th className="py-1.5 md:py-2 px-4 border border-[#0D2C54] text-center text-[10px] md:text-[11pt] font-bold w-[22%]">
-                    Nilai
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="bg-white hover:bg-slate-50">
-                  <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    1
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    Nilai kehadiran
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
-                    {selectedKehadiran !== null && selectedKehadiran !== undefined && selectedKehadiran > 0
-                      ? selectedKehadiran.toFixed(1)
-                      : "-"}
-                  </td>
-                </tr>
-                <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
-                  <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    2
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    Nilai personal
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
-                    {selectedStudent.nilai.personal !== null && selectedStudent.nilai.personal > 0
-                      ? selectedStudent.nilai.personal.toFixed(1)
-                      : "-"}
-                  </td>
-                </tr>
-                <tr className="bg-white hover:bg-slate-50">
-                  <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    3
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    Program kerja kelompok
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
-                    {selectedStudent.nilai.proker !== null && selectedStudent.nilai.proker > 0
-                      ? selectedStudent.nilai.proker.toFixed(1)
-                      : "-"}
-                  </td>
-                </tr>
-                <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
-                  <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    4
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    Laporan akhir
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
-                    {selectedStudent.nilai.laporan !== null && selectedStudent.nilai.laporan > 0
-                      ? selectedStudent.nilai.laporan.toFixed(1)
-                      : "-"}
-                  </td>
-                </tr>
-                <tr className="bg-white hover:bg-slate-50">
-                  <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    5
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    Paper
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
-                    {selectedStudent.nilai.paper !== null && selectedStudent.nilai.paper > 0
-                      ? selectedStudent.nilai.paper.toFixed(1)
-                      : "-"}
-                  </td>
-                </tr>
-                <tr className="bg-[#F0F7FF] hover:bg-blue-50/60">
-                  <td className="py-1.5 md:py-2 px-3 border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    6
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] font-semibold text-[#0A2540] text-[9.5px] md:text-[10.5pt]">
-                    Video
-                  </td>
-                  <td className="py-1.5 md:py-2 px-4 border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[10px] md:text-[11pt]">
-                    {selectedStudent.nilai.video !== null && selectedStudent.nilai.video > 0
-                      ? selectedStudent.nilai.video.toFixed(1)
-                      : "-"}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+              <div className="flex-1 text-center px-[0.5cqw]">
+                <div className="font-sans text-[0.9cqw] font-bold text-[#0A2540] mb-[0.2cqw]">NIM:</div>
+                <div className="font-sans text-[1.15cqw] font-extrabold text-[#005AA9]">
+                  {selectedStudent.nim}
+                </div>
+              </div>
+              <div className="w-[1.5px] h-[55%] bg-[#C5A059] shrink-0" />
 
-            {/* ── 3-COLUMN HOURS BREAKDOWN & TOTAL (DIPINDAHKAN KE HALAMAN 2 DI BAWAH TABEL DATA) ── */}
-            <div className="flex items-center justify-center w-full max-w-[800px] md:max-w-[880px] mt-3 md:mt-4 py-2 md:py-2.5 px-4 bg-slate-50/80 border border-slate-200/90 rounded-xl shadow-2xs">
-              <div className="flex-1 text-center px-2">
-                <div className="cert-hours-label text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Persiapan</div>
-                <div className="cert-hours-val text-sm md:text-[15pt] font-extrabold text-[#005AA9]">100 jam</div>
+              <div className="flex-1 text-center px-[0.5cqw]">
+                <div className="font-sans text-[0.9cqw] font-bold text-[#0A2540] mb-[0.2cqw]">PROGRAM STUDI:</div>
+                <div className="font-sans text-[1.15cqw] font-extrabold text-[#005AA9] uppercase whitespace-nowrap overflow-hidden text-ellipsis">
+                  {selectedStudent.prodi.toUpperCase()}
+                </div>
               </div>
-              <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
-              <div className="flex-1 text-center px-2">
-                <div className="cert-hours-label text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Pelaksanaan di lapangan</div>
-                <div className="cert-hours-val text-sm md:text-[15pt] font-extrabold text-[#005AA9]">250 jam</div>
-              </div>
-              <div className="w-[1.5px] h-7 md:h-[32px] bg-[#C5A059] shrink-0" />
-              <div className="flex-1 text-center px-2">
-                <div className="cert-hours-label text-[8.5px] md:text-[9.5pt] font-semibold text-[#0A2540] mb-0.5">Evaluasi dan pelaporan</div>
-                <div className="cert-hours-val text-sm md:text-[15pt] font-extrabold text-[#005AA9]">100 jam</div>
+              <div className="w-[1.5px] h-[55%] bg-[#C5A059] shrink-0" />
+
+              <div className="flex-1 text-center px-[0.5cqw]">
+                <div className="font-sans text-[0.9cqw] font-bold text-[#0A2540] mb-[0.2cqw]">SKS DIAMBIL:</div>
+                <div className="font-sans text-[1.15cqw] font-extrabold text-[#005AA9]">
+                  {selectedStudent.sks} SKS
+                </div>
               </div>
             </div>
 
-            {/* TOTAL 450 JAM */}
-            <div className="cert-total-hours font-cinzel text-xs md:text-[12pt] font-extrabold text-[#0A2540] tracking-[2px] mt-2 md:mt-2.5">
-              TOTAL 450 JAM
+            {/* 5. 6 Aspects Assessment Table (Full Width 73.4% Canva Standard) */}
+            <div className="absolute left-[13.3%] right-[13.3%] w-[73.4%]" style={{ top: "35.2%" }}>
+              <table className="aspects-table w-full border-collapse border-[1.5px] border-[#0D2C54] bg-white shadow-xs" style={{ width: "100% !important", tableLayout: "fixed" }}>
+                <colgroup>
+                  <col className="col-no" style={{ width: "8%" }} />
+                  <col className="col-aspect" style={{ width: "72%" }} />
+                  <col className="col-val" style={{ width: "20%" }} />
+                </colgroup>
+                <thead>
+                  <tr className="bg-[#0D2C54] text-white">
+                    <th className="col-no py-[0.7cqw] px-[0.8cqw] border border-[#0D2C54] text-center font-bold text-[1cqw]" style={{ width: "8%", boxSizing: "border-box" }}>
+                      No.
+                    </th>
+                    <th className="col-aspect py-[0.7cqw] px-[1.2cqw] border border-[#0D2C54] text-left font-bold text-[1cqw]" style={{ width: "72%", boxSizing: "border-box" }}>
+                      Aspek
+                    </th>
+                    <th className="col-val py-[0.7cqw] px-[0.8cqw] border border-[#0D2C54] text-center font-bold text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
+                      Nilai
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="bg-white">
+                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>1</td>
+                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Nilai kehadiran</td>
+                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
+                      {selectedKehadiran !== null && selectedKehadiran !== undefined && selectedKehadiran > 0 ? selectedKehadiran.toFixed(1) : "–"}
+                    </td>
+                  </tr>
+                  <tr className="bg-[#F0F7FF]">
+                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>2</td>
+                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Nilai personal</td>
+                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
+                      {selectedStudent.nilai.personal !== null && selectedStudent.nilai.personal > 0 ? selectedStudent.nilai.personal.toFixed(1) : "–"}
+                    </td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>3</td>
+                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Program kerja kelompok</td>
+                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
+                      {selectedStudent.nilai.proker !== null && selectedStudent.nilai.proker > 0 ? selectedStudent.nilai.proker.toFixed(1) : "–"}
+                    </td>
+                  </tr>
+                  <tr className="bg-[#F0F7FF]">
+                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>4</td>
+                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Laporan akhir</td>
+                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
+                      {selectedStudent.nilai.laporan !== null && selectedStudent.nilai.laporan > 0 ? selectedStudent.nilai.laporan.toFixed(1) : "–"}
+                    </td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>5</td>
+                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Paper</td>
+                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
+                      {selectedStudent.nilai.paper !== null && selectedStudent.nilai.paper > 0 ? selectedStudent.nilai.paper.toFixed(1) : "–"}
+                    </td>
+                  </tr>
+                  <tr className="bg-[#F0F7FF]">
+                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>6</td>
+                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Video</td>
+                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
+                      {selectedStudent.nilai.video !== null && selectedStudent.nilai.video > 0 ? selectedStudent.nilai.video.toFixed(1) : "–"}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* 6. Work Hours Card Container (Persis Canva Box) */}
+            <div className="absolute left-[13.3%] right-[13.3%] flex items-center justify-between rounded-xl border border-[#CBD5E1] bg-[#F0F7FF]/70 py-[0.7cqw] px-[1.5cqw]" style={{ top: "67.4%" }}>
+              <div className="flex-1 text-center">
+                <div className="font-sans text-[0.85cqw] font-semibold text-[#0A2540] mb-[0.15cqw]">Persiapan</div>
+                <div className="font-sans text-[1.4cqw] font-black text-[#005AA9]">100 jam</div>
+              </div>
+              <div className="w-[1.5px] h-[2cqw] bg-[#C5A059]" />
+
+              <div className="flex-1 text-center">
+                <div className="font-sans text-[0.85cqw] font-semibold text-[#0A2540] mb-[0.15cqw]">Pelaksanaan di lapangan</div>
+                <div className="font-sans text-[1.4cqw] font-black text-[#005AA9]">250 jam</div>
+              </div>
+              <div className="w-[1.5px] h-[2cqw] bg-[#C5A059]" />
+
+              <div className="flex-1 text-center">
+                <div className="font-sans text-[0.85cqw] font-semibold text-[#0A2540] mb-[0.15cqw]">Evaluasi dan pelaporan</div>
+                <div className="font-sans text-[1.4cqw] font-black text-[#005AA9]">100 jam</div>
+              </div>
+            </div>
+
+            {/* 7. Total Hours Footer */}
+            <div className="absolute left-0 right-0 text-center" style={{ top: "77.2%" }}>
+              <div className="font-cinzel text-[1.25cqw] font-extrabold text-[#0A2540] tracking-[3px]">
+                TOTAL 450 JAM
+              </div>
             </div>
           </div>
-
-          {/* Bottom spacer for vertical balance */}
-          <div className="w-full shrink-0 h-2 md:h-3" />
         </div>
       </div>
-    </div>
 
       {/* ── MODAL EKSPOR FORMAT CANVA BULK CREATE DENGAN PILIHAN KELOMPOK ──── */}
       {showCanvaModal && (
@@ -1651,8 +1872,8 @@ export const SertifikatKknPage: React.FC = () => {
   );
 };
 
-// SVG QR Code generator component for React UI
-const QrSvgComponent: React.FC<{ idSertifikat: string }> = ({ idSertifikat }) => {
+// SVG QR Code generator component for React UI (opsional untuk verifikasi jika dibutuhkan)
+export const QrSvgComponent: React.FC<{ idSertifikat: string }> = ({ idSertifikat }) => {
   const pattern = useMemo(() => {
     let hash = 0;
     for (let i = 0; i < idSertifikat.length; i++) {

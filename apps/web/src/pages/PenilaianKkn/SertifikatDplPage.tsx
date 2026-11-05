@@ -218,14 +218,22 @@ export const SertifikatDplPage: React.FC = () => {
     }
   };
 
-  // Direct Print / Save as PDF
   const handlePrintCertificate = () => {
     toast("Membuka dialog Simpan PDF / Cetak (Pilih 'Save as PDF' - Ukuran A4 Landscape)...", {
       icon: "🖨️",
     });
+    const originalTitle = document.title;
+    const safeName = (selectedDpl.nama || "DPL").trim().replace(/[^a-zA-Z0-9]/g, "_");
+    const safeNip = (selectedDpl.nip || "NIP").trim().replace(/[^a-zA-Z0-9]/g, "_");
+    const dynamicTitle = `SERTIFIKAT_DPL_${safeNip}_${safeName}`;
+
+    document.title = dynamicTitle;
     setTimeout(() => {
       window.print();
-    }, 300);
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
+    }, 250);
   };
 
   // Copy ID Sertifikat
@@ -404,6 +412,15 @@ export const SertifikatDplPage: React.FC = () => {
           .cert-footer-text {
             font-size: 8.5pt !important;
             line-height: 1.25 !important;
+          }
+          .cert-bottom-section {
+            padding-left: 28mm !important;
+            padding-right: 28mm !important;
+            padding-bottom: 15mm !important;
+          }
+          .cert-qr-box {
+            width: 18mm !important;
+            height: 18mm !important;
           }
         }
       `}</style>
@@ -645,14 +662,16 @@ export const SertifikatDplPage: React.FC = () => {
         {/* ==================== HALAMAN 1: PIAGAM PENGHARGAAN DPL ==================== */}
         <div
           className="cert-print-sheet relative w-full aspect-[1.414/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.414/1] print:break-after-avoid"
-          style={{
-            backgroundImage: "url('/image/serti/certificate_frame_hires.png')",
-            backgroundSize: "100% 100%",
-            backgroundRepeat: "no-repeat",
-          }}
         >
+          {/* Elemen fisik gambar bingkai sertifikat (Anti-hilang saat dicetak meski Background Graphics tidak dicentang) */}
+          <img
+            src="/image/serti/certificate_frame_hires.png"
+            alt="Bingkai Sertifikat"
+            className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-0"
+          />
+
           {/* Inner Content Area */}
-          <div className="absolute inset-0 flex flex-col items-center justify-between px-8 md:px-16 pt-7 md:pt-9 pb-6 select-none box-border">
+          <div className="relative z-10 w-full h-full flex flex-col items-center justify-between px-8 md:px-16 pt-7 md:pt-9 pb-6 select-none box-border">
             
             {/* TOP SECTION: Header & Title */}
             <div className="flex flex-col items-center w-full shrink-0">
@@ -723,11 +742,11 @@ export const SertifikatDplPage: React.FC = () => {
             </div>
 
             {/* BOTTOM SECTION: Signatures & Validation QR */}
-            <div className="w-full flex items-end justify-between px-6 md:px-14 pb-2 md:pb-4 mt-2 shrink-0">
+            <div className="cert-bottom-section w-full flex items-end justify-between px-12 md:px-24 pb-4 md:pb-8 mt-2 shrink-0">
               
               {/* Left Column: QR Code & ID */}
               <div className="flex flex-col items-center">
-                <div className="w-16 h-16 md:w-22 md:h-22 bg-white p-1 rounded-md border border-[#0A2540]/20 shadow-xs flex items-center justify-center">
+                <div className="cert-qr-box w-14 h-14 md:w-16 md:h-16 bg-white p-1 rounded-md border border-[#0A2540]/20 shadow-xs flex items-center justify-center">
                   {/* Real QR SVG pointing to public verification */}
                   <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
@@ -747,30 +766,30 @@ export const SertifikatDplPage: React.FC = () => {
 
               {/* Center Seal / Watermark placeholder */}
               <div className="hidden md:flex flex-col items-center opacity-80">
-                <div className="w-14 h-14 rounded-full border border-[#C5A059]/40 flex items-center justify-center">
-                  <ShieldCheck size={28} className="text-[#005AA9]" />
+                <div className="w-12 h-12 rounded-full border border-[#C5A059]/40 flex items-center justify-center">
+                  <ShieldCheck size={24} className="text-[#005AA9]" />
                 </div>
-                <span className="text-[7pt] text-[#C5A059] font-bold tracking-widest uppercase mt-1">
+                <span className="text-[6.5pt] text-[#C5A059] font-bold tracking-widest uppercase mt-0.5">
                   OFFICIAL SEAL
                 </span>
               </div>
 
               {/* Right Column: Signature & Official Stamped Date */}
-              <div className="flex flex-col items-center text-center">
-                <div className="cert-footer-text text-[9px] md:text-[10pt] font-semibold text-[#0A2540] mb-1">
+              <div className="flex flex-col items-center text-center max-w-[240px] md:max-w-[280px]">
+                <div className="cert-footer-text text-[9px] md:text-[10pt] font-semibold text-[#0A2540] mb-0.5">
                   Bandung, {selectedDpl.tanggalTerbit}
                 </div>
-                <div className="cert-footer-text text-[8px] md:text-[9.5pt] font-bold text-[#0A2540]">
+                <div className="cert-footer-text text-[8px] md:text-[9.5pt] font-bold text-[#0A2540] leading-tight">
                   Rektor Universitas Komputer Indonesia
                 </div>
                 
                 {/* Ruang kosong untuk tanda tangan manual / basah */}
-                <div className="h-12 md:h-16 w-full" />
+                <div className="h-10 md:h-14 w-full" />
 
-                <div className="cert-footer-text font-bold text-[9px] md:text-[11pt] text-[#0A2540] underline tracking-wide">
+                <div className="cert-footer-text font-bold text-[8.5px] md:text-[10pt] text-[#0A2540] underline tracking-tight whitespace-nowrap">
                   Prof. Dr. Ir. H. Eddy Soeryanto Soegoto, M.T.
                 </div>
-                <div className="cert-footer-text text-[7px] md:text-[8.5pt] font-semibold text-[#0A2540]">
+                <div className="cert-footer-text text-[7px] md:text-[8pt] font-semibold text-[#0A2540] mt-0.5">
                   NIP: 4127.34.02.001
                 </div>
               </div>
