@@ -1433,7 +1433,7 @@ export const SertifikatKknPage: React.FC = () => {
           {/* Absolute Vector Stage 1:1 Canva Canvas Architecture */}
           <div className="absolute inset-0 z-10 w-full h-full pointer-events-none select-none">
             {/* 1. Header UNIKOM */}
-            <div className="absolute left-0 right-0 text-center" style={{ top: "6.2%" }}>
+            <div className="absolute left-0 right-0 text-center" style={{ top: "4.8%" }}>
               <h1 className="font-playfair text-[2.2cqw] font-bold text-[#0A2540] tracking-[0.5px] leading-tight m-0">
                 UNIVERSITAS KOMPUTER INDONESIA
               </h1>
@@ -1456,7 +1456,7 @@ export const SertifikatKknPage: React.FC = () => {
             </div>
 
             {/* 4. Student Metadata Row (4 Kolom Canva Sempurna) */}
-            <div className="absolute left-[13.3%] right-[13.3%] flex items-center justify-between" style={{ top: "21.8%", height: "7.8%" }}>
+            <div className="absolute left-[13.3%] right-[13.3%] flex items-center justify-between" style={{ top: "25.8%", height: "7.8%" }}>
               <div className="flex-1 text-center px-[0.5cqw]">
                 <div className="font-sans text-[0.9cqw] font-bold text-[#0A2540] mb-[0.2cqw]">NAMA:</div>
                 <div className="font-sans text-[1.15cqw] font-extrabold text-[#005AA9] uppercase whitespace-nowrap overflow-hidden text-ellipsis">
@@ -1489,72 +1489,98 @@ export const SertifikatKknPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 5. 6 Aspects Assessment Table (Full Width 73.4% Canva Standard) */}
-            <div className="absolute left-[13.3%] right-[13.3%] w-[73.4%]" style={{ top: "35.2%" }}>
-              <table className="aspects-table w-full border-collapse border-[1.5px] border-[#0D2C54] bg-white shadow-xs" style={{ width: "100% !important", tableLayout: "fixed" }}>
-                <colgroup>
-                  <col className="col-no" style={{ width: "8%" }} />
-                  <col className="col-aspect" style={{ width: "72%" }} />
-                  <col className="col-val" style={{ width: "20%" }} />
-                </colgroup>
-                <thead>
-                  <tr className="bg-[#0D2C54] text-white">
-                    <th className="col-no py-[0.7cqw] px-[0.8cqw] border border-[#0D2C54] text-center font-bold text-[1cqw]" style={{ width: "8%", boxSizing: "border-box" }}>
-                      No.
-                    </th>
-                    <th className="col-aspect py-[0.7cqw] px-[1.2cqw] border border-[#0D2C54] text-left font-bold text-[1cqw]" style={{ width: "72%", boxSizing: "border-box" }}>
-                      Aspek
-                    </th>
-                    <th className="col-val py-[0.7cqw] px-[0.8cqw] border border-[#0D2C54] text-center font-bold text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
-                      Nilai
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="bg-white">
-                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>1</td>
-                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Nilai kehadiran</td>
-                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
-                      {selectedKehadiran !== null && selectedKehadiran !== undefined && selectedKehadiran > 0 ? selectedKehadiran.toFixed(1) : "–"}
-                    </td>
-                  </tr>
-                  <tr className="bg-[#F0F7FF]">
-                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>2</td>
-                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Nilai personal</td>
-                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
-                      {selectedStudent.nilai.personal !== null && selectedStudent.nilai.personal > 0 ? selectedStudent.nilai.personal.toFixed(1) : "–"}
-                    </td>
-                  </tr>
-                  <tr className="bg-white">
-                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>3</td>
-                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Program kerja kelompok</td>
-                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
-                      {selectedStudent.nilai.proker !== null && selectedStudent.nilai.proker > 0 ? selectedStudent.nilai.proker.toFixed(1) : "–"}
-                    </td>
-                  </tr>
-                  <tr className="bg-[#F0F7FF]">
-                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>4</td>
-                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Laporan akhir</td>
-                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
-                      {selectedStudent.nilai.laporan !== null && selectedStudent.nilai.laporan > 0 ? selectedStudent.nilai.laporan.toFixed(1) : "–"}
-                    </td>
-                  </tr>
-                  <tr className="bg-white">
-                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>5</td>
-                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Paper</td>
-                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
-                      {selectedStudent.nilai.paper !== null && selectedStudent.nilai.paper > 0 ? selectedStudent.nilai.paper.toFixed(1) : "–"}
-                    </td>
-                  </tr>
-                  <tr className="bg-[#F0F7FF]">
-                    <td className="col-no py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-bold text-[#0A2540] text-[0.95cqw]" style={{ width: "8%", boxSizing: "border-box" }}>6</td>
-                    <td className="col-aspect py-[0.6cqw] px-[1.2cqw] border border-[#CBD5E1] font-semibold text-[#0A2540] text-[0.95cqw]" style={{ width: "72%", boxSizing: "border-box" }}>Video</td>
-                    <td className="col-val py-[0.6cqw] px-[0.8cqw] border border-[#CBD5E1] text-center font-extrabold text-[#005AA9] text-[1cqw]" style={{ width: "20%", boxSizing: "border-box" }}>
-                      {selectedStudent.nilai.video !== null && selectedStudent.nilai.video > 0 ? selectedStudent.nilai.video.toFixed(1) : "–"}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            {/* 5. 6 Aspects Assessment Table (Robust Grid Layout 100% Anti-Shrink) */}
+            <div className="absolute left-[13.3%] right-[13.3%] border-[1.5px] border-[#0D2C54] bg-white shadow-xs overflow-hidden" style={{ top: "35.2%" }}>
+              {/* Header Row */}
+              <div className="flex w-full bg-[#0D2C54] text-white">
+                <div className="flex items-center justify-center font-bold text-[1cqw] py-[0.7cqw] px-[0.5cqw] border-r border-[#0D2C54] shrink-0" style={{ width: "8%" }}>
+                  No.
+                </div>
+                <div className="flex items-center font-bold text-[1cqw] py-[0.7cqw] px-[1.2cqw] border-r border-[#0D2C54] shrink-0" style={{ width: "72%" }}>
+                  Aspek
+                </div>
+                <div className="flex items-center justify-center font-bold text-[1cqw] py-[0.7cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
+                  Nilai
+                </div>
+              </div>
+
+              {/* Row 1 */}
+              <div className="flex w-full bg-white border-t border-[#CBD5E1]">
+                <div className="flex items-center justify-center font-bold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[0.5cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "8%" }}>
+                  1
+                </div>
+                <div className="flex items-center font-semibold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[1.2cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "72%" }}>
+                  Nilai kehadiran
+                </div>
+                <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
+                  {selectedKehadiran !== null && selectedKehadiran !== undefined && selectedKehadiran > 0 ? selectedKehadiran.toFixed(1) : "–"}
+                </div>
+              </div>
+
+              {/* Row 2 */}
+              <div className="flex w-full bg-[#F0F7FF] border-t border-[#CBD5E1]">
+                <div className="flex items-center justify-center font-bold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[0.5cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "8%" }}>
+                  2
+                </div>
+                <div className="flex items-center font-semibold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[1.2cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "72%" }}>
+                  Nilai personal
+                </div>
+                <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
+                  {selectedStudent.nilai.personal !== null && selectedStudent.nilai.personal > 0 ? selectedStudent.nilai.personal.toFixed(1) : "–"}
+                </div>
+              </div>
+
+              {/* Row 3 */}
+              <div className="flex w-full bg-white border-t border-[#CBD5E1]">
+                <div className="flex items-center justify-center font-bold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[0.5cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "8%" }}>
+                  3
+                </div>
+                <div className="flex items-center font-semibold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[1.2cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "72%" }}>
+                  Program kerja kelompok
+                </div>
+                <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
+                  {selectedStudent.nilai.proker !== null && selectedStudent.nilai.proker > 0 ? selectedStudent.nilai.proker.toFixed(1) : "–"}
+                </div>
+              </div>
+
+              {/* Row 4 */}
+              <div className="flex w-full bg-[#F0F7FF] border-t border-[#CBD5E1]">
+                <div className="flex items-center justify-center font-bold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[0.5cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "8%" }}>
+                  4
+                </div>
+                <div className="flex items-center font-semibold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[1.2cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "72%" }}>
+                  Laporan akhir
+                </div>
+                <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
+                  {selectedStudent.nilai.laporan !== null && selectedStudent.nilai.laporan > 0 ? selectedStudent.nilai.laporan.toFixed(1) : "–"}
+                </div>
+              </div>
+
+              {/* Row 5 */}
+              <div className="flex w-full bg-white border-t border-[#CBD5E1]">
+                <div className="flex items-center justify-center font-bold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[0.5cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "8%" }}>
+                  5
+                </div>
+                <div className="flex items-center font-semibold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[1.2cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "72%" }}>
+                  Paper
+                </div>
+                <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
+                  {selectedStudent.nilai.paper !== null && selectedStudent.nilai.paper > 0 ? selectedStudent.nilai.paper.toFixed(1) : "–"}
+                </div>
+              </div>
+
+              {/* Row 6 */}
+              <div className="flex w-full bg-[#F0F7FF] border-t border-[#CBD5E1]">
+                <div className="flex items-center justify-center font-bold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[0.5cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "8%" }}>
+                  6
+                </div>
+                <div className="flex items-center font-semibold text-[#0A2540] text-[0.95cqw] py-[0.6cqw] px-[1.2cqw] border-r border-[#CBD5E1] shrink-0" style={{ width: "72%" }}>
+                  Video
+                </div>
+                <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
+                  {selectedStudent.nilai.video !== null && selectedStudent.nilai.video > 0 ? selectedStudent.nilai.video.toFixed(1) : "–"}
+                </div>
+              </div>
             </div>
 
             {/* 6. Work Hours Card Container (Persis Canva Box) */}
