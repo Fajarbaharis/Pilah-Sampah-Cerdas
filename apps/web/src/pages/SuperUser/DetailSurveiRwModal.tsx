@@ -367,6 +367,11 @@ export default function DetailSurveiRwModal({
                     ) : (
                       <span className="text-xs text-slate-400 italic">Karakteristik standar</span>
                     )}
+                    {survey.karakterLain && (
+                      <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold px-2.5 py-1 rounded-md">
+                        Lainnya: {survey.karakterLain}
+                      </span>
+                    )}
                     {(survey.jumlahKos > 0 || survey.jumlahUmkm > 0) && (
                       <span className="bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-semibold px-2.5 py-1 rounded-md">
                         {survey.jumlahKos ? `${survey.jumlahKos} Kos ` : ""}{survey.jumlahUmkm ? `· ${survey.jumlahUmkm} UMKM` : ""}
