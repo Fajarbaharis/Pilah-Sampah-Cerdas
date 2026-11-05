@@ -128,3 +128,7 @@ scripts/*.json
 sample_output.svg
 .aider*
 .opencode/
+
+# AI Agent state & secrets (ISO 27001)
+.agent/
+.agents/
