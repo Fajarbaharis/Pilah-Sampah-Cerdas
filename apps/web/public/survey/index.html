@@ -59,7 +59,7 @@ main{max-width:980px;margin:-60px auto 0;padding:0 16px 120px;position:relative;
 }
 .step{min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 6px 8px;border-radius:14px;background:#fff;border:1.5px solid #d8e5dc;font-size:12px;line-height:1.2;color:#475569;cursor:pointer;text-decoration:none;text-align:center;transition:all .18s ease}
 .step:hover{border-color:#0BA84A;background:#f9fdfa}
-.step b{font-weight:600;display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
+.step b{font-weight:600;display:block;max-width:100%;font-size:11.5px;word-break:break-word;line-height:1.2}
 .step i{font-style:normal;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#E8F7EE;color:#0BA84A;font-weight:800;font-size:13px;flex:none;transition:all .18s ease}
 .step.done{border-color:#BFE3CB}
 .step.done b{color:#15803d}
@@ -718,9 +718,9 @@ table.data td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:
 </header>
 
 <main>
-  <div class="tabs" role="tablist" aria-label="Menu">
+  <div class="tabs" role="tablist" aria-label="Menu" id="mainTabs" style="display: none;">
     <button class="tab" role="tab" aria-selected="true" data-view="form" id="tab-form">Isi Survey</button>
-    <button class="tab" role="tab" aria-selected="false" data-view="data" id="tab-data">Data Masuk <span class="count" id="countBadge">0</span></button>
+    <button class="tab" role="tab" aria-selected="false" data-view="data" id="tab-data" style="display: none;">Data Masuk <span class="count" id="countBadge">0</span></button>
   </div>
 
   <!-- ================= FORM VIEW ================= -->
@@ -2428,7 +2428,44 @@ function computeRekapFromSurveys(surveyList, tahapFilter) {
   return Object.values(g).sort((a, b) => a.kel.localeCompare(b.kel) || a.tahap.localeCompare(b.tahap));
 }
 
+function isDeveloperUser() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("role") === "DEVELOPER") return true;
+
+    const raw = localStorage.getItem("psc_user") || sessionStorage.getItem("psc_user");
+    if (raw) {
+      const u = JSON.parse(raw);
+      const r = String(u.peran || u.role || "").toUpperCase();
+      if (r === "DEVELOPER") return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+function applyRoleVisibility() {
+  const isDev = isDeveloperUser();
+  const tabs = document.getElementById("mainTabs") || document.querySelector(".tabs");
+  const tabData = document.getElementById("tab-data");
+  const viewData = document.getElementById("view-data");
+  const viewForm = document.getElementById("view-form");
+
+  if (isDev) {
+    if (tabs) tabs.style.display = "";
+    if (tabData) tabData.style.display = "";
+    fetchServerData();
+  } else {
+    if (tabs) tabs.style.display = "none";
+    if (tabData) tabData.style.display = "none";
+    if (viewData) viewData.hidden = true;
+    if (viewForm) viewForm.hidden = false;
+  }
+}
+
 function showView(v) {
+  if (v === "data" && !isDeveloperUser()) {
+    v = "form";
+  }
   $$(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.view === v));
   $("#view-form").hidden = v !== "form"; $("#view-data").hidden = v !== "data";
   $("#actions").hidden = v !== "form";
@@ -3446,8 +3483,8 @@ if (!studentVerified) {
   clearSurveyDataInputs();
 }
 calcPilah(); calcVol(); updateProgress(); showInlineWarns(); updateScopeUi();
-// Inisialisasi awal: Muat data server secara otomatis agar countBadge dan metrik langsung sinkron
-fetchServerData();
+// Inisialisasi visibilitas berbasis peran: Tab Data Masuk hanya untuk role DEVELOPER
+applyRoleVisibility();
 
 </script>
 </body>

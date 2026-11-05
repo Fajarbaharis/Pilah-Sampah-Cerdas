@@ -31,13 +31,17 @@ Repositori ini dikelola sebagai **Monorepo** (NPM Workspaces) yang memayungi lay
 │   │   └── deploy.yml          # Auto-deploy ke VPS Production (branch main)
 │   └── pull_request_template.md # Template PR standar ISO & Quality Control
 ├── apps/
-│   ├── api/                    # Express.js (TypeScript) Backend REST API & Prisma ORM
+│   ├── api/                    # Express.js (TypeScript) Backend REST API, Prisma ORM, & Services
 │   └── web/                    # React 18 + Vite Multi-Role Portal & Geofencing Dashboard
-├── database/                   # Berkas skema & dump inisialisasi SQL
-├── docs/                       # Dokumentasi teknis, modul KKN, integrasi mobile, & laporan QC
-├── scripts/                    # Skrip otomatisasi & pemeliharaan VPS
+├── docs/                       # Dokumentasi Terstruktur Standar ISO/IEC 12207
+│   ├── api/                    # Spesifikasi REST API & integrasi client mobile
+│   ├── architecture/           # Dokumen arsitektur teknis, flow sistem, & SDD/SRS
+│   ├── guides/                 # SOP, runbook deployment, panduan penggunaan, & QC
+│   └── reports/                # Laporan resmi, hasil audit sistem, & notulensi
+├── scripts/                    # Skrip otomatisasi DevOps, migrasi data, & pemeliharaan DB
 ├── docker-compose.yml          # Orchestrasi container lokal (PostgreSQL & Redis)
-├── AGENTS.md                   # Pedoman AI Agent untuk web & backend (SOP wajib)
+├── AGENTS.md                   # Pedoman tata kelola AI Agent & SOP developer
+├── CLAUDE.md                   # Regulasi izin operasional & hierarki otoritas dokumen
 ├── package.json                # Monorepo Workspace Root
 └── README.md
 ```

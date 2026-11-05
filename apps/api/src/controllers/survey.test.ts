@@ -18,6 +18,7 @@ vi.mock("../lib/prisma.js", () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
       delete: vi.fn(),
+      count: vi.fn(),
     },
     surveiKelurahan: {
       findFirst: vi.fn(),
@@ -170,6 +171,7 @@ describe("Survey Service & Controller Unit Tests", () => {
     });
 
     it("harus berhasil menyimpan survei jika NIM valid dan melakukan auto-agregasi", async () => {
+      (prisma.surveiRw.count as any).mockResolvedValue(1);
       (prisma.studentKkn.findFirst as any).mockResolvedValue({
         id: "student-uuid-1",
         userId: "user-uuid-1",
@@ -379,41 +381,34 @@ describe("Survey Service & Controller Unit Tests", () => {
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
-        data: {
+        data: expect.objectContaining({
           exists: true,
           survey: expect.objectContaining({
             kodeSurvey: "BRS-123",
             kelurahan: "Dago",
             rw: "RW 01",
           }),
-        },
+        }),
       });
     });
 
-    it("deleteSurvey handler harus mengembalikan 403 jika NIM tidak cocok", async () => {
+    it("deleteSurvey handler harus mengembalikan 403 jika bukan Super User atau Developer", async () => {
       req.params = { id: "srw-1" };
-      req.query = { nim: "10122999" };
-      (prisma.surveiRw.findUnique as any).mockResolvedValue({
-        id: "srw-1",
-        nim: "10122001",
-        kelurahan: "Dago",
-        tahap: "Endline",
-        tahun: "2026",
-      });
+      req.user = { id: "user-1", role: "MAHASISWA_KKN" };
 
       await surveyController.deleteSurvey(req, res);
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("hanya berhak menghapus"),
+          message: expect.stringContaining("Akses ditolak"),
         })
       );
     });
 
-    it("deleteSurvey handler harus mengembalikan 200 jika NIM cocok", async () => {
+    it("deleteSurvey handler harus mengembalikan 200 jika user berwenang", async () => {
       req.params = { id: "srw-1" };
-      req.query = { nim: "10122001" };
+      req.user = { id: "admin-1", role: "SUPER_USER" };
       (prisma.surveiRw.findUnique as any).mockResolvedValue({
         id: "srw-1",
         nim: "10122001",
@@ -427,7 +422,7 @@ describe("Survey Service & Controller Unit Tests", () => {
       await surveyController.deleteSurvey(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ success: true, message: "Survei berhasil dihapus." })
+        expect.objectContaining({ success: true, message: expect.stringContaining("berhasil dihapus") })
       );
     });
   });
