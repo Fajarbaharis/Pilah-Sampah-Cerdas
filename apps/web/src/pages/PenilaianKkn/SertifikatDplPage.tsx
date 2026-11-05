@@ -17,9 +17,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
+  GraduationCap,
   Printer,
-  Download,
   X,
   CheckCircle2,
   FileSpreadsheet,
@@ -50,7 +49,6 @@ export const SertifikatDplPage: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
   const [hasCopiedId, setHasCopiedId] = useState<boolean>(false);
-  const [zoomScale, setZoomScale] = useState<number>(1);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Click outside listener for search autocomplete
@@ -144,6 +142,23 @@ export const SertifikatDplPage: React.FC = () => {
     }
     return dplList[0] || (fallbackDplRaw[0] as DplCertData);
   });
+
+  // Dynamic adaptive typography based on name length
+  const dplNameFontSize = useMemo(() => {
+    const len = (selectedDpl?.nama || "").trim().length;
+    if (len > 48) return "1.7cqw";
+    if (len > 37) return "2.05cqw";
+    if (len > 27) return "2.4cqw";
+    return "2.85cqw";
+  }, [selectedDpl?.nama]);
+
+  // Dynamic divider width adapting to name length (base 24cqw)
+  const dplDividerWidth = useMemo(() => {
+    const len = (selectedDpl?.nama || "").trim().length;
+    if (len > 45) return "27cqw";
+    if (len > 32) return "25cqw";
+    return "24cqw";
+  }, [selectedDpl?.nama]);
 
   // Lock to self if DPL
   useEffect(() => {
@@ -307,6 +322,11 @@ export const SertifikatDplPage: React.FC = () => {
           font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
         }
 
+        /* ── NATIVE EXACT CANVA CSS ENGINE ── */
+        .cert-stage-wrapper {
+          container-type: inline-size;
+        }
+
         @page {
           size: A4 landscape;
           margin: 0;
@@ -342,6 +362,7 @@ export const SertifikatDplPage: React.FC = () => {
             width: 100% !important;
             gap: 0 !important;
           }
+          .cert-stage-wrapper,
           .cert-print-sheet {
             box-shadow: none !important;
             border-radius: 0 !important;
@@ -661,143 +682,112 @@ export const SertifikatDplPage: React.FC = () => {
         
         {/* ==================== HALAMAN 1: PIAGAM PENGHARGAAN DPL ==================== */}
         <div
-          className="cert-print-sheet relative w-full aspect-[1.414/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.414/1] print:break-after-avoid"
+          className="cert-stage-wrapper relative w-full aspect-[1.4153/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.4153/1] print:break-after-avoid"
         >
-          {/* Elemen fisik gambar bingkai sertifikat (Anti-hilang saat dicetak meski Background Graphics tidak dicentang) */}
+          {/* Elemen fisik gambar bingkai sertifikat */}
           <img
             src="/image/serti/certificate_frame_hires.png"
             alt="Bingkai Sertifikat"
             className="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-0"
           />
 
-          {/* Inner Content Area */}
-          <div className="relative z-10 w-full h-full flex flex-col items-center justify-between px-8 md:px-16 pt-7 md:pt-9 pb-6 select-none box-border">
-            
-            {/* TOP SECTION: Header & Title */}
-            <div className="flex flex-col items-center w-full shrink-0">
-              {/* Header UNIKOM */}
-              <div className="flex flex-col items-center w-full mt-0.5 md:mt-1">
-                <h1 className="cert-univ-title font-cinzel text-lg md:text-2xl font-black text-[#0A2540] tracking-wide m-0 leading-tight">
-                  UNIVERSITAS KOMPUTER INDONESIA
-                </h1>
-              </div>
+          {/* Absolute Vector Stage 1:1 Canva Architecture (Kop Identik dengan Mahasiswa) */}
+          <div className="absolute inset-0 z-10 w-full h-full pointer-events-none select-none">
+            {/* 1. Header UNIKOM (Persis 100% Titik Koordinat & Font Mahasiswa) */}
+            <div className="absolute left-0 right-0 text-center" style={{ top: "4.8%" }}>
+              <h1 className="font-playfair text-[2.2cqw] font-bold text-[#0A2540] tracking-[0.5px] leading-tight m-0">
+                UNIVERSITAS KOMPUTER INDONESIA
+              </h1>
+            </div>
 
-              {/* Title PIAGAM PENGHARGAAN */}
-              <div className="flex items-center justify-center gap-3 md:gap-4 mt-2.5 md:mt-3.5 w-full">
-                <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
-                <h2 className="cert-title-main font-cinzel text-xl md:text-4xl font-extrabold text-[#0A2540] tracking-[3px] m-0 leading-none">
-                  PIAGAM PENGHARGAAN
-                </h2>
-                <div className="h-[1.5px] bg-[#C5A059] w-8 md:w-14 shrink-0" />
-              </div>
+            {/* 2. Judul PIAGAM PENGHARGAAN & Garis Emas */}
+            <div className="absolute left-0 right-0 flex items-center justify-center gap-[1.5cqw]" style={{ top: "8.8%" }}>
+              <div className="h-[1.5px] bg-[#C5A059] w-[5.5cqw] shrink-0" />
+              <h2 className="font-playfair text-[2.6cqw] font-black text-[#0A2540] tracking-[3px] leading-none m-0">
+                PIAGAM PENGHARGAAN
+              </h2>
+              <div className="h-[1.5px] bg-[#C5A059] w-[5.5cqw] shrink-0" />
+            </div>
 
-              <div className="cert-title-sub1 text-xs md:text-[15pt] font-extrabold text-[#005AA9] tracking-wide mt-1 md:mt-1.5 uppercase">
+            {/* 3. Subtitle DPL & Periode */}
+            <div className="absolute left-0 right-0 text-center" style={{ top: "13.2%" }}>
+              <div className="font-sans text-[1.4cqw] font-extrabold text-[#005AA9] tracking-wider uppercase leading-tight">
                 DOSEN PEMBIMBING LAPANGAN (DPL)
               </div>
-              <div className="cert-title-sub2 text-[10px] md:text-[13pt] font-extrabold text-[#005AA9] tracking-wide mt-0.5 uppercase">
+              <div className="font-sans text-[1.15cqw] font-bold text-[#0A2540] tracking-wide uppercase leading-tight mt-[0.3cqw]">
                 KULIAH KERJA NYATA TEMATIK BATCH I TAHUN AKADEMIK 2026/2027
               </div>
-              <div className="cert-number text-[10px] md:text-[11pt] font-semibold text-[#0A2540] mt-1">
+              <div className="font-sans text-[1.05cqw] font-semibold text-[#0A2540] leading-tight mt-[0.4cqw]">
                 {selectedDpl.nomorSertifikat.startsWith("Nomor:") ? selectedDpl.nomorSertifikat : `Nomor: ${selectedDpl.nomorSertifikat}`}
               </div>
             </div>
 
-            {/* ── CENTER PROPORTIONAL SECTION (SIMETRIS DI TENGAH) ── */}
-            <div className="cert-center-body flex-1 flex flex-col items-center justify-center w-full my-auto py-2">
-              <div className="cert-given-to font-playfair text-[10px] md:text-[11.5pt] italic text-[#0A2540] mb-1">
+            {/* 4. Diberikan kepada: */}
+            <div className="absolute left-0 right-0 text-center" style={{ top: "27.2%" }}>
+              <div className="font-playfair text-[1.4cqw] italic font-bold text-[#0A2540] m-0">
                 Diberikan dengan penuh rasa hormat dan apresiasi kepada:
-              </div>
-
-              {/* Recipient DPL Name */}
-              <div className="cert-recipient-name font-playfair text-xl md:text-[26pt] font-black text-[#0A2540] tracking-wide uppercase text-center whitespace-nowrap leading-tight">
-                {selectedDpl.nama}
-              </div>
-
-              {/* Diamond Divider */}
-              <div className="flex items-center justify-center gap-3 w-full max-w-[420px] md:max-w-[480px] my-1 md:my-1.5">
-                <div className="h-[1px] bg-[#C5A059] flex-1" />
-                <span className="text-[#C5A059] text-[8pt] md:text-[10pt] leading-none">&#9670;</span>
-                <div className="h-[1px] bg-[#C5A059] flex-1" />
-              </div>
-
-              {/* NIP */}
-              <div className="cert-bio-text text-[10px] md:text-[11pt] font-semibold text-[#0A2540]">
-                NIP: {selectedDpl.nip}
-              </div>
-
-              {/* Role Pill */}
-              <div className="cert-role-pill mt-1.5 border-[1.2px] border-[#C5A059] rounded-full px-5 py-0.5 bg-white shadow-2xs">
-                <span className="text-[10px] md:text-[11pt] font-extrabold text-[#005AA9] tracking-wide">
-                  Dosen Pembimbing Lapangan &bull; {selectedDpl.kelompok}
-                </span>
-              </div>
-
-              {/* Narrative of Appreciation */}
-              <div className="cert-narrative text-[9px] md:text-[11pt] text-[#0A2540] text-center max-w-[760px] mt-2.5 leading-relaxed font-normal px-4">
-                Atas dedikasi, bimbingan, keteladanan, dan kontribusi nyata dalam mendampingi mahasiswa
-                Kuliah Kerja Nyata Tematik (KKN-T) Pengelolaan Sampah dan Lingkungan Hidup Berseka
-                di wilayah <span className="font-bold">{selectedDpl.kelompok}</span> (
-                <span className="font-semibold">{selectedDpl.wilayahDampingan}</span>).
               </div>
             </div>
 
-            {/* BOTTOM SECTION: Signatures & Validation QR */}
-            <div className="cert-bottom-section w-full flex items-end justify-between px-12 md:px-24 pb-4 md:pb-8 mt-2 shrink-0">
-              
-              {/* Left Column: QR Code & ID */}
-              <div className="flex flex-col items-center">
-                <div className="cert-qr-box w-14 h-14 md:w-16 md:h-16 bg-white p-1 rounded-md border border-[#0A2540]/20 shadow-xs flex items-center justify-center">
-                  {/* Real QR SVG pointing to public verification */}
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
-                      `${typeof window !== "undefined" ? window.location.origin : "https://berseka.id"}/verify-dpl/${selectedDpl.idSertifikat}`
-                    )}`}
-                    alt="QR Verification"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="text-[7px] md:text-[8pt] font-mono font-bold text-[#0A2540] mt-1 tracking-tight">
-                  {selectedDpl.idSertifikat}
-                </div>
-                <div className="text-[6.5px] md:text-[7pt] text-slate-500 font-semibold tracking-wide">
-                  Scan untuk Validasi Keabsahan
-                </div>
+            {/* 5. Nama Dosen DPL (Anchor ke Bawah dengan Jarak Nafas yang Pas) */}
+            <div className="absolute left-0 right-0 flex items-end justify-center text-center px-[4cqw]" style={{ top: "30.0%", height: "8.0cqw" }}>
+              <div
+                className="font-playfair font-black text-[#0A2540] tracking-[0.5px] uppercase whitespace-nowrap leading-none mx-auto max-w-[72cqw] pb-[1.2cqw]"
+                style={{ fontSize: dplNameFontSize }}
+              >
+                {selectedDpl.nama}
               </div>
+            </div>
 
-              {/* Center Seal / Watermark placeholder */}
-              <div className="hidden md:flex flex-col items-center opacity-80">
-                <div className="w-12 h-12 rounded-full border border-[#C5A059]/40 flex items-center justify-center">
-                  <ShieldCheck size={24} className="text-[#005AA9]" />
-                </div>
-                <span className="text-[6.5pt] text-[#C5A059] font-bold tracking-widest uppercase mt-0.5">
-                  OFFICIAL SEAL
+            {/* 6. Diamond Divider Emas (Ringkas 16cqw & Dinamis Menyesuaikan Nama) */}
+            <div className="absolute left-0 right-0 flex items-center justify-center gap-[1.2cqw] px-[8cqw]" style={{ top: "39.4%" }}>
+              <div className="h-[1.5px] bg-[#C5A059] shrink-0" style={{ width: dplDividerWidth }} />
+              <span className="text-[#C5A059] text-[0.9cqw] leading-none">&#9670;</span>
+              <div className="h-[1.5px] bg-[#C5A059] shrink-0" style={{ width: dplDividerWidth }} />
+            </div>
+
+            {/* 7. NIP & Role Pill DPL */}
+            <div className="absolute left-0 right-0 flex flex-col items-center text-center" style={{ top: "42.8%" }}>
+              <div className="font-sans text-[1.3cqw] font-bold text-[#0A2540] leading-tight">
+                NIP: {selectedDpl.nip}
+              </div>
+              <div className="mt-[0.5cqw] border-[1.2px] border-[#C5A059] rounded-full px-[2cqw] py-[0.15cqw] bg-white shadow-2xs">
+                <span className="font-sans text-[1.2cqw] font-extrabold text-[#005AA9] tracking-wide">
+                  Dosen Pembimbing Lapangan &bull; {selectedDpl.kelompok}
                 </span>
               </div>
+            </div>
 
-              {/* Right Column: Signature & Official Stamped Date */}
-              <div className="flex flex-col items-center text-center max-w-[240px] md:max-w-[280px]">
-                <div className="cert-footer-text text-[9px] md:text-[10pt] font-semibold text-[#0A2540] mb-0.5">
+            {/* 8. Paragraf Narasi Apresiasi DPL (Maximized Full Width) */}
+            <div className="absolute left-0 right-0 flex justify-center text-center px-[6cqw]" style={{ top: "52.2%" }}>
+              <div className="font-sans text-[1.45cqw] font-medium text-[#0A2540] leading-[1.65] max-w-[66cqw]">
+                Atas dedikasi, bimbingan, keteladanan, dan kontribusi nyata dalam mendampingi mahasiswa Kuliah Kerja Nyata Tematik (KKN-T) Pengelolaan Sampah dan Lingkungan Hidup Berseka di wilayah {selectedDpl.kelompok} ({selectedDpl.wilayahDampingan}).
+              </div>
+            </div>
+
+            {/* 9. Blok Penandatangan Rektor (Center Horizontal, Diturunkan Sedikit) */}
+            <div className="absolute left-0 right-0 flex justify-center text-center" style={{ top: "71.5%" }}>
+              <div className="flex flex-col items-center">
+                <div className="font-sans text-[1.15cqw] font-semibold text-[#0A2540] leading-tight">
                   Bandung, {selectedDpl.tanggalTerbit}
                 </div>
-                <div className="cert-footer-text text-[8px] md:text-[9.5pt] font-bold text-[#0A2540] leading-tight">
+                <div className="font-sans text-[1.05cqw] font-bold text-[#0A2540] leading-tight mt-[0.4cqw]">
                   Rektor Universitas Komputer Indonesia
                 </div>
                 
-                {/* Ruang kosong untuk tanda tangan manual / basah */}
-                <div className="h-10 md:h-14 w-full" />
+                {/* Ruang tanda tangan manual (Identik 6cqw Mahasiswa) */}
+                <div className="h-[6cqw] w-full" />
 
-                <div className="cert-footer-text font-bold text-[8.5px] md:text-[10pt] text-[#0A2540] underline tracking-tight whitespace-nowrap">
+                <div className="font-sans font-bold text-[1.25cqw] text-[#0A2540] whitespace-nowrap leading-tight">
                   Prof. Dr. Ir. H. Eddy Soeryanto Soegoto, M.T.
                 </div>
-                <div className="cert-footer-text text-[7px] md:text-[8pt] font-semibold text-[#0A2540] mt-0.5">
+                <div className="font-sans text-[0.95cqw] font-semibold text-[#0A2540] mt-[0.2cqw]">
                   NIP: 4127.34.02.001
                 </div>
               </div>
             </div>
-
           </div>
         </div>
-
       </div>
     </div>
   );

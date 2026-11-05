@@ -328,6 +328,22 @@ export const SertifikatKknPage: React.FC = () => {
     : `KKNT-MHS/${String(selectedStudent.noUrut || 1).padStart(3, '0')}/UNIKOM/BATCH-1/XI/2026`;
 
   const formattedName = selectedStudent.nama ? selectedStudent.nama.toUpperCase().trim() : '';
+
+  // Dynamic adaptive typography for student name based on character length
+  const studentNameFontSize = useMemo(() => {
+    const len = formattedName.length;
+    if (len > 38) return "1.85cqw";
+    if (len > 28) return "2.25cqw";
+    return "2.85cqw";
+  }, [formattedName]);
+
+  // Dynamic divider width adapting to name length (base 24cqw)
+  const studentDividerWidth = useMemo(() => {
+    const len = formattedName.length;
+    if (len > 36) return "27cqw";
+    if (len > 26) return "25cqw";
+    return "24cqw";
+  }, [formattedName]);
   const tanggalTerbit = selectedStudent.tanggalTerbit && selectedStudent.tanggalTerbit !== "Menunggu Penilaian"
     ? selectedStudent.tanggalTerbit
     : "10 November 2026";
@@ -1366,18 +1382,21 @@ export const SertifikatKknPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 5. Nama Penerima (Dominan Besar) */}
-            <div className="absolute left-0 right-0 text-center px-[5cqw]" style={{ top: "32.8%" }}>
-              <div className="font-playfair text-[3.2cqw] font-black text-[#0A2540] tracking-[0.5px] uppercase whitespace-nowrap leading-tight">
+            {/* 5. Nama Penerima (Anchor ke Bawah dengan Jarak Nafas yang Pas) */}
+            <div className="absolute left-0 right-0 flex items-end justify-center text-center px-[4cqw]" style={{ top: "30.0%", height: "8.0cqw" }}>
+              <div
+                className="font-playfair font-black text-[#0A2540] tracking-[0.5px] uppercase whitespace-nowrap leading-none mx-auto max-w-[72cqw] pb-[1.2cqw]"
+                style={{ fontSize: studentNameFontSize }}
+              >
                 {formattedName}
               </div>
             </div>
 
-            {/* 6. Diamond Divider Emas */}
-            <div className="absolute left-0 right-0 flex items-center justify-center gap-[1cqw] px-[15cqw]" style={{ top: "39.4%" }}>
-              <div className="h-[1.5px] bg-[#C5A059] w-[26cqw]" />
+            {/* 6. Diamond Divider Emas (Ringkas 16cqw & Dinamis Menyesuaikan Nama) */}
+            <div className="absolute left-0 right-0 flex items-center justify-center gap-[1.2cqw] px-[8cqw]" style={{ top: "39.4%" }}>
+              <div className="h-[1.5px] bg-[#C5A059] shrink-0" style={{ width: studentDividerWidth }} />
               <span className="text-[#C5A059] text-[0.9cqw] leading-none">&#9670;</span>
-              <div className="h-[1.5px] bg-[#C5A059] w-[26cqw]" />
+              <div className="h-[1.5px] bg-[#C5A059] shrink-0" style={{ width: studentDividerWidth }} />
             </div>
 
             {/* 7. NIM & Program Studi */}
@@ -1397,8 +1416,8 @@ export const SertifikatKknPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 9. Blok Penandatangan (Center Horizontal, Top 67.5% Persis Image 1) */}
-            <div className="absolute left-0 right-0 flex justify-center text-center" style={{ top: "67.5%" }}>
+            {/* 9. Blok Penandatangan (Center Horizontal, Diturunkan ke 71.5% Identik DPL) */}
+            <div className="absolute left-0 right-0 flex justify-center text-center" style={{ top: "71.5%" }}>
               <div className="flex flex-col items-center">
                 <div className="font-sans text-[1.15cqw] font-semibold text-[#0A2540] leading-tight">
                   Bandung, {tanggalTerbit}
