@@ -1534,7 +1534,7 @@ let lastLoadedRwKey = "";
 
 function clearSurveyDataInputs() {
   $$("#f input, #f select, #f textarea").forEach(el => {
-    if (!el.name || ["kota", "kecamatan", "kelurahan", "rw", "nim", "nama", "prodi", "kelompok", "wa", "tahap", "tahun"].includes(el.name)) return;
+    if (!el.name || ["kota", "kecamatan", "kelurahan", "rw", "nim", "nama", "prodi", "kelompok", "wa", "tahap", "tahun", "tanggal"].includes(el.name)) return;
     if (el.type === "checkbox") {
       el.checked = false;
     } else if (el.type === "radio") {
@@ -2186,7 +2186,7 @@ function restore(o) {
   }
 
   // Pulihkan data lapangan jika RW terpilih
-  const reservedFields = ["kota", "kecamatan", "kelurahan", "rw", "nim", "nama", "prodi", "kelompok", "wa", "tahap", "tahun", "tingkat_pilah"];
+  const reservedFields = ["kota", "kecamatan", "kelurahan", "rw", "nim", "nama", "prodi", "kelompok", "wa", "tahap", "tahun", "tanggal", "tingkat_pilah"];
   $$("#f input, #f select, #f textarea").forEach(el => {
     if (!el.name || reservedFields.includes(el.name)) return;
     const v = o[el.name];
@@ -3028,7 +3028,6 @@ function renderServerData(d) {
       '<td style="white-space:nowrap; display:flex; gap:6px; align-items:center;">' +
         '<button class="btn btn-sec btn-sm" type="button" data-detail="' + esc(s.id) + '" style="padding:4px 10px; font-size:12px;">Detail</button>' +
         (s.versi > 1 ? '<span style="font-size:11px; padding:2px 8px; border-radius:10px; background:#fef3c7; color:#92400e; font-weight:700;">v' + s.versi + ' • Revisi</span>' : '') +
-        '<span style="font-size:11px; padding:2px 8px; border-radius:10px; background:#dcfce7; color:#166534; font-weight:600;">DB</span>' +
       '</td>' +
     '</tr>';
   }).join("")
