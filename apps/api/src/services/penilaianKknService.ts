@@ -230,6 +230,24 @@ export const penilaianKknService = {
       }
     }
 
+    // Strict Scope: Jika evaluator RW, pastikan mahasiswa ditugaskan di wilayah RW binaannya
+    if (
+      evaluatorRole &&
+      ["RW", "ADMIN_RW"].includes(evaluatorRole.toUpperCase()) &&
+      evaluatorId
+    ) {
+      const userRw = await prisma.user.findUnique({
+        where: { id: evaluatorId },
+        select: { rwId: true },
+      });
+      const studentRwId = profile?.assignedRwId || studentUser.rwId;
+      if (userRw?.rwId && studentRwId && studentRwId !== userRw.rwId) {
+        throw new Error(
+          "Akses ditolak: Mahasiswa ini bukan bagian dari wilayah RW binaan Anda"
+        );
+      }
+    }
+
     // 1. Hitung Kehadiran Real dari Database (Berdasarkan durasi menit aktual & status pemenuhan jam)
     const ruleConfigs = await configService.getRuleEngineConfigs().catch(() => null);
     const targetLogbook = ruleConfigs?.logbookTargetKegiatan || 24;
@@ -634,6 +652,20 @@ export const penilaianKknService = {
       }
     }
 
+    // Strict Scope: RW hanya berwenang menilai mahasiswa di wilayah RW binaannya
+    if (["RW", "ADMIN_RW"].includes(normRole) && evaluatorId) {
+      const userRw = await prisma.user.findUnique({
+        where: { id: evaluatorId },
+        select: { rwId: true },
+      });
+      const studentRwId = studentUser.studentProfile?.assignedRwId || studentUser.rwId;
+      if (userRw?.rwId && studentRwId && studentRwId !== userRw.rwId) {
+        throw new Error(
+          "Akses ditolak: Anda hanya berwenang menilai mahasiswa di wilayah RW binaan Anda"
+        );
+      }
+    }
+
     if (studentUser.penilaianKkn?.isFinalized && !["SUPER_USER", "DEVELOPER"].includes(normRole)) {
       throw new Error(
         "Penilaian telah difinalisasi dan dikunci. Hubungi Administrator untuk pembukaan kunci."
@@ -775,10 +807,16 @@ export const penilaianKknService = {
       skorMitraInisiatif > 0;
 
     const isComplete = (subtotalDpl > 0 || hasDplAny) && (subtotalMitra > 0 || hasMitraAny);
-    // Sesuai Opsi A: Penilaian TIDAK BISA difinalisasi menjadi mutu akhir jika salah satu penilai (misal MPL) belum menilai
-    const isFinal = Boolean(payload.isFinalizeAction && isComplete);
+    // Finalisasi sah jika kedua penilai telah mengisi, ATAU jika DPL / Super User memfinalisasi mandiri (saat MPL belum/tidak mengisi)
+    const canFinalize =
+      isComplete ||
+      (subtotalDpl > 0 &&
+        ["DPL", "DOSEN_PEMBIMBING", "DOSEN_PENDAMPING", "SUPER_USER", "DEVELOPER", "ADMIN_DLH"].includes(
+          normRole
+        ));
+    const isFinal = Boolean(payload.isFinalizeAction && canFinalize);
 
-    const nilaiAkhir = calculateCompositeScore(
+    let nilaiAkhir = calculateCompositeScore(
       subtotalMitra,
       subtotalDpl,
       50,
@@ -787,11 +825,17 @@ export const penilaianKknService = {
       0,
       0
     );
+
+    // Jika difinalisasi mandiri oleh DPL / Admin karena MPL tidak/belum mengisi, normalisasi nilai akhir ke evaluasi penuh DPL
+    if (isFinal && !isComplete && subtotalDpl > 0) {
+      nilaiAkhir = subtotalDpl;
+    }
+
     let kategoriNilai = calculateGradeCategory(nilaiAkhir, {
       isFinalized: isFinal,
-      isComplete,
+      isComplete: isComplete || isFinal,
     });
-    if (!isComplete && (subtotalDpl > 0 || hasDplAny) && subtotalMitra === 0 && !hasMitraAny) {
+    if (!isFinal && !isComplete && (subtotalDpl > 0 || hasDplAny) && subtotalMitra === 0 && !hasMitraAny) {
       kategoriNilai = "Menunggu Penilaian Mitra";
     }
     const statusVal: StatusPenilaianKkn = isFinal
@@ -1138,11 +1182,15 @@ export const penilaianKknService = {
             ? kontribusiMitra
             : 0;
 
-      const finalNilai = isComplete
-        ? p && Number(p.nilaiAkhir) > 0
-          ? Number(p.nilaiAkhir)
-          : calculatedNilaiAkhir
-        : calculatedNilaiAkhir;
+      const isFinalized = Boolean(p?.isFinalized || p?.status === "FINAL");
+
+      const finalNilai = isFinalized && Number(p?.nilaiAkhir) > 0
+        ? Number(p.nilaiAkhir)
+        : isComplete
+          ? p && Number(p.nilaiAkhir) > 0
+            ? Number(p.nilaiAkhir)
+            : calculatedNilaiAkhir
+          : calculatedNilaiAkhir;
 
       let statusDpl = "BELUM_DINILAI";
       if (hasDplAll || (p && p.status === "FINAL") || (subtotalDpl > 0 && hasDplAll)) {
@@ -1157,7 +1205,9 @@ export const penilaianKknService = {
       }
 
       let statusPenilaian = "BELUM_DINILAI";
-      if (isComplete) {
+      if (isFinalized) {
+        statusPenilaian = "FINAL";
+      } else if (isComplete) {
         statusPenilaian = "LENGKAP";
       } else if (subtotalDpl > 0 || hasDplAny) {
         statusPenilaian = "MENUNGGU_MPL";
@@ -1165,14 +1215,13 @@ export const penilaianKknService = {
         statusPenilaian = "MENUNGGU_DPL";
       }
 
-      const isFinalized = Boolean(p?.isFinalized && isComplete);
       const kategori =
-        p?.kategoriNilai && isComplete && isFinalized
+        p?.kategoriNilai && isFinalized
           ? p.kategoriNilai
-          : !isComplete && (subtotalDpl > 0 || hasDplAny) && subtotalMitra === 0 && !hasMitraScores
+          : !isFinalized && !isComplete && (subtotalDpl > 0 || hasDplAny) && subtotalMitra === 0 && !hasMitraScores
             ? "Menunggu Penilaian Mitra"
             : finalNilai > 0
-              ? calculateGradeCategory(finalNilai, { isFinalized, isComplete })
+              ? calculateGradeCategory(finalNilai, { isFinalized, isComplete: isComplete || isFinalized })
               : "Belum Dinilai";
 
       return {

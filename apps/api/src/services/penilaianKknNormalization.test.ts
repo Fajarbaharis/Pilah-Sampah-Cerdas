@@ -151,5 +151,12 @@ describe("Penilaian KKN - Normalisasi Formula & Anti Nilai E Prematur", () => {
     it("should return 'Belum Dinilai' when score is 0", () => {
       expect(calculateGradeCategory(0)).toBe("Belum Dinilai");
     });
+
+    it("should return official letter grade when finalized solo by DPL (MPL absent)", () => {
+      const dplSoloFinalizedOptions = { isFinalized: true, isComplete: true };
+      expect(calculateGradeCategory(85.0, dplSoloFinalizedOptions)).toBe("A");
+      expect(calculateGradeCategory(74.5, dplSoloFinalizedOptions)).toBe("B");
+      expect(calculateGradeCategory(62.0, dplSoloFinalizedOptions)).toBe("C");
+    });
   });
 });

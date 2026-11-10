@@ -141,6 +141,56 @@ describe("sertifikatKknService - Integrity & Scoping Test Suite", () => {
     expect(anugrah?.rw).toBe("RW 21 Kelurahan Sadang Serang");
   });
 
+  it("should calculate combined personal score from 50% DPL + 50% MPL in certificate", async () => {
+    const mockStudent = [
+      {
+        id: "s-comb",
+        nim: "21124999",
+        jurusan: "Teknik Informatika",
+        sks: 11,
+        userId: "user-comb",
+        kelompokId: "kel-comb",
+        assessmentScore: null,
+        isAssessed: true,
+        user: { name: "Mahasiswa Gabungan" },
+        kelompok: {
+          id: "kel-comb",
+          name: "Kelompok Riset",
+          kelurahan: "Dago",
+          cakupanRw: ["01"],
+          dpl: { name: "DPL Penguji" },
+        },
+        assignedRw: null,
+      },
+    ];
+
+    const mockPenilaian = [
+      {
+        studentId: "user-comb",
+        subtotalDpl: 80,
+        subtotalMitra: 90,
+        skorDplLaporanAkhir: 85,
+        skorDplOutput: 85,
+        skorMitraBuktiKegiatan: 90,
+        nilaiAkhir: 85.0,
+        isFinalized: true,
+        status: "FINAL",
+      },
+    ];
+
+    vi.mocked(prisma.studentKkn.findMany).mockResolvedValueOnce(mockStudent as any);
+    vi.mocked(prisma.programKerjaKkn.findMany).mockResolvedValueOnce([]);
+    vi.mocked(prisma.penilaianKknMahasiswa.findMany).mockResolvedValueOnce(mockPenilaian as any);
+    vi.mocked((prisma as any).pointHistory.groupBy).mockResolvedValueOnce([]);
+
+    const list = await sertifikatKknService.getSertifikatList({ peran: "SUPER_USER", id: "u1" });
+    expect(list.length).toBe(1);
+    const mhs = list[0];
+    expect(mhs.sudahDinilai).toBe(true);
+    // (80 * 0.5) + (90 * 0.5) = 40 + 45 = 85.0
+    expect(mhs.nilai.personal).toBe(85.0);
+  });
+
   it("should scope students for MAHASISWA_KKN role", async () => {
     vi.mocked(prisma.studentKkn.findMany).mockResolvedValueOnce([]);
     vi.mocked(prisma.programKerjaKkn.findMany).mockResolvedValueOnce([]);

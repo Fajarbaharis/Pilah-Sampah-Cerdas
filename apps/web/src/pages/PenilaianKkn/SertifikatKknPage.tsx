@@ -195,15 +195,49 @@ export const SertifikatKknPage: React.FC = () => {
     }
   }, [isMahasiswa, currentMahasiswa]);
 
-  // Sync selected student with URL param (only for non-mahasiswa)
+  // Track last selected NIM to prevent URL synchronization ping-pong
+  const lastSelectedNimRef = useRef<string>(selectedStudent?.nim || initialNim);
+
+  // Sync selected student with URL param (only for non-mahasiswa on external URL changes)
   useEffect(() => {
     if (isMahasiswa) return;
     const nimParam = searchParams.get("nim");
-    if (nimParam && nimParam !== selectedStudent.nim) {
+    if (nimParam && nimParam !== lastSelectedNimRef.current) {
+      lastSelectedNimRef.current = nimParam;
       const found = studentsData.find((s) => s.nim === nimParam);
       if (found) setSelectedStudent(found);
     }
-  }, [searchParams, isMahasiswa, selectedStudent.nim, studentsData]);
+  }, [searchParams, isMahasiswa, studentsData]);
+
+  // Fast direct hydration for active selected student from API with race-condition guard
+  useEffect(() => {
+    let isCancelled = false;
+    const targetNim = selectedStudent?.nim || initialNim;
+    if (targetNim) {
+      sertifikatKknService.getSertifikatByNim(targetNim).then((res) => {
+        if (!isCancelled && res) {
+          setSelectedStudent((prev) => {
+            if (prev?.nim === res.nim) {
+              return {
+                ...prev,
+                ...res,
+                kehadiran: res.kehadiran ?? res.nilai?.kehadiran ?? prev.kehadiran,
+                nilai: {
+                  ...prev.nilai,
+                  ...res.nilai,
+                  kehadiran: res.nilai?.kehadiran ?? res.kehadiran ?? prev.nilai?.kehadiran,
+                },
+              };
+            }
+            return prev;
+          });
+        }
+      }).catch(() => {});
+    }
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedStudent?.nim, initialNim]);
 
   // Keep selectedStudent in sync with studentsData updates (zero-dummy guarantee)
   useEffect(() => {
@@ -227,9 +261,10 @@ export const SertifikatKknPage: React.FC = () => {
   }, [studentsData, selectedStudent]);
 
   const handleSelectStudent = (s: StudentCertData) => {
-    if (isMahasiswa) return;
+    if (isMahasiswa || !s) return;
+    lastSelectedNimRef.current = s.nim;
     setSelectedStudent(s);
-    setSearchParams({ nim: s.nim });
+    setSearchParams({ nim: s.nim }, { replace: true });
   };
 
   // Distinct groups list
@@ -241,17 +276,18 @@ export const SertifikatKknPage: React.FC = () => {
     return Array.from(set).sort();
   }, [studentsData]);
 
-  // Filtered student list for quick drawer/dropdown
+  // Filtered student list with Intelligent Ranked Search (Prefix & Word-Boundary Priority)
   const filteredStudents = useMemo(() => {
     if (isMahasiswa) {
       return selectedStudent ? [selectedStudent] : [];
     }
-    return studentsData.filter((s) => {
-      const matchSearch =
-        !searchQuery ||
-        s.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.nim.includes(searchQuery) ||
-        s.prodi.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const cleanQuery = searchQuery.trim().toLowerCase();
+
+    // 1. Filter candidates by group & status, and calculate relevance score
+    const scoredStudents: { student: StudentCertData; score: number }[] = [];
+
+    for (const s of studentsData) {
       const matchKelompok =
         selectedKelompok === "ALL" || s.kelompok === selectedKelompok;
       const isGraded = Boolean(
@@ -266,14 +302,154 @@ export const SertifikatKknPage: React.FC = () => {
         (filterStatusPenilaian === "SUDAH" && isGraded) ||
         (filterStatusPenilaian === "BELUM" && !isGraded);
 
-      return matchSearch && matchKelompok && matchStatus;
-    });
+      if (!matchKelompok || !matchStatus) continue;
+
+      if (!cleanQuery) {
+        // Tanpa search query: beri skor default 0
+        scoredStudents.push({ student: s, score: 0 });
+        continue;
+      }
+
+      const namaLower = (s.nama || "").toLowerCase();
+      const nimClean = (s.nim || "").trim();
+      const prodiLower = (s.prodi || "").toLowerCase();
+
+      let score = 0;
+
+      // Tier 1: Exact match (Nama atau NIM)
+      if (namaLower === cleanQuery || nimClean === cleanQuery) {
+        score = 1000;
+      }
+      // Tier 2: Nama depan diawali query (Prefix Nama Lengkap)
+      else if (namaLower.startsWith(cleanQuery)) {
+        score = 500;
+      }
+      // Tier 3: NIM diawali query (Prefix NIM)
+      else if (nimClean.startsWith(cleanQuery)) {
+        score = 400;
+      }
+      // Tier 4: Kata dalam nama diawali query (Word-boundary prefix, contoh: "Abdan" di kata ke-2 / ke-3)
+      else if (
+        namaLower.split(/\s+/).some((word) => word.startsWith(cleanQuery))
+      ) {
+        score = 300;
+      }
+      // Tier 5: Prodi diawali query
+      else if (
+        prodiLower.startsWith(cleanQuery) ||
+        prodiLower.split(/\s+/).some((word) => word.startsWith(cleanQuery))
+      ) {
+        score = 150;
+      }
+      // Tier 6: Substring di tengah nama
+      else if (namaLower.includes(cleanQuery)) {
+        score = 50;
+      }
+      // Tier 7: Substring di tengah NIM atau Prodi
+      else if (nimClean.includes(cleanQuery) || prodiLower.includes(cleanQuery)) {
+        score = 25;
+      }
+
+      if (score > 0) {
+        scoredStudents.push({ student: s, score });
+      }
+    }
+
+    // 2. Sorting: jika ada query, prioritaskan skor tertinggi; jika skor sama, urutkan nama A-Z
+    if (cleanQuery) {
+      scoredStudents.sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+        return a.student.nama.localeCompare(b.student.nama, "id", { sensitivity: "base" });
+      });
+    }
+
+    return scoredStudents.map((item) => item.student);
   }, [searchQuery, selectedKelompok, filterStatusPenilaian, isMahasiswa, selectedStudent, studentsData]);
+
+  // Auto-cascade: ONLY when selectedKelompok or filterStatusPenilaian changes (NOT on every keystroke of searchQuery)
+  const prevFilterStateRef = useRef({ kelompok: selectedKelompok, status: filterStatusPenilaian });
+  useEffect(() => {
+    if (isMahasiswa || filteredStudents.length === 0) return;
+    const isFilterChanged =
+      prevFilterStateRef.current.kelompok !== selectedKelompok ||
+      prevFilterStateRef.current.status !== filterStatusPenilaian;
+
+    prevFilterStateRef.current = { kelompok: selectedKelompok, status: filterStatusPenilaian };
+
+    if (isFilterChanged) {
+      const isCurrentInFiltered = selectedStudent && filteredStudents.some((s) => s.nim === selectedStudent.nim);
+      if (!isCurrentInFiltered) {
+        handleSelectStudent(filteredStudents[0]);
+      }
+    }
+  }, [selectedKelompok, filterStatusPenilaian, filteredStudents, selectedStudent, isMahasiswa]);
+
+  // Cross-filter aware counter for kelompok options taking status filter into account
+  const kelompokCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    studentsData.forEach((s) => {
+      const isGraded = Boolean(
+        s.sudahDinilai &&
+        s.statusPenilaian === "SUDAH_DINILAI" &&
+        s.nilai &&
+        s.nilai.total > 0 &&
+        s.nilai.predikat !== "Belum Dinilai"
+      );
+      const matchStatus =
+        filterStatusPenilaian === "ALL" ||
+        (filterStatusPenilaian === "SUDAH" && isGraded) ||
+        (filterStatusPenilaian === "BELUM" && !isGraded);
+
+      if (matchStatus && s.kelompok) {
+        counts.set(s.kelompok, (counts.get(s.kelompok) || 0) + 1);
+      }
+    });
+    return counts;
+  }, [studentsData, filterStatusPenilaian]);
+
+  // Cross-filter aware counter for status options taking selected kelompok into account
+  const statusCounts = useMemo(() => {
+    let sudah = 0;
+    let belum = 0;
+    studentsData.forEach((s) => {
+      if (selectedKelompok !== "ALL" && s.kelompok !== selectedKelompok) return;
+      const isGraded = Boolean(
+        s.sudahDinilai &&
+        s.statusPenilaian === "SUDAH_DINILAI" &&
+        s.nilai &&
+        s.nilai.total > 0 &&
+        s.nilai.predikat !== "Belum Dinilai"
+      );
+      if (isGraded) sudah++;
+      else belum++;
+    });
+    return {
+      all: sudah + belum,
+      sudah,
+      belum,
+    };
+  }, [studentsData, selectedKelompok]);
+
+  const hasActiveFilter = Boolean(
+    searchQuery.trim() !== "" ||
+    selectedKelompok !== "ALL" ||
+    filterStatusPenilaian !== "ALL"
+  );
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setSelectedKelompok("ALL");
+    setFilterStatusPenilaian("ALL");
+    setIsSearchFocused(false);
+  };
 
   // Quick navigation: Previous and Next student in filtered list
   const currentStudentIndex = useMemo(() => {
+    if (!selectedStudent) return -1;
     return filteredStudents.findIndex((s) => s.nim === selectedStudent.nim);
-  }, [filteredStudents, selectedStudent.nim]);
+  }, [filteredStudents, selectedStudent?.nim]);
 
   const handlePrevStudent = () => {
     if (currentStudentIndex > 0) {
@@ -282,13 +458,22 @@ export const SertifikatKknPage: React.FC = () => {
   };
 
   const handleNextStudent = () => {
-    if (currentStudentIndex < filteredStudents.length - 1) {
+    if (currentStudentIndex >= 0 && currentStudentIndex < filteredStudents.length - 1) {
       handleSelectStudent(filteredStudents[currentStudentIndex + 1]);
     }
   };
 
   const handlePrintCertificate = () => {
+    if (filteredStudents.length === 0 || !selectedStudent) {
+      toast.error("Tidak ada mahasiswa yang dipilih untuk dicetak!");
+      return;
+    }
     toast.dismiss();
+    if (!isGraded) {
+      toast("Peringatan: Mahasiswa ini belum selesai dinilai. Sertifikat masih berstatus DRAFT.", {
+        icon: "⚠️",
+      });
+    }
     const originalTitle = document.title;
     const safeName = (selectedStudent.nama || "Mahasiswa").trim().replace(/[^a-zA-Z0-9]/g, "_");
     const dynamicTitle = `SERTIFIKAT_KKN_${selectedStudent.nim}_${safeName}`;
@@ -480,12 +665,12 @@ export const SertifikatKknPage: React.FC = () => {
         escapeCsv(nomor),
         escapeCsv(s.idSertifikat),
         escapeCsv("450 Jam"),
-        escapeCsv(studentKeh !== null && studentKeh > 0 ? studentKeh.toFixed(1) : "-"),
-        escapeCsv(s.nilai?.personal !== null ? s.nilai.personal.toFixed(1) : "-"),
-        escapeCsv(s.nilai?.proker !== null ? s.nilai.proker.toFixed(1) : "-"),
-        escapeCsv(s.nilai?.laporan !== null ? s.nilai.laporan.toFixed(1) : "-"),
-        escapeCsv(s.nilai?.paper !== null ? s.nilai.paper.toFixed(1) : "-"),
-        escapeCsv(s.nilai?.video !== null ? s.nilai.video.toFixed(1) : "-"),
+        escapeCsv(studentKeh !== null && studentKeh > 0 ? studentKeh.toFixed(2) : "-"),
+        escapeCsv(s.nilai?.personal !== null ? s.nilai.personal.toFixed(2) : "-"),
+        escapeCsv(s.nilai?.proker !== null ? s.nilai.proker.toFixed(2) : "-"),
+        escapeCsv(s.nilai?.laporan !== null ? s.nilai.laporan.toFixed(2) : "-"),
+        escapeCsv(s.nilai?.paper !== null ? s.nilai.paper.toFixed(2) : "-"),
+        escapeCsv(s.nilai?.video !== null ? s.nilai.video.toFixed(2) : "-"),
         escapeCsv(totalNilai),
         escapeCsv(predikat),
         escapeCsv(tgl),
@@ -1034,7 +1219,8 @@ export const SertifikatKknPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handlePrintCertificate}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#009966] hover:bg-[#008055] text-white text-xs font-bold shadow-xs transition cursor-pointer"
+                disabled={filteredStudents.length === 0}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#009966] hover:bg-[#008055] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold shadow-xs transition cursor-pointer"
                 title="Cetak Langsung atau Simpan sebagai PDF Vektor (A4 Landscape)"
               >
                 <Printer className="w-4 h-4" />
@@ -1126,6 +1312,7 @@ export const SertifikatKknPage: React.FC = () => {
                     if (e.key === "Enter" && filteredStudents.length > 0) {
                       handleSelectStudent(filteredStudents[0]);
                       setIsSearchFocused(false);
+                      setSearchQuery("");
                     } else if (e.key === "Escape") {
                       setIsSearchFocused(false);
                     }
@@ -1165,6 +1352,7 @@ export const SertifikatKknPage: React.FC = () => {
                           onClick={() => {
                             handleSelectStudent(s);
                             setIsSearchFocused(false);
+                            setSearchQuery("");
                           }}
                           className={`w-full text-left px-3.5 py-2.5 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/30 transition-colors flex items-center justify-between gap-3 cursor-pointer ${
                             s.nim === selectedStudent.nim ? "bg-emerald-50/60 dark:bg-emerald-950/40 font-semibold border-l-4 border-[#009966]" : ""
@@ -1210,12 +1398,15 @@ export const SertifikatKknPage: React.FC = () => {
                   onChange={(e) => setSelectedKelompok(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 font-semibold text-slate-700 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#009966]/20 focus:border-[#009966] cursor-pointer"
                 >
-                  <option value="ALL">Semua Kelompok ({studentsData.length} Mhs)</option>
-                  {kelompokList.map((k) => (
-                    <option key={k} value={k}>
-                      {k} ({studentsData.filter((x) => x.kelompok === k).length} Mhs)
-                    </option>
-                  ))}
+                  <option value="ALL">Semua Kelompok ({statusCounts.all} Mhs)</option>
+                  {kelompokList.map((k) => {
+                    const count = kelompokCounts.get(k) || 0;
+                    return (
+                      <option key={k} value={k}>
+                        {k} ({count} Mhs)
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -1226,9 +1417,9 @@ export const SertifikatKknPage: React.FC = () => {
                   onChange={(e) => setFilterStatusPenilaian(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 font-semibold text-slate-700 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#009966]/20 focus:border-[#009966] cursor-pointer"
                 >
-                  <option value="ALL">Semua Status</option>
-                  <option value="SUDAH">Sudah Dinilai</option>
-                  <option value="BELUM">Belum Dinilai</option>
+                  <option value="ALL">Semua Status ({statusCounts.all} Mhs)</option>
+                  <option value="SUDAH">Sudah Dinilai ({statusCounts.sudah} Mhs)</option>
+                  <option value="BELUM">Belum Dinilai ({statusCounts.belum} Mhs)</option>
                 </select>
               </div>
 
@@ -1237,7 +1428,7 @@ export const SertifikatKknPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handlePrevStudent}
-                  disabled={currentStudentIndex <= 0}
+                  disabled={currentStudentIndex <= 0 || filteredStudents.length === 0}
                   className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 disabled:opacity-40 transition cursor-pointer text-slate-700 dark:text-slate-300"
                   title="Mahasiswa sebelumnya"
                 >
@@ -1245,29 +1436,29 @@ export const SertifikatKknPage: React.FC = () => {
                 </button>
 
                 <select
-                  value={selectedStudent.nim}
+                  value={selectedStudent?.nim || ""}
                   onChange={(e) => {
                     const s = studentsData.find((x) => x.nim === e.target.value);
                     if (s) handleSelectStudent(s);
                   }}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#009966]/30 cursor-pointer truncate"
+                  disabled={filteredStudents.length === 0}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#009966]/30 cursor-pointer truncate disabled:opacity-50"
                 >
-                  {!filteredStudents.some((x) => x.nim === selectedStudent.nim) && (
-                    <option key={selectedStudent.nim} value={selectedStudent.nim}>
-                      {selectedStudent.nim} - {selectedStudent.nama} ({selectedStudent.sks} SKS)
-                    </option>
+                  {filteredStudents.length === 0 ? (
+                    <option value="">Tidak ada mahasiswa</option>
+                  ) : (
+                    filteredStudents.map((s) => (
+                      <option key={s.nim} value={s.nim}>
+                        {s.nama} ({s.sks} SKS)
+                      </option>
+                    ))
                   )}
-                  {filteredStudents.map((s) => (
-                    <option key={s.nim} value={s.nim}>
-                      {s.nim} - {s.nama} ({s.sks} SKS)
-                    </option>
-                  ))}
                 </select>
 
                 <button
                   type="button"
                   onClick={handleNextStudent}
-                  disabled={currentStudentIndex >= filteredStudents.length - 1}
+                  disabled={currentStudentIndex >= filteredStudents.length - 1 || currentStudentIndex === -1 || filteredStudents.length === 0}
                   className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 disabled:opacity-40 transition cursor-pointer text-slate-700 dark:text-slate-300"
                   title="Mahasiswa berikutnya"
                 >
@@ -1277,65 +1468,127 @@ export const SertifikatKknPage: React.FC = () => {
             </div>
 
             {/* Student Quick Summary Pill Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-xs">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="font-bold text-slate-900 dark:text-slate-100">
-                  {selectedStudent.nama}
-                </span>
-                <span className="text-slate-400">&bull;</span>
-                <span className="text-slate-500">
-                  NIM: <strong className="text-slate-700 dark:text-slate-300 font-mono">{selectedStudent.nim}</strong>
-                </span>
-                <span className="text-slate-400">&bull;</span>
-                <span className="text-slate-500">
-                  Prodi: <strong className="text-slate-700 dark:text-slate-300">{selectedStudent.prodi}</strong>
-                </span>
-                <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full text-[10.5px]">
-                  {selectedStudent.sks} SKS
-                </span>
-                <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-2 py-0.5 rounded-full text-[10.5px]">
-                  {selectedStudent.kelompok}
-                </span>
-                <span className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full text-[10.5px]">
-                  {(selectedStudent.totalPoin ?? 0).toLocaleString("id-ID")} Poin
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-500">Nilai Akhir:</span>
-                  {isGraded ? (
-                    <span className="bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-extrabold px-2.5 py-0.5 rounded-md text-xs">
-                      {selectedStudent.nilai.total.toFixed(2)} ({selectedStudent.nilai.predikat.split(" ")[0]})
-                    </span>
-                  ) : (
-                    <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold px-2.5 py-0.5 rounded-md text-xs">
-                      Belum Dinilai
-                    </span>
-                  )}
+            {filteredStudents.length === 0 ? (
+              <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-amber-500" />
+                  <span>Tidak ada mahasiswa yang sesuai dengan kriteria filter saat ini.</span>
                 </div>
-
-                <div className="flex items-center gap-1 text-[11px] text-slate-500 font-mono bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
-                  <span>{selectedStudent.idSertifikat}</span>
+                {hasActiveFilter && (
                   <button
                     type="button"
-                    onClick={handleCopyId}
-                    className="hover:text-emerald-600 cursor-pointer"
-                    title="Salin ID Sertifikat"
+                    onClick={handleResetFilters}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer transition"
                   >
-                    {hasCopiedId ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset Filter</span>
                   </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-xs">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="font-bold text-slate-900 dark:text-slate-100">
+                    {selectedStudent.nama}
+                  </span>
+                  <span className="text-slate-400">&bull;</span>
+                  <span className="text-slate-500">
+                    NIM: <strong className="text-slate-700 dark:text-slate-300 font-mono">{selectedStudent.nim}</strong>
+                  </span>
+                  <span className="text-slate-400">&bull;</span>
+                  <span className="text-slate-500">
+                    Prodi: <strong className="text-slate-700 dark:text-slate-300">{selectedStudent.prodi}</strong>
+                  </span>
+                  <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full text-[10.5px]">
+                    {selectedStudent.sks} SKS
+                  </span>
+                  <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-2 py-0.5 rounded-full text-[10.5px]">
+                    {selectedStudent.kelompok}
+                  </span>
+                  <span className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full text-[10.5px]">
+                    {(selectedStudent.totalPoin ?? 0).toLocaleString("id-ID")} Poin
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {hasActiveFilter && (
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-emerald-600 cursor-pointer transition font-medium"
+                      title="Reset semua filter ke default"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset Filter</span>
+                    </button>
+                  )}
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-500">Nilai Akhir:</span>
+                    {isGraded ? (
+                      <span className="bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-extrabold px-2.5 py-0.5 rounded-md text-xs">
+                        {selectedStudent.nilai.total.toFixed(2)} ({selectedStudent.nilai.predikat.split(" ")[0]})
+                      </span>
+                    ) : (
+                      <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold px-2.5 py-0.5 rounded-md text-xs">
+                        Belum Dinilai
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 text-[11px] text-slate-500 font-mono bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
+                    <span>{selectedStudent.idSertifikat}</span>
+                    <button
+                      type="button"
+                      onClick={handleCopyId}
+                      className="hover:text-emerald-600 cursor-pointer"
+                      title="Salin ID Sertifikat"
+                    >
+                      {hasCopiedId ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
 
       {/* ── LIVE CERTIFICATE RENDER AREA (100% CANVA RESMI MOCKUP ALIGNED) ─── */}
-      <div className="cert-export-wrapper max-w-[1150px] mx-auto mt-4 px-2 flex flex-col items-center gap-8 print:p-0 print:m-0 print:max-w-none print:w-full">
-        
-        {/* ==================== HALAMAN 1: SERTIFIKAT ==================== */}
+      {filteredStudents.length === 0 ? (
+        <div className="max-w-[1150px] w-full mx-auto mt-6 px-4 py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 shadow-xs">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center mb-4 border border-amber-200 dark:border-amber-900/50">
+            <Filter className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+            Tidak Ada Mahasiswa yang Sesuai Filter
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-md mx-auto">
+            Tidak ditemukan data mahasiswa yang cocok dengan kombinasi filter kelompok, status penilaian, atau kata kunci pencarian saat ini.
+          </p>
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#009966] hover:bg-[#008055] text-white text-xs font-bold transition cursor-pointer shadow-xs"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Semua Filter</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="cert-export-wrapper max-w-[1150px] mx-auto mt-4 px-2 flex flex-col items-center gap-8 print:p-0 print:m-0 print:max-w-none print:w-full">
+          {!isGraded && (
+            <div className="no-print w-full bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 rounded-xl p-3 flex items-center gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+              <Info className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>Perhatian:</strong> Mahasiswa ini <strong>belum selesai dinilai</strong> oleh Dosen Pembimbing Lapangan (DPL). Sertifikat berstatus <strong>DRAFT</strong> dan nilai transkrip pada Halaman 2 belum terisi lengkap.
+              </span>
+            </div>
+          )}
+
+          {/* ==================== HALAMAN 1: SERTIFIKAT ==================== */}
         <div className="cert-stage-wrapper relative w-full aspect-[1.4153/1] bg-white rounded-lg shadow-xl overflow-hidden print:shadow-none print:rounded-none print:m-0 print:w-full print:aspect-[1.4153/1] print:break-after-page">
           {/* Elemen fisik bingkai sertifikat */}
           <img
@@ -1532,7 +1785,7 @@ export const SertifikatKknPage: React.FC = () => {
                   Nilai kehadiran
                 </div>
                 <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
-                  {selectedKehadiran !== null && selectedKehadiran !== undefined && selectedKehadiran > 0 ? selectedKehadiran.toFixed(1) : "–"}
+                  {selectedKehadiran !== null && selectedKehadiran !== undefined && selectedKehadiran > 0 ? selectedKehadiran.toFixed(2) : "–"}
                 </div>
               </div>
 
@@ -1545,7 +1798,7 @@ export const SertifikatKknPage: React.FC = () => {
                   Nilai personal
                 </div>
                 <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
-                  {selectedStudent.nilai.personal !== null && selectedStudent.nilai.personal > 0 ? selectedStudent.nilai.personal.toFixed(1) : "–"}
+                  {selectedStudent.nilai.personal !== null && selectedStudent.nilai.personal > 0 ? selectedStudent.nilai.personal.toFixed(2) : "–"}
                 </div>
               </div>
 
@@ -1558,7 +1811,7 @@ export const SertifikatKknPage: React.FC = () => {
                   Program kerja kelompok
                 </div>
                 <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
-                  {selectedStudent.nilai.proker !== null && selectedStudent.nilai.proker > 0 ? selectedStudent.nilai.proker.toFixed(1) : "–"}
+                  {selectedStudent.nilai.proker !== null && selectedStudent.nilai.proker > 0 ? selectedStudent.nilai.proker.toFixed(2) : "–"}
                 </div>
               </div>
 
@@ -1571,7 +1824,7 @@ export const SertifikatKknPage: React.FC = () => {
                   Laporan akhir
                 </div>
                 <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
-                  {selectedStudent.nilai.laporan !== null && selectedStudent.nilai.laporan > 0 ? selectedStudent.nilai.laporan.toFixed(1) : "–"}
+                  {selectedStudent.nilai.laporan !== null && selectedStudent.nilai.laporan > 0 ? selectedStudent.nilai.laporan.toFixed(2) : "–"}
                 </div>
               </div>
 
@@ -1584,7 +1837,7 @@ export const SertifikatKknPage: React.FC = () => {
                   Paper
                 </div>
                 <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
-                  {selectedStudent.nilai.paper !== null && selectedStudent.nilai.paper > 0 ? selectedStudent.nilai.paper.toFixed(1) : "–"}
+                  {selectedStudent.nilai.paper !== null && selectedStudent.nilai.paper > 0 ? selectedStudent.nilai.paper.toFixed(2) : "–"}
                 </div>
               </div>
 
@@ -1597,7 +1850,7 @@ export const SertifikatKknPage: React.FC = () => {
                   Video
                 </div>
                 <div className="flex items-center justify-center font-extrabold text-[#005AA9] text-[1cqw] py-[0.6cqw] px-[0.5cqw] shrink-0" style={{ width: "20%" }}>
-                  {selectedStudent.nilai.video !== null && selectedStudent.nilai.video > 0 ? selectedStudent.nilai.video.toFixed(1) : "–"}
+                  {selectedStudent.nilai.video !== null && selectedStudent.nilai.video > 0 ? selectedStudent.nilai.video.toFixed(2) : "–"}
                 </div>
               </div>
             </div>
@@ -1631,6 +1884,7 @@ export const SertifikatKknPage: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── MODAL EKSPOR FORMAT CANVA BULK CREATE DENGAN PILIHAN KELOMPOK ──── */}
       {showCanvaModal && (

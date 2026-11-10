@@ -23,9 +23,13 @@ const PENILAIAN_READ_ROLES = [
   "MPL",
   "PANITIA_TASKFORCE",
   "PEMIMPIN",
+  "PIMPINAN",
+  "CAMAT",
+  "LURAH",
+  "RW",
 ] as const;
 
-// Role yang boleh menyimpan/memfinalisasi penilaian (tidak termasuk MAHASISWA_KKN)
+// Role yang boleh menyimpan/memfinalisasi penilaian (tidak termasuk MAHASISWA_KKN & PIMPINAN)
 const PENILAIAN_WRITE_ROLES = [
   "DEVELOPER",
   "SUPER_USER",
@@ -33,8 +37,8 @@ const PENILAIAN_WRITE_ROLES = [
   "DPL",
   "DOSEN_PEMBIMBING",
   "MPL",
+  "RW",
   "PANITIA_TASKFORCE",
-  "PEMIMPIN",
 ] as const;
 
 router.get(

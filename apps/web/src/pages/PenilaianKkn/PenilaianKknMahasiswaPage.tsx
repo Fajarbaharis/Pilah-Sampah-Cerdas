@@ -24,6 +24,8 @@ import {
   Clock,
   AlertCircle,
   HelpCircle,
+  Save,
+  Lock,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -127,18 +129,30 @@ const ASPEK_MITRA_CONFIG = [
 export const PenilaianKknMahasiswaPage: React.FC = () => {
   const { user } = useAuthStore();
   const rawRole = String(user?.peran || (user as any)?.role || "").toUpperCase();
-  const isPimpinan = rawRole === "PIMPINAN" || rawRole === "PEMIMPIN";
+  const isPimpinan =
+    rawRole === "PIMPINAN" ||
+    rawRole === "PEMIMPIN" ||
+    rawRole === "CAMAT" ||
+    rawRole === "LURAH";
   const isMplUser =
     !isPimpinan &&
     (rawRole === "MPL" ||
       rawRole === "MITRA_PEMBIMBING_LAPANGAN" ||
-      rawRole === "MITRA_PENDAMPING_LAPANGAN");
+      rawRole === "MITRA_PENDAMPING_LAPANGAN" ||
+      rawRole === "RW" ||
+      rawRole === "ADMIN_RW");
   const isDplUser =
     !isPimpinan &&
     (rawRole === "DPL" || rawRole === "DOSEN_PEMBIMBING" || rawRole === "DOSEN_PENDAMPING");
+  const isAdminTeknis =
+    rawRole === "SUPER_USER" ||
+    rawRole === "DEVELOPER" ||
+    rawRole === "ADMIN_DLH" ||
+    rawRole === "PANITIA_TASKFORCE";
 
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
+  const [isFinalizing, setIsFinalizing] = useState<boolean>(false);
   const [students, setStudents] = useState<StudentRekapItem[]>([]);
 
   // Modal State
@@ -147,6 +161,12 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
   const [evaluatorTab, setEvaluatorTab] = useState<"DPL" | "MPL">(isMplUser ? "MPL" : "DPL");
   const [bobotDpl, setBobotDpl] = useState<number>(50);
   const [bobotMpl, setBobotMpl] = useState<number>(50);
+
+  const isStudentFinalized = Boolean(activeStudent?.isFinalized || activeStudent?.status === "FINAL");
+  // Perubahan Logika Kunci: Role yang berhak (DPL, MPL, SU, Developer) tetap dapat mengedit nilai komponennya meskipun status sudah FINAL
+  const isDplTabEditable = !isPimpinan && (isDplUser || isAdminTeknis);
+  const isMplTabEditable = !isPimpinan && (isMplUser || isAdminTeknis);
+  const isCurrentTabEditable = evaluatorTab === "DPL" ? isDplTabEditable : isMplTabEditable;
 
   // Filters & Pagination
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -274,27 +294,47 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
   // Statistics KPI Summary
   const stats = useMemo(() => {
     const total = students.length;
+    const finalCount = students.filter(
+      (s) => s.isFinalized || s.status === "FINAL"
+    ).length;
     const lengkap = students.filter(
-      (s) => s.statusPenilaian === "LENGKAP" || (s.subtotalDpl > 0 && s.subtotalMitra > 0)
+      (s) =>
+        !s.isFinalized &&
+        s.status !== "FINAL" &&
+        (s.statusPenilaian === "LENGKAP" || (s.subtotalDpl > 0 && s.subtotalMitra > 0))
     ).length;
     const menungguMpl = students.filter(
-      (s) => s.statusPenilaian === "MENUNGGU_MPL" || (s.subtotalDpl > 0 && s.subtotalMitra === 0)
+      (s) =>
+        !s.isFinalized &&
+        s.status !== "FINAL" &&
+        (s.statusPenilaian === "MENUNGGU_MPL" || (s.subtotalDpl > 0 && s.subtotalMitra === 0))
     ).length;
     const menungguDpl = students.filter(
-      (s) => s.statusPenilaian === "MENUNGGU_DPL" || (s.subtotalDpl === 0 && s.subtotalMitra > 0)
+      (s) =>
+        !s.isFinalized &&
+        s.status !== "FINAL" &&
+        (s.statusPenilaian === "MENUNGGU_DPL" || (s.subtotalDpl === 0 && s.subtotalMitra > 0))
     ).length;
     const belum = students.filter(
-      (s) => (s.subtotalDpl === 0 && s.subtotalMitra === 0) || s.statusPenilaian === "BELUM_DINILAI"
+      (s) =>
+        !s.isFinalized &&
+        s.status !== "FINAL" &&
+        s.subtotalDpl === 0 &&
+        s.subtotalMitra === 0
     ).length;
 
-    const assessedStudents = students.filter((s) => s.nilaiAkhir > 0);
+    const assessedStudents = students.filter((s) => (s.isFinalized ? s.nilaiAkhir > 0 : s.subtotalDpl > 0 || s.nilaiAkhir > 0));
     const avgScore =
       assessedStudents.length > 0
-        ? assessedStudents.reduce((acc, curr) => acc + curr.nilaiAkhir, 0) / assessedStudents.length
+        ? assessedStudents.reduce(
+            (acc, curr) => acc + (curr.isFinalized ? curr.nilaiAkhir : curr.subtotalDpl > 0 ? curr.subtotalDpl : curr.nilaiAkhir),
+            0
+          ) / assessedStudents.length
         : 0;
 
     return {
       total,
+      finalCount,
       lengkap,
       menungguMpl,
       menungguDpl,
@@ -303,41 +343,110 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
     };
   }, [students]);
 
-  // Filtered Students with Natural Roster Sorting
+  // Filtered Students with Intelligent Ranked Search (Prefix & Word-Boundary Priority)
   const filteredStudents = useMemo(() => {
-    const filtered = students.filter((s) => {
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        s.nama.toLowerCase().includes(q) ||
-        s.nim.toLowerCase().includes(q) ||
-        (s.jurusan && s.jurusan.toLowerCase().includes(q)) ||
-        (s.programStudi && s.programStudi.toLowerCase().includes(q)) ||
-        (s.kelompok && s.kelompok.toLowerCase().includes(q)) ||
-        (s.kelurahan && s.kelurahan.toLowerCase().includes(q));
+    const q = searchQuery.toLowerCase().trim();
 
+    // 1. Filter candidates by kelompok & status, and score them
+    const scoredStudents: { student: StudentRekapItem; score: number }[] = [];
+
+    for (const s of students) {
       const matchesKelompok = filterKelompok === "ALL" || s.kelompok === filterKelompok;
 
       let matchesStatus = true;
       if (filterStatus !== "ALL") {
-        if (filterStatus === "LENGKAP") {
+        if (filterStatus === "FINAL") {
+          matchesStatus = Boolean(s.isFinalized || s.status === "FINAL");
+        } else if (filterStatus === "LENGKAP") {
           matchesStatus =
-            s.statusPenilaian === "LENGKAP" || (s.subtotalDpl > 0 && s.subtotalMitra > 0);
+            !s.isFinalized &&
+            (s.statusPenilaian === "LENGKAP" || (s.subtotalDpl > 0 && s.subtotalMitra > 0));
         } else if (filterStatus === "MENUNGGU_MPL") {
           matchesStatus =
-            s.statusPenilaian === "MENUNGGU_MPL" || (s.subtotalDpl > 0 && s.subtotalMitra === 0);
+            !s.isFinalized &&
+            (s.statusPenilaian === "MENUNGGU_MPL" || (s.subtotalDpl > 0 && s.subtotalMitra === 0));
         } else if (filterStatus === "MENUNGGU_DPL") {
           matchesStatus =
-            s.statusPenilaian === "MENUNGGU_DPL" || (s.subtotalDpl === 0 && s.subtotalMitra > 0);
+            !s.isFinalized &&
+            (s.statusPenilaian === "MENUNGGU_DPL" || (s.subtotalDpl === 0 && s.subtotalMitra > 0));
         } else if (filterStatus === "BELUM_DINILAI") {
-          matchesStatus = s.subtotalDpl === 0 && s.subtotalMitra === 0;
+          matchesStatus = !s.isFinalized && s.subtotalDpl === 0 && s.subtotalMitra === 0;
         }
       }
 
-      return matchesSearch && matchesKelompok && matchesStatus;
-    });
+      if (!matchesKelompok || !matchesStatus) continue;
 
-    return sortStudentsRoster(filtered, {
+      if (!q) {
+        scoredStudents.push({ student: s, score: 0 });
+        continue;
+      }
+
+      const namaLower = (s.nama || "").toLowerCase();
+      const nimClean = (s.nim || "").trim().toLowerCase();
+      const prodiLower = (s.programStudi || s.jurusan || "").toLowerCase();
+      const kelompokLower = (s.kelompok || "").toLowerCase();
+      const kelurahanLower = (s.kelurahan || "").toLowerCase();
+
+      let score = 0;
+
+      // Tier 1: Exact match
+      if (namaLower === q || nimClean === q) {
+        score = 1000;
+      }
+      // Tier 2: Nama depan diawali query (Prefix Nama Lengkap)
+      else if (namaLower.startsWith(q)) {
+        score = 500;
+      }
+      // Tier 3: NIM diawali query
+      else if (nimClean.startsWith(q)) {
+        score = 400;
+      }
+      // Tier 4: Kata dalam nama diawali query (Word-boundary prefix)
+      else if (namaLower.split(/\s+/).some((word) => word.startsWith(q))) {
+        score = 300;
+      }
+      // Tier 5: Prodi / Kelompok / Kelurahan diawali query
+      else if (
+        prodiLower.startsWith(q) ||
+        prodiLower.split(/\s+/).some((w) => w.startsWith(q)) ||
+        kelompokLower.startsWith(q) ||
+        kelurahanLower.startsWith(q)
+      ) {
+        score = 150;
+      }
+      // Tier 6: Substring di tengah nama
+      else if (namaLower.includes(q)) {
+        score = 50;
+      }
+      // Tier 7: Substring di field lainnya
+      else if (
+        nimClean.includes(q) ||
+        prodiLower.includes(q) ||
+        kelompokLower.includes(q) ||
+        kelurahanLower.includes(q)
+      ) {
+        score = 25;
+      }
+
+      if (score > 0) {
+        scoredStudents.push({ student: s, score });
+      }
+    }
+
+    // 2. Sorting: jika ada query, urutkan berdasarkan skor relevansi tertinggi
+    if (q) {
+      scoredStudents.sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+        return a.student.nama.localeCompare(b.student.nama, "id", { sensitivity: "base" });
+      });
+      return scoredStudents.map((item) => item.student);
+    }
+
+    // Jika tanpa query, gunakan natural roster sorting standar
+    const plainList = scoredStudents.map((item) => item.student);
+    return sortStudentsRoster(plainList, {
       getKelompok: (s) => s.kelompok,
       getName: (s) => s.nama,
       getNim: (s) => s.nim,
@@ -398,7 +507,14 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
     const kontribusiMitra = Number((subtotalMitra * 0.5).toFixed(2));
 
     let composite = 0;
-    if (subtotalDpl > 0 && subtotalMitra > 0) {
+    if (activeStudent && (activeStudent.isFinalized || activeStudent.status === "FINAL") && activeStudent.nilaiAkhir > 0) {
+      // Jika kedua evaluator telah memiliki skor atau sedang dihitung ulang, tampilkan akumulasi riil
+      if (subtotalDpl > 0 && subtotalMitra > 0) {
+        composite = Number((kontribusiDpl + kontribusiMitra).toFixed(2));
+      } else {
+        composite = activeStudent.nilaiAkhir;
+      }
+    } else if (subtotalDpl > 0 && subtotalMitra > 0) {
       composite = Number((kontribusiDpl + kontribusiMitra).toFixed(2));
     } else if (subtotalDpl > 0) {
       composite = kontribusiDpl;
@@ -415,7 +531,7 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
       kontribusiMitra,
       composite,
     };
-  }, [formScores, bobotDpl, bobotMpl]);
+  }, [formScores, bobotDpl, bobotMpl, activeStudent]);
 
   // Handle Input Change for Scores
   const handleScoreChange = (key: keyof typeof formScores, val: string) => {
@@ -430,8 +546,8 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
     }
   };
 
-  // Save Penilaian to Database
-  const handleSave = async () => {
+  // Save or Finalize Penilaian to Database
+  const handleSave = async (isFinalize: boolean = false) => {
     if (isPimpinan) {
       toast.error(
         "Role Pimpinan hanya memiliki akses View-Only dan tidak dapat menyimpan penilaian"
@@ -444,15 +560,27 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
       return;
     }
 
+    if (isFinalize) {
+      let confirmText =
+        "Apakah Anda yakin ingin memfinalisasi penilaian mahasiswa ini secara resmi? Nilai yudisium akan dikunci untuk penerbitan E-Sertifikat.";
+      if (computedScores.subtotalMitra === 0) {
+        confirmText =
+          "Mitra Lapangan (MPL) belum mengisi penilaian. Finalisasi mandiri oleh DPL akan menetapkan 100% evaluasi akademik DPL sebagai nilai akhir yudisium mahasiswa.\n\nLanjutkan finalisasi?";
+      }
+      if (!window.confirm(confirmText)) return;
+    }
+
     setSaving(true);
+    setIsFinalizing(isFinalize);
     try {
       const parseNum = (v: number | string) => (v === "" ? 0 : Number(v));
 
       const payload: any = {
         studentId: activeStudent.studentId,
+        isFinalizeAction: isFinalize,
       };
 
-      if (evaluatorTab === "MPL" || isMplUser) {
+      if (isMplUser || isAdminTeknis || evaluatorTab === "MPL") {
         payload.skorMitraKehadiran = parseNum(formScores.skorMitraKehadiran);
         payload.skorMitraWargaBinaan = parseNum(formScores.skorMitraWargaBinaan);
         payload.skorMitraProker = parseNum(formScores.skorMitraProker);
@@ -464,7 +592,7 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
         payload.catatanMitra = formScores.catatanMitra;
       }
 
-      if (evaluatorTab === "DPL" || isDplUser || (!isMplUser && !isDplUser)) {
+      if (isDplUser || isAdminTeknis || evaluatorTab === "DPL") {
         payload.skorDplPerencanaan = parseNum(formScores.skorDplPerencanaan);
         payload.skorDplKontribusi = parseNum(formScores.skorDplKontribusi);
         payload.skorDplLogbook = parseNum(formScores.skorDplLogbook);
@@ -474,16 +602,21 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
         payload.catatanDpl = formScores.catatanDpl;
       }
 
-      await penilaianKknApiService.savePenilaian(payload);
+      if (isFinalize) {
+        await penilaianKknApiService.finalizePenilaian(payload);
+        toast.success("Penilaian berhasil difinalisasi dan dikunci resmi!");
+      } else {
+        await penilaianKknApiService.savePenilaian(payload);
+        toast.success("Draf penilaian berhasil disimpan ke database!");
+      }
       await fetchStudents();
-
-      toast.success("Penilaian berhasil disimpan ke database!");
       handleCloseModal();
     } catch (err: any) {
-      console.error("Save error:", err);
+      console.error("Save/Finalize error:", err);
       toast.error(err.response?.data?.message || err.message || "Gagal menyimpan penilaian");
     } finally {
       setSaving(false);
+      setIsFinalizing(false);
     }
   };
 
@@ -562,9 +695,17 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
           <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold block">
-            Lengkap (DPL & MPL)
+            Yudisium Final
           </span>
           <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+            {stats.finalCount}
+          </p>
+        </div>
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+          <span className="text-[11px] text-sky-600 dark:text-sky-400 font-semibold block">
+            Lengkap (DPL &amp; MPL)
+          </span>
+          <p className="text-xl sm:text-2xl font-black text-sky-600 dark:text-sky-400 mt-1">
             {stats.lengkap}
           </p>
         </div>
@@ -576,17 +717,9 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
             {stats.menungguMpl}
           </p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-          <span className="text-[11px] text-sky-600 dark:text-sky-400 font-semibold block">
-            Menunggu DPL
-          </span>
-          <p className="text-xl sm:text-2xl font-black text-sky-600 dark:text-sky-400 mt-1">
-            {stats.menungguDpl}
-          </p>
-        </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs col-span-2 sm:col-span-1">
           <span className="text-[11px] text-[#009966] dark:text-emerald-400 font-semibold block">
-            Rerata Nilai Komposit
+            Rerata Nilai Mahasiswa
           </span>
           <p className="text-xl sm:text-2xl font-black text-[#009966] dark:text-emerald-400 mt-1">
             {stats.avgScore > 0 ? stats.avgScore.toFixed(2) : "—"}
@@ -632,6 +765,7 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
               className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#009966]/20 focus:border-[#009966] transition cursor-pointer"
             >
               <option value="ALL">Semua Status Penilaian</option>
+              <option value="FINAL">Yudisium Final / Terkunci</option>
               <option value="LENGKAP">Lengkap (DPL &amp; MPL)</option>
               <option value="MENUNGGU_MPL">Menunggu Nilai MPL</option>
               <option value="MENUNGGU_DPL">Menunggu Nilai DPL</option>
@@ -695,6 +829,7 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                 {paginatedStudents.map((s, idx) => {
                   const rowNumber = (currentPage - 1) * itemsPerPage + idx + 1;
 
+                  const isFinalized = Boolean(s.isFinalized || s.status === "FINAL");
                   const hasDpl = s.subtotalDpl > 0;
                   const hasMitra = s.subtotalMitra > 0;
                   const dplWeight = 50;
@@ -708,7 +843,14 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                     </span>
                   );
 
-                  if (hasDpl && hasMitra) {
+                  if (isFinalized) {
+                    statusBadge = (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/60">
+                        <CheckCircle2 size={11} />
+                        <span>Yudisium Final</span>
+                      </span>
+                    );
+                  } else if (hasDpl && hasMitra) {
                     statusBadge = (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60">
                         <CheckCircle2 size={11} />
@@ -791,19 +933,25 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                       {/* 6. Nilai Akhir Komposit */}
                       <td className="py-3.5 px-4 text-center">
                         <div className="font-mono font-black text-sm text-[#009966] dark:text-emerald-400">
-                          {hasDpl && hasMitra
-                            ? (dplKontribusi + mitraKontribusi).toFixed(2)
-                            : hasDpl
-                              ? dplKontribusi.toFixed(2)
-                              : hasMitra
-                                ? mitraKontribusi.toFixed(2)
-                                : "0.00"}
+                          {isFinalized && s.nilaiAkhir > 0
+                            ? s.nilaiAkhir.toFixed(2)
+                            : hasDpl && hasMitra
+                              ? (dplKontribusi + mitraKontribusi).toFixed(2)
+                              : hasDpl
+                                ? dplKontribusi.toFixed(2)
+                                : hasMitra
+                                  ? mitraKontribusi.toFixed(2)
+                                  : "0.00"}
                         </div>
-                        {(!hasDpl || !hasMitra) && (hasDpl || hasMitra) && (
+                        {isFinalized ? (
+                          <span className="text-[9.5px] text-purple-600 dark:text-purple-400 font-bold block">
+                            (Mutu {s.kategoriNilai || "A"})
+                          </span>
+                        ) : (!hasDpl || !hasMitra) && (hasDpl || hasMitra) ? (
                           <span className="text-[9.5px] text-amber-600 dark:text-amber-400 font-medium block">
                             (Sementara {hasDpl ? "0.5×DPL" : "0.5×MPL"})
                           </span>
-                        )}
+                        ) : null}
                       </td>
 
                       {/* 7. Status Penilaian */}
@@ -816,17 +964,27 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                           onClick={() => handleOpenModal(s)}
                           className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
                             isPimpinan
-                              ? "border border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white hover:bg-emerald-50 dark:bg-slate-900 dark:hover:bg-emerald-950/40 shadow-2xs"
-                              : "bg-[#009966] hover:bg-[#008055] text-white shadow-2xs"
+                              ? "border border-purple-600 text-purple-700 dark:text-purple-300 bg-white hover:bg-purple-50 dark:bg-slate-900 dark:hover:bg-purple-950/40 shadow-2xs"
+                              : isFinalized
+                                ? "border border-emerald-600 text-[#009966] dark:text-emerald-300 bg-white hover:bg-emerald-50 dark:bg-slate-900 dark:hover:bg-emerald-950/40 shadow-2xs"
+                                : "bg-[#009966] hover:bg-[#008055] text-white shadow-2xs"
                           }`}
                         >
-                          {isPimpinan ? <Eye size={12} /> : <Edit3 size={12} />}
+                          {isPimpinan ? (
+                            <Eye size={12} />
+                          ) : isFinalized ? (
+                            <Edit3 size={12} />
+                          ) : (
+                            <Edit3 size={12} />
+                          )}
                           <span>
                             {isPimpinan
                               ? "Lihat Rincian"
-                              : isMplUser
-                                ? "Nilai Lapangan"
-                                : "Beri Nilai"}
+                              : isFinalized
+                                ? "Edit / Lihat Nilai"
+                                : isMplUser
+                                  ? "Nilai Lapangan"
+                                  : "Beri Nilai"}
                           </span>
                         </button>
                       </td>
@@ -880,38 +1038,58 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Evaluator Tabs if allowed */}
-              {!isMplUser && !isDplUser && (
-                <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setEvaluatorTab("DPL")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                      evaluatorTab === "DPL"
-                        ? "bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs"
-                        : "text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    Form DPL (50%)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEvaluatorTab("MPL")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                      evaluatorTab === "MPL"
-                        ? "bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-xs"
-                        : "text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    Form MPL (50%)
-                  </button>
-                </div>
-              )}
+              {/* Evaluator Tabs (Bidirectional View) */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setEvaluatorTab("DPL")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    evaluatorTab === "DPL"
+                      ? "bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs"
+                      : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <GraduationCap size={13} />
+                  <span>Form DPL (50%)</span>
+                  {computedScores.subtotalDpl > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEvaluatorTab("MPL")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    evaluatorTab === "MPL"
+                      ? "bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-xs"
+                      : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <Building2 size={13} />
+                  <span>Form MPL (50%)</span>
+                  {computedScores.subtotalMitra > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Modal Body (Scrollable) */}
             <div className="overflow-y-auto p-5 sm:p-6 space-y-5">
-              {isPimpinan && (
+              {isStudentFinalized && (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center gap-2.5 text-xs text-emerald-900 dark:text-emerald-300">
+                  <CheckCircle2 size={16} className="shrink-0 text-[#009966] dark:text-emerald-400" />
+                  <div>
+                    <strong className="block font-bold">Penilaian Sudah Lengkap (FINAL)</strong>
+                    <span>
+                      {isPimpinan
+                        ? "Seluruh komponen nilai mahasiswa telah terisi lengkap. Anda melihat rincian nilai ini dalam mode pemantauan."
+                        : "Seluruh komponen nilai mahasiswa telah terisi lengkap. Sebagai penilai berwenang, Anda tetap dapat melakukan penyesuaian jika terdapat revisi nilai."}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {isPimpinan && !isStudentFinalized && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
                   <AlertCircle
                     size={16}
@@ -924,6 +1102,17 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                       Seluruh formulir penilaian dikunci.
                     </span>
                   </div>
+                </div>
+              )}
+
+              {!isPimpinan && !isCurrentTabEditable && (
+                <div className="p-2.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                  <Eye size={15} className="shrink-0 text-slate-500" />
+                  <span>
+                    {evaluatorTab === "MPL"
+                      ? "Mode Pratinjau Baca: Kolom penilaian lapangan ini khusus diisi oleh Mitra Lapangan (MPL / RW)."
+                      : "Mode Pratinjau Baca: Kolom evaluasi akademik ini khusus diisi oleh Dosen Pembimbing (DPL)."}
+                  </span>
                 </div>
               )}
 
@@ -996,7 +1185,7 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
               </div>
 
               {/* Rubric Section based on Active Tab */}
-              {evaluatorTab === "MPL" || isMplUser ? (
+              {evaluatorTab === "MPL" ? (
                 /* === ASPEK PENILAIAN MITRA / MPL (4 ASPEK) === */
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -1055,7 +1244,7 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                                     type="number"
                                     min={0}
                                     max={100}
-                                    disabled={isPimpinan}
+                                    disabled={!isMplTabEditable}
                                     value={val}
                                     onChange={(e) => handleScoreChange(aspek.key, e.target.value)}
                                     placeholder="0"
@@ -1103,7 +1292,7 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                     </label>
                     <textarea
                       rows={3}
-                      disabled={isPimpinan}
+                      disabled={!isMplTabEditable}
                       value={formScores.catatanMitra}
                       onChange={(e) =>
                         setFormScores((prev) => ({ ...prev, catatanMitra: e.target.value }))
@@ -1172,7 +1361,7 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                                     type="number"
                                     min={0}
                                     max={100}
-                                    disabled={isPimpinan}
+                                    disabled={!isDplTabEditable}
                                     value={val}
                                     onChange={(e) => handleScoreChange(aspek.key, e.target.value)}
                                     placeholder="0"
@@ -1220,7 +1409,7 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                     </label>
                     <textarea
                       rows={3}
-                      disabled={isPimpinan}
+                      disabled={!isDplTabEditable}
                       value={formScores.catatanDpl}
                       onChange={(e) =>
                         setFormScores((prev) => ({ ...prev, catatanDpl: e.target.value }))
@@ -1236,7 +1425,12 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
             {/* Modal Footer */}
             <div className="px-5 sm:px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between">
               <div className="text-xs text-slate-500">
-                {isPimpinan ? (
+                {isStudentFinalized ? (
+                  <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-bold">
+                    <CheckCircle2 size={13} />
+                    <span>Status: Lengkap &amp; Terfinalisasi (Dapat Diperbarui)</span>
+                  </span>
+                ) : isPimpinan ? (
                   <span>
                     Akses Pemantauan:{" "}
                     <strong className="text-slate-800 dark:text-slate-200 font-bold">
@@ -1245,9 +1439,9 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                   </span>
                 ) : (
                   <span>
-                    Menyimpan nilai sebagai:{" "}
+                    Sedang aktif:{" "}
                     <strong className="text-slate-800 dark:text-slate-200 font-bold">
-                      {evaluatorTab === "MPL" ? "Mitra Lapangan (MPL)" : "Dosen Pembimbing (DPL)"}
+                      {evaluatorTab === "MPL" ? "Penilaian Lapangan MPL" : "Evaluasi Akademik DPL"}
                     </strong>
                   </span>
                 )}
@@ -1277,24 +1471,49 @@ export const PenilaianKknMahasiswaPage: React.FC = () => {
                       Batal
                     </button>
 
-                    <button
-                      type="button"
-                      disabled={saving}
-                      onClick={handleSave}
-                      className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#009966] hover:bg-[#008055] text-white shadow-sm transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-                    >
-                      {saving ? (
-                        <>
+                    {/* Tombol Simpan (jika tab aktif boleh diedit oleh user) */}
+                    {isCurrentTabEditable && (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => handleSave(false)}
+                        className="px-4 py-2.5 rounded-xl text-xs font-bold border border-emerald-600 text-[#009966] dark:text-emerald-400 bg-white dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 shadow-xs transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                      >
+                        {saving && !isFinalizing ? (
                           <Loader2 size={14} className="animate-spin" />
-                          <span>Menyimpan...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 size={14} />
-                          <span>Simpan Penilaian</span>
-                        </>
-                      )}
-                    </button>
+                        ) : (
+                          <Save size={14} />
+                        )}
+                        <span>{isStudentFinalized ? "Perbarui Nilai" : "Simpan Draf"}</span>
+                      </button>
+                    )}
+
+                    {/* Tombol Finalisasi Nilai (khusus DPL & Admin) */}
+                    {(isDplUser || isAdminTeknis) && (
+                      <button
+                        type="button"
+                        disabled={saving || computedScores.subtotalDpl === 0}
+                        onClick={() => handleSave(true)}
+                        title={
+                          computedScores.subtotalDpl === 0
+                            ? "Isi evaluasi DPL terlebih dahulu sebelum finalisasi"
+                            : "Kunci / sahkan nilai akhir mahasiswa untuk penerbitan sertifikat"
+                        }
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#009966] hover:bg-[#008055] text-white shadow-sm transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                      >
+                        {saving && isFinalizing ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" />
+                            <span>Menyimpan...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 size={14} />
+                            <span>{isStudentFinalized ? "Perbarui & Sahkan" : "Finalisasi Nilai"}</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </>
                 )}
               </div>

@@ -186,7 +186,7 @@ export const sertifikatKknService = {
       for (const [kId, scores] of prokerGroupScores.entries()) {
         if (scores.length > 0) {
           const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-          prokerAvgMap.set(kId, Number(avg.toFixed(1)));
+          prokerAvgMap.set(kId, Number(avg.toFixed(2)));
         }
       }
     } catch (e) {
@@ -213,23 +213,83 @@ export const sertifikatKknService = {
       console.warn("[sertifikatKknService] Warning querying calculateValidIndividualPointsForUsers:", e);
     }
 
-    // 6. Ambil nilai kehadiran riil dari SSOT rekapitulasi nilai akhir
+    // 6. Ambil nilai kehadiran riil langsung via bulk batch query (optimasi SSOT < 100ms)
     const attendanceMap = new Map<string, number>();
     try {
-      const rekapRes = await dplService.getRekapNilaiAkhir(
-        userId || "",
-        filters?.kelompok,
-        userRole || "ADMIN_DLH"
-      );
-      if (rekapRes && Array.isArray(rekapRes.students)) {
-        for (const st of rekapRes.students) {
-          const keh = typeof st.kehadiran === "number" ? st.kehadiran : (st.tingkatKehadiran ?? 0);
-          if (st.nim) attendanceMap.set(String(st.nim).trim(), keh);
-          if (st.userId) attendanceMap.set(String(st.userId).trim(), keh);
+      if (studentUserIds.length > 0) {
+        const allAttendances = await prisma.activityAttendance.findMany({
+          where: {
+            studentId: { in: studentUserIds },
+            status: { notIn: ["TIDAK_ADA_KEGIATAN", "SKIP_KEGIATAN"] },
+          },
+          select: {
+            studentId: true,
+            status: true,
+            actualInZoneMinutes: true,
+            attendedAt: true,
+            checkOutAt: true,
+          },
+        });
+
+        // Group attendances per studentId
+        const attendancesByStudent = new Map<string, typeof allAttendances>();
+        for (const att of allAttendances) {
+          if (!att.studentId) continue;
+          if (!attendancesByStudent.has(att.studentId)) {
+            attendancesByStudent.set(att.studentId, []);
+          }
+          attendancesByStudent.get(att.studentId)!.push(att);
+        }
+
+        // Hitung persentase kehadiran riil per mahasiswa (SSOT Formula)
+        const targetDailyMinutes = 30;
+        for (const s of dbStudents) {
+          const uId = s.userId;
+          if (!uId) continue;
+          const atts = attendancesByStudent.get(uId);
+          if (!atts || atts.length === 0) {
+            attendanceMap.set(uId, 0);
+            if (s.nim) attendanceMap.set(String(s.nim).trim(), 0);
+            continue;
+          }
+
+          let sumSessionScores = 0;
+          for (const att of atts) {
+            const stUpper = String(att.status || "").toUpperCase();
+            let mins = Math.min(480, Math.max(0, att.actualInZoneMinutes ?? 0));
+            if (stUpper === "BERLANGSUNG" && !att.checkOutAt && att.attendedAt) {
+              const elapsed = Math.max(
+                0,
+                Math.floor((Date.now() - new Date(att.attendedAt).getTime()) / 60000)
+              );
+              mins = Math.min(480, Math.max(mins, elapsed));
+            } else if (mins === 0 && att.attendedAt && att.checkOutAt) {
+              const diff = Math.floor(
+                (new Date(att.checkOutAt).getTime() - new Date(att.attendedAt).getTime()) / 60000
+              );
+              mins = Math.min(480, Math.max(0, diff));
+            }
+
+            let sessionScore = 0;
+            if (stUpper === "HADIR_MEMENUHI" || (stUpper === "HADIR" && mins >= targetDailyMinutes)) {
+              sessionScore = 100;
+            } else if (mins > 0) {
+              sessionScore = Math.min(100, Math.round((mins / targetDailyMinutes) * 100));
+            } else if (stUpper.includes("IZIN") || stUpper.includes("SAKIT")) {
+              sessionScore = 100;
+            } else {
+              sessionScore = 0;
+            }
+            sumSessionScores += sessionScore;
+          }
+
+          const calculatedRate = Math.min(100, Math.max(0, Math.round(sumSessionScores / atts.length)));
+          attendanceMap.set(uId, calculatedRate);
+          if (s.nim) attendanceMap.set(String(s.nim).trim(), calculatedRate);
         }
       }
     } catch (e) {
-      console.warn("[sertifikatKknService] Warning querying rekapitulasi nilai akhir for attendance:", e);
+      console.warn("[sertifikatKknService] Warning querying bulk activityAttendance:", e);
     }
 
     // 7. Mapping data live database ke format sertifikat TANPA NILAI FIKTIF
@@ -261,30 +321,42 @@ export const sertifikatKknService = {
       const kelompokId = s.kelompokId;
       const prokerScore = kelompokId && prokerAvgMap.has(kelompokId) ? prokerAvgMap.get(kelompokId)! : null;
 
-      const personalScore = pDb?.subtotalDpl && Number(pDb.subtotalDpl) > 0 
+      const dplScore = pDb?.subtotalDpl && Number(pDb.subtotalDpl) > 0 
         ? Number(pDb.subtotalDpl) 
         : (s.assessmentScore && Number(s.assessmentScore) > 0 ? Number(s.assessmentScore) : null);
+
+      const mplScore = pDb?.subtotalMitra && Number(pDb.subtotalMitra) > 0 
+        ? Number(pDb.subtotalMitra) 
+        : null;
+
+      // Nilai Personal: Gabungan 50% DPL + 50% MPL (selaras dengan Halaman Rekapitulasi & Penilaian Individu Mahasiswa)
+      let personalScore: number | null = null;
+      if (dplScore !== null && mplScore !== null) {
+        personalScore = Number(((dplScore * 0.5) + (mplScore * 0.5)).toFixed(2));
+      } else if (pDb && (pDb.isFinalized || pDb.status === "FINAL") && pDb.nilaiAkhir && Number(pDb.nilaiAkhir) > 0) {
+        personalScore = Number(Number(pDb.nilaiAkhir).toFixed(2));
+      } else if (dplScore !== null) {
+        personalScore = Number(dplScore.toFixed(2));
+      } else if (mplScore !== null) {
+        personalScore = Number(mplScore.toFixed(2));
+      }
       
       const laporanScore = pDb?.skorDplLaporanAkhir && Number(pDb.skorDplLaporanAkhir) > 0 
-        ? Number(pDb.skorDplLaporanAkhir) 
+        ? Number(Number(pDb.skorDplLaporanAkhir).toFixed(2)) 
         : null;
 
-      const paperScore = pDb?.skorDplOutput && Number(pDb.skorDplOutput) > 0 
-        ? Number(pDb.skorDplOutput) 
-        : null;
-
-      const videoScore = pDb?.skorMitraBuktiKegiatan && Number(pDb.skorMitraBuktiKegiatan) > 0 
-        ? Number(pDb.skorMitraBuktiKegiatan) 
-        : null;
+      // Paper dan Video dilepas relasinya sementara sampai modul form penilaian khususnya siap
+      const paperScore: number | null = null;
+      const videoScore: number | null = null;
 
       // Mahasiswa HANYA dianggap sudah dinilai secara sah dan tuntas jika DPL telah memfinalisasi atau seluruh komponen lengkap & isAssessed true
       const isFullyGraded = Boolean(
         (pDb && (pDb.isFinalized || pDb.status === "FINAL" || pDb.status === "SELESAI") && Number(pDb.nilaiAkhir) > 0) ||
-        (s.isAssessed === true && Number(s.assessmentScore) > 0 && personalScore !== null && prokerScore !== null && laporanScore !== null && paperScore !== null && videoScore !== null)
+        (s.isAssessed === true && Number(s.assessmentScore) > 0 && personalScore !== null && prokerScore !== null && laporanScore !== null)
       );
 
       const rawKehadiran = attendanceMap.get(nim) ?? (s.userId ? attendanceMap.get(s.userId) : null) ?? null;
-      const kehadiranScore = rawKehadiran !== null ? Number(rawKehadiran.toFixed(1)) : null;
+      const kehadiranScore = rawKehadiran !== null ? Number(rawKehadiran.toFixed(2)) : null;
 
       let nilai: StudentCertData["nilai"];
       let statusPenilaian: "SUDAH_DINILAI" | "BELUM_DINILAI";
@@ -298,11 +370,11 @@ export const sertifikatKknService = {
         const totalScore = Number(pDb?.nilaiAkhir || s.assessmentScore || 0);
         nilai = {
           kehadiran: kehadiranScore,
-          personal: personalScore !== null ? Number(personalScore.toFixed(1)) : null,
-          proker: prokerScore !== null ? Number(prokerScore.toFixed(1)) : null,
-          laporan: laporanScore !== null ? Number(laporanScore.toFixed(1)) : null,
-          paper: paperScore !== null ? Number(paperScore.toFixed(1)) : null,
-          video: videoScore !== null ? Number(videoScore.toFixed(1)) : null,
+          personal: personalScore !== null ? Number(personalScore.toFixed(2)) : null,
+          proker: prokerScore !== null ? Number(prokerScore.toFixed(2)) : null,
+          laporan: laporanScore !== null ? Number(laporanScore.toFixed(2)) : null,
+          paper: paperScore !== null ? Number(paperScore.toFixed(2)) : null,
+          video: videoScore !== null ? Number(videoScore.toFixed(2)) : null,
           total: Number(totalScore.toFixed(2)),
           predikat: calculatePredikat(totalScore),
         };
@@ -314,11 +386,11 @@ export const sertifikatKknService = {
         sudahDinilai = false;
         nilai = {
           kehadiran: kehadiranScore,
-          personal: personalScore !== null ? Number(personalScore.toFixed(1)) : null,
-          proker: prokerScore !== null ? Number(prokerScore.toFixed(1)) : null,
-          laporan: laporanScore !== null ? Number(laporanScore.toFixed(1)) : null,
-          paper: paperScore !== null ? Number(paperScore.toFixed(1)) : null,
-          video: videoScore !== null ? Number(videoScore.toFixed(1)) : null,
+          personal: personalScore !== null ? Number(personalScore.toFixed(2)) : null,
+          proker: prokerScore !== null ? Number(prokerScore.toFixed(2)) : null,
+          laporan: laporanScore !== null ? Number(laporanScore.toFixed(2)) : null,
+          paper: paperScore !== null ? Number(paperScore.toFixed(2)) : null,
+          video: videoScore !== null ? Number(videoScore.toFixed(2)) : null,
           total: 0,
           predikat: "Belum Dinilai",
         };
@@ -376,10 +448,17 @@ export const sertifikatKknService = {
    * Mengambil detail sertifikat satu orang mahasiswa berdasarkan NIM
    */
   getSertifikatByNim: async (nim: string, user?: any) => {
-    const list = await sertifikatKknService.getSertifikatList(user);
-    const student = list.find((s) => s.nim === nim || s.idSertifikat === nim);
+    const cleanNim = String(nim).trim();
+    const list = await sertifikatKknService.getSertifikatList(user, { search: cleanNim });
+    const student = list.find((s) => s.nim === cleanNim || s.idSertifikat === cleanNim);
     if (!student) {
-      throw new Error(`Data e-sertifikat untuk NIM ${nim} tidak ditemukan.`);
+      // Fallback: search in full list if search filter did not catch alias
+      const fullList = await sertifikatKknService.getSertifikatList(user);
+      const fallbackStudent = fullList.find((s) => s.nim === cleanNim || s.idSertifikat === cleanNim);
+      if (!fallbackStudent) {
+        throw new Error(`Data e-sertifikat untuk NIM ${cleanNim} tidak ditemukan.`);
+      }
+      return fallbackStudent;
     }
     return student;
   },

@@ -9829,7 +9829,9 @@
     "tanggalTerbit": "10 November 2026",
     "statusPenilaian": "BELUM_DINILAI",
     "sudahDinilai": false,
+    "kehadiran": 93,
     "nilai": {
+      "kehadiran": 93,
       "personal": null,
       "proker": null,
       "laporan": null,
